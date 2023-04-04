@@ -9,54 +9,68 @@ import random
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
+import pandas as pd
+import seaborn as sns
+from Transformation import m_to_f
+from Transformation import m_to_t
 
-n = 10  # 100 nodes
-p = 0.4
-M = nx.erdos_renyi_graph(n, p)
 
 
-# nx.draw(M, with_labels=True)
-# plt.show()
-#
-# print(M.number_of_edges())
-# print(nx.average_clustering(M))
-#
-# edges = list(M.edges)
-# print(edges)
-#
-# edges_to_remove = (random.sample(edges, k=1))  # choose a random edge
-# # edges_to_remove = edges.index((edges_to_remove[0])) # to use index removal if needed
-# edges.remove(edges_to_remove[0])  # edges after removal
-# print(edges)
-# M.remove_edge(*(edges_to_remove[0]))
-# print(M.edges)
-#
-#
-#
-# edges_to_remove = (random.sample(edges, k=1))  # choose a random edge
-
-def remove_edge(M, f: int):
+def remove_edge(m, n: int):
     """
-    remove a random edge from net M
-    # :param matrix: initial migration net
+    Remove a random edge from net m of type networkx
+    :param m: initial migration net m
+    :param n: no. of fragmentation steps
+    :return: net after edge removal
     """
 
-    for i in range(f):
-        edges = list(nx.edges(M))
+    for i in range(n):
+        edges = list(nx.edges(m))
         edges_to_remove = (random.sample(edges, k=1))  # choose a random edge
-        M.remove_edge(*(edges_to_remove[0]))
+        m.remove_edge(*(edges_to_remove[0]))
 
-        print(f'I removed the edge: {edges_to_remove[0]} \n 'f'These are the remaining edges: {M.edges}')
+        print(f'I removed the edge: {edges_to_remove[0]} \n 'f'These are the remaining edges: {m.edges}')
 
-        nx.draw(M, with_labels=True)
+        nx.draw(m, with_labels=True)
         plt.show()
 
 
-n = 5  # no. of nodes
+n = 20  # no. of nodes
 p = 0.8  # probability to connect nodes
-net = nx.erdos_renyi_graph(n, p)
-n_frag = 5
-print(net.edges)
+net = nx.erdos_renyi_graph(n, p)  # create ER net
+n_frag = 5  # no. of fragmentation steps
 
-remove_edge(net, n_frag)
+
+# remove_edge(net, n_frag)
 M = nx.attr_matrix(net)[0]
+print(M)
+
+# F_1 = m_to_f(M)
+# print(np.round(F_1, decimals=2))
+# nx.draw(net, with_labels=True)
+# plt.show()
+
+
+M = np.concatenate(M)
+g = sns.displot(data=M, kind="kde")
+g.set_axis_labels("Fst", "Density")
+
+plt.show()
+
+
+
+# data.speeding.plot.density(color='green')
+# plt.title('Density plot for Speeding')
+# plt.show()
+# # loading the dataset
+# # from seaborn library
+#
+# # viewing the dataset
+# print(data.head(4))
+#
+# # plotting the density plot
+# # for 'speeding' attribute
+# # using plot.density()
+# data.speeding.plot.density(color='green')
+# plt.title('Density plot for Speeding')
+# plt.show()

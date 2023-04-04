@@ -158,7 +158,7 @@ def comb(n: int, k: int) -> int:
 
 def m_to_f(m: np.ndarray) -> np.ndarray:
     """
-    Receives a migration matrix(a squared, positive matrix with zeroes on the diagonal), and returns it's
+    Receives a migration matrix(a squared, positive matrix with zeroes on the diagonal), and returns its
     corresponding Fst matrix according to Wilkinson-Herbot's equations. Note that matrices that represent migration
     networks where one or more of the subpopulations are isolated will cause an error, since their coalescence times
     are interpreted as infinite, and Fst as 0. In this case, use the migration matrix that doesn't include the isolated
@@ -175,7 +175,7 @@ def m_to_f(m: np.ndarray) -> np.ndarray:
 
 def m_to_t(m: np.ndarray) -> np.ndarray:
     """
-       Receives a migration matrix(a squared, positive matrix with zeroes on the diagonal), and returns it's
+       Receives a migration matrix (a squared, positive matrix with zeroes on the diagonal), and returns its
        corresponding Coalescent times (T) matrix according to Wilkinson-Herbot's equations.
        Note that matrices that represent migration networks where one or more of the subpopulations are isolated
        will cause an error, since their coalescence times are interpreted as infinite, and Fst as 1.
@@ -187,16 +187,4 @@ def m_to_t(m: np.ndarray) -> np.ndarray:
     M = Migration(m)
     return M.produce_coalescence()
 
-
-import numpy as np
-from Transformation import m_to_f
-
-M_1 = np.array([[0, 2, 0, 1], [0, 0, 1, 2], [2, 1, 0, 0], [1, 0, 2, 0]])
-print(M_1)
-F_1 = m_to_f(M_1)
-print(F_1, "\n")
-M_2 = np.array([[0, 1.87, 1.48, 0.74], [0.65, 0, 1.74, 0.17], [1.73, 0, 0, 1.95], [1.7, 0.68, 0.46, 0]])
-F_2 = m_to_f(M_2)
-print(np.round(F_2, decimals=2))
-print(type(M_1))
 
