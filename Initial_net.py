@@ -59,4 +59,4 @@ n_frag = 5
 print(net.edges)
 
 remove_edge(net, n_frag)
-חטעךלויךלויךלו
+M = nx.attr_matrix(net)[0]
