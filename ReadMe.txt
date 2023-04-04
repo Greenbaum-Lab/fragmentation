@@ -1,3 +1,14 @@
+Networks fragmentation analysis
+
+Code for creating multiple population networks and evaluate the genetic diversity and genetic differntiation of populations
+
+M-create ER network-100 nodes and well connected T-calculate the expected coalescence matrix F-calculate Fst matrix het= coalesence time of a pair of individuals sampled from the same population-distribution and avg fst= pairwise fst of population-distribution and avg fst= Tt-Ts/Tt= between pop coales time- within pop coales time
+
+
+
+
+
+Transformations
 *Written by: Eyal Haluts
 *Email: eyal.haluts@mail.huji.ac.il
 
