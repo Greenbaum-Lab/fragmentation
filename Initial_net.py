@@ -15,7 +15,6 @@ from Transformation import m_to_f
 from Transformation import m_to_t
 
 
-
 def remove_edge(m, n: int):
     """
     Remove a random edge from net m of type networkx
@@ -31,46 +30,54 @@ def remove_edge(m, n: int):
 
         print(f'I removed the edge: {edges_to_remove[0]} \n 'f'These are the remaining edges: {m.edges}')
 
-        nx.draw(m, with_labels=True)
-        plt.show()
+       # nx.draw(m, with_labels=True)
+       # plt.show()
 
 
-n = 20  # no. of nodes
-p = 0.8  # probability to connect nodes
+n = 5  # no. of nodes
+p = 0.7  # probability to connect nodes
 net = nx.erdos_renyi_graph(n, p)  # create ER net
 n_frag = 5  # no. of fragmentation steps
 
 
-# remove_edge(net, n_frag)
-M = nx.attr_matrix(net)[0]
-print(M)
-
-# F_1 = m_to_f(M)
-# print(np.round(F_1, decimals=2))
-# nx.draw(net, with_labels=True)
+# M = nx.attr_matrix(net)[0]  # take the matrix of the net
+# F = m_to_f(M)
+# print(np.round(F, decimals=2))
+#
+# ####????when fully connected Fst is 0.0909 and not 0
+# F_no_diag = F[~np.eye(len(F), dtype=bool)]  # remove diagonals of zero and concatante array
+#
+# # plot density plot of Fst
+# g = sns.displot(data=F_no_diag, kind="kde")
+# g.set_axis_labels("Fst", "Density")
 # plt.show()
 
 
-M = np.concatenate(M)
-g = sns.displot(data=M, kind="kde")
+def calculate_fst(m):
+    """
+    Calculate Fst of M matrix after each random edge removal
+    :param m: initial migration network M of networkx
+    :return: list of lists of Fst values for each step of fragmentation
+    """
+    fst_list = []
+    for i in range(n_frag):
+        M = nx.attr_matrix(m)[0]  # take the matrix of the net
+        F = m_to_f(M)
+        F_no_diag = F[~np.eye(len(F), dtype=bool)]  # remove diagonals of zero and concatante array
+        F_no_diag = np.ndarray.tolist(F_no_diag)
+        remove_edge(m, 1)
+        fst_list.append(F_no_diag)
+
+    return fst_list
+
+
+fst_dist = calculate_fst(net)
+
+df = pd.DataFrame(fst_dist)
+df = df.transpose()
+print(df)
+
+# plot density plot of Fst
+g = sns.displot(data=df, kind="kde")
 g.set_axis_labels("Fst", "Density")
-
 plt.show()
-
-
-
-# data.speeding.plot.density(color='green')
-# plt.title('Density plot for Speeding')
-# plt.show()
-# # loading the dataset
-# # from seaborn library
-#
-# # viewing the dataset
-# print(data.head(4))
-#
-# # plotting the density plot
-# # for 'speeding' attribute
-# # using plot.density()
-# data.speeding.plot.density(color='green')
-# plt.title('Density plot for Speeding')
-# plt.show()
