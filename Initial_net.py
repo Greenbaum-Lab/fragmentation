@@ -86,4 +86,3 @@ joyplot(
 )
 plt.title('pairwise Fst along fragmentation', fontsize=20)
 plt.show()
-plt.savefig('fst.png')
