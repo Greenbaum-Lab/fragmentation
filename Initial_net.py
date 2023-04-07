@@ -1,10 +1,4 @@
-# define N=100 and u=0.000005
-# M-create ER network-100 nodes and well-connected
-# T-calculate the expected coalescence matrix
-# F-calculate Fst matrix
-# het= coalescence time of a pair of individuals sampled from the same population-distribution and avg
-# fst= pairwise fst of population-distribution and avg
-# fst= Tt-Ts/Tt= between pop coalescence time-within pop coalescence time
+import array
 import random
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -28,56 +22,68 @@ def remove_edge(m, n: int):
         edges_to_remove = (random.sample(edges, k=1))  # choose a random edge
         m.remove_edge(*(edges_to_remove[0]))
 
-        print(f'I removed the edge: {edges_to_remove[0]} \n 'f'These are the remaining edges: {m.edges}')
+    print(f'I removed {n} edges')
 
-       # nx.draw(m, with_labels=True)
-       # plt.show()
-
-
-n = 5  # no. of nodes
-p = 0.7  # probability to connect nodes
-net = nx.erdos_renyi_graph(n, p)  # create ER net
-n_frag = 5  # no. of fragmentation steps
+    # nx.draw(m, with_labels=True)
+    # plt.show()
 
 
-# M = nx.attr_matrix(net)[0]  # take the matrix of the net
-# F = m_to_f(M)
-# print(np.round(F, decimals=2))
-#
-# ####????when fully connected Fst is 0.0909 and not 0
-# F_no_diag = F[~np.eye(len(F), dtype=bool)]  # remove diagonals of zero and concatante array
-#
-# # plot density plot of Fst
-# g = sns.displot(data=F_no_diag, kind="kde")
-# g.set_axis_labels("Fst", "Density")
-# plt.show()
+n = 10  # no. of nodes
+p = 1  # probability to connect nodes
+net = nx.erdos_renyi_graph(n, p)  # create ER network
+n_frag = 10  # no. of fragmentation steps
 
 
-def calculate_fst(m):
+def calculate_fst(m) -> list:
     """
     Calculate Fst of M matrix after each random edge removal
     :param m: initial migration network M of networkx
-    :return: list of lists of Fst values for each step of fragmentation
+    :return: list of lists of Fst matrices for each step of fragmentation
     """
     fst_list = []
     for i in range(n_frag):
         M = nx.attr_matrix(m)[0]  # take the matrix of the net
-        F = m_to_f(M)
-        F_no_diag = F[~np.eye(len(F), dtype=bool)]  # remove diagonals of zero and concatante array
-        F_no_diag = np.ndarray.tolist(F_no_diag)
-        remove_edge(m, 1)
-        fst_list.append(F_no_diag)
+        F = m_to_f(M)  # migration to fst function
+        remove_edge(m, 1)  # use the remove edge function
+        fst_list.append(F)  # add another item (fragmentation step) to the list
 
     return fst_list
 
 
-fst_dist = calculate_fst(net)
+array = calculate_fst(net)
+print(array)
 
-df = pd.DataFrame(fst_dist)
-df = df.transpose()
-print(df)
 
-# plot density plot of Fst
-g = sns.displot(data=df, kind="kde")
-g.set_axis_labels("Fst", "Density")
+def make_fst_data(f: list) -> pd.DataFrame:
+    """
+    take a list of F metrics and return a dataframe without diagonal values (zero)
+    :param f: list of fst metrics
+    :return: dataframe with colomm represent each matrix
+    """
+    fst_data = []
+    for i in range(len(f)):
+        F_no_diag = f[i][~np.eye(len(f[i]), dtype=bool)]  # remove diagonals of zero and concatante array
+        F_no_diag = np.ndarray.tolist(F_no_diag)  # transform to list
+        fst_data.append(F_no_diag)  # add another item (fragmentation step) to the list
+        df = pd.DataFrame(fst_data)
+        df = df.transpose()
+    return df
+
+
+fst_data = make_fst_data(array)
+# make dataframe wist one colom of all values-need to remove "a"
+fst_data = fst_data.stack().rename_axis(('a', 'step')).reset_index(name='fst')
+
+from joypy import joyplot
+
+plt.figure()
+
+joyplot(
+    data=fst_data[['fst', 'step']],
+    by='step'
+    , colormap=plt.cm.autumn, fade=True,
+    figsize=(12, 8)
+)
+plt.title('pairwise Fst along fragmentation', fontsize=20)
 plt.show()
+plt.savefig('fst.png')
