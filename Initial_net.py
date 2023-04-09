@@ -7,9 +7,10 @@ import pandas as pd
 import seaborn as sns
 from Transformation import m_to_f
 from Transformation import m_to_t
+from statistics import mean
+from statistics import median
 
-
-def remove_edge(m, n: int):
+def remove_edge_random(m, n: int):
     """
     Remove a random edge from net m of type networkx
     :param m: initial migration net m
@@ -28,10 +29,10 @@ def remove_edge(m, n: int):
     # plt.show()
 
 
-n = 10  # no. of nodes
+n = 5  # no. of nodes
 p = 1  # probability to connect nodes
 net = nx.erdos_renyi_graph(n, p)  # create ER network
-n_frag = 10  # no. of fragmentation steps
+n_frag = 3  # no. of fragmentation steps
 
 
 def calculate_fst(m) -> list:
@@ -44,44 +45,78 @@ def calculate_fst(m) -> list:
     for i in range(n_frag):
         M = nx.attr_matrix(m)[0]  # take the matrix of the net
         F = m_to_f(M)  # migration to fst function
-        remove_edge(m, 1)  # use the remove edge function
+        remove_edge_random(m, 1)  # use the remove edge function
         fst_list.append(F)  # add another item (fragmentation step) to the list
 
     return fst_list
 
 
 array = calculate_fst(net)
-print(array)
 
 
-def make_fst_data(f: list) -> pd.DataFrame:
+def make_fst_dens(f: list) -> pd.DataFrame:
     """
     take a list of F metrics and return a dataframe without diagonal values (zero)
     :param f: list of fst metrics
     :return: dataframe with colomm represent each matrix
     """
-    fst_data = []
+    fst_dens = []
     for i in range(len(f)):
         F_no_diag = f[i][~np.eye(len(f[i]), dtype=bool)]  # remove diagonals of zero and concatante array
         F_no_diag = np.ndarray.tolist(F_no_diag)  # transform to list
-        fst_data.append(F_no_diag)  # add another item (fragmentation step) to the list
-        df = pd.DataFrame(fst_data)
+        fst_dens.append(F_no_diag)  # add another item (fragmentation step) to the list
+        df = pd.DataFrame(fst_dens)
         df = df.transpose()
     return df
 
 
-fst_data = make_fst_data(array)
-# make dataframe wist one colom of all values-need to remove "a"
-fst_data = fst_data.stack().rename_axis(('a', 'step')).reset_index(name='fst')
+fst_dens = make_fst_dens(array)
+
+# make dataframe with one column of all values-need to remove "a"
+fst_dens = fst_dens.stack().rename_axis(('a', 'step')).reset_index(name='fst')
+
+print(fst_dens)
+
+
+# calculate the mean and median fst of each step
+def calculate_fst_data(f: pd.DataFrame) -> pd.DataFrame:
+    avg = []
+    med = []
+    for i in range(n_frag):
+        fst_avg = f[f['step'] == i]['fst']
+        avg.append(mean(fst_avg))
+        fst_med = f[f['step'] == i]['fst']
+        med.append(median(fst_med))
+        step = range(n_frag)
+    d = {'step': step, 'avg': avg, 'median': med}
+    df = pd.DataFrame(data=d)
+    return df
+
+
+fst_data = calculate_fst_data(fst_dens)
+
+# plotting avg and median
+plt.plot(fst_data['step'], fst_data['avg'], label="average")
+plt.plot(fst_data['step'], fst_data['median'], label="median")
+
+# naming the x axis
+plt.xlabel('fragmentation process')
+# naming the y axis
+plt.ylabel('Fst')
+
+# show a legend on the plot
+plt.legend()
+
+# function to show the plot
+plt.show()
 
 from joypy import joyplot
 
 plt.figure()
-
 joyplot(
-    data=fst_data[['fst', 'step']],
-    by='step'
-    , colormap=plt.cm.autumn, fade=True,
+    data=fst_dens[['fst', 'step']],
+    by='step',
+    colormap=plt.cm.autumn, fade=True,
     figsize=(12, 8)
 )
 plt.title('pairwise Fst along fragmentation', fontsize=20)
