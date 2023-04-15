@@ -10,6 +10,47 @@ from statistics import mean
 from statistics import median
 
 
+n = 10  # no. of nodes
+p = 0.8  # probability to connect nodes
+net = nx.erdos_renyi_graph(n, p, seed=55)  # create ER network
+n_frag = 5  # no. of fragmentation steps
+
+class fragmentation:
+    def remove_edge_random(self, m, n: int):
+        """
+        Remove a random edge from net m of type networkx
+        :param m: initial migration net m
+        :param n: no. of fragmentation steps
+        :return: net after edge removal
+        """
+
+        for i in range(n):
+            edges = list(nx.edges(m))
+            edges_to_remove = (random.sample(edges, k=1))  # choose a random edge
+            m.remove_edge(*(edges_to_remove[0]))
+
+        print(f'I removed {n} edges')
+
+        # pos = nx.spring_layout(m, seed=50)
+        # nx.draw(m, pos = pos,  with_labels=True)
+        # plt.show()
+
+    def calculate_fst(self, m) -> list:
+        """
+        Calculate Fst of M matrix after each random edge removal
+        :param m: initial migration network M of networkx
+        :return: list of lists of Fst matrices for each step of fragmentation
+        """
+        fst_list = []
+        for i in range(n_frag):
+            M = nx.attr_matrix(m)[0]  # take the matrix of the net
+            F = m_to_f(M)  # migration to fst function
+            remove_edge_random(m, 1)  # use the remove edge function
+            fst_list.append(F)  # add another item (fragmentation step) to the list
+
+        return fst_list
+
+
 def remove_edge_random(m, n: int):
     """
     Remove a random edge from net m of type networkx
@@ -28,12 +69,6 @@ def remove_edge_random(m, n: int):
     # pos = nx.spring_layout(m, seed=50)
     # nx.draw(m, pos = pos,  with_labels=True)
     # plt.show()
-
-
-n = 20  # no. of nodes
-p = 0.8  # probability to connect nodes
-net = nx.erdos_renyi_graph(n, p, seed=55)  # create ER network
-n_frag = 20  # no. of fragmentation steps
 
 
 def calculate_fst(m) -> list:
@@ -125,8 +160,7 @@ def calculate_het(m) -> pd.DataFrame:
 x = calculate_het(net)
 
 print(x)
-# x.rename(columns={0 :'new column name', 1: 'sdfs'}, inplace=True )
-# print(x.columns)
+
 
 
 ################ plotting avg and median
@@ -140,21 +174,21 @@ print(x)
 #
 # # plot distribution of Fst values - ridge-lines
 from joypy import joyplot
-#
-# plt.figure()
-# joyplot(
-#     data=fst_dens[['fst', 'step']],
-#     by='step',
-#     colormap=plt.cm.autumn, fade=True,
-#     figsize=(12, 8)
-# )
-# plt.title('pairwise Fst along fragmentation', fontsize=20)
-# plt.show()
-#
-#
-#
-#
 
+plt.figure()
+joyplot(
+    data=fst_dens[['fst', 'step']],
+    by='step',
+    colormap=plt.cm.autumn, fade=True,
+    figsize=(12, 8)
+)
+plt.title('pairwise Fst along fragmentation', fontsize=20)
+plt.show()
+
+
+#
+#
+#
 plt.figure()
 joyplot(
     data=x[['het', 'step']],
@@ -164,7 +198,7 @@ joyplot(
 )
 plt.title('pairwise Fst along fragmentation', fontsize=20)
 plt.show()
-#
+
 #
 
 
