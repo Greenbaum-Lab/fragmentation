@@ -1,79 +1,29 @@
-import random
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
-import pandas
 import pandas as pd
 from Transformation import m_to_f
 from Transformation import m_to_t
 from statistics import mean
 from statistics import median
+from fragmentation import remove_edge_random
+from fragmentation import remove_edge_correlated
 
-
+# create a network
 n = 10  # no. of nodes
 p = 0.8  # probability to connect nodes
-net = nx.erdos_renyi_graph(n, p, seed=55)  # create ER network
+net = nx.erdos_renyi_graph(n, p, seed=55)
 n_frag = 5  # no. of fragmentation steps
 
-class fragmentation:
-    def remove_edge_random(self, m, n: int):
-        """
-        Remove a random edge from net m of type networkx
-        :param m: initial migration net m
-        :param n: no. of fragmentation steps
-        :return: net after edge removal
-        """
-
-        for i in range(n):
-            edges = list(nx.edges(m))
-            edges_to_remove = (random.sample(edges, k=1))  # choose a random edge
-            m.remove_edge(*(edges_to_remove[0]))
-
-        print(f'I removed {n} edges')
-
-        # pos = nx.spring_layout(m, seed=50)
-        # nx.draw(m, pos = pos,  with_labels=True)
-        # plt.show()
-
-    def calculate_fst(self, m) -> list:
-        """
-        Calculate Fst of M matrix after each random edge removal
-        :param m: initial migration network M of networkx
-        :return: list of lists of Fst matrices for each step of fragmentation
-        """
-        fst_list = []
-        for i in range(n_frag):
-            M = nx.attr_matrix(m)[0]  # take the matrix of the net
-            F = m_to_f(M)  # migration to fst function
-            remove_edge_random(m, 1)  # use the remove edge function
-            fst_list.append(F)  # add another item (fragmentation step) to the list
-
-        return fst_list
+# pos = nx.spring_layout(net, seed=55)
+nx.draw(net, with_labels=True)
+plt.show()
 
 
-def remove_edge_random(m, n: int):
-    """
-    Remove a random edge from net m of type networkx
-    :param m: initial migration net m
-    :param n: no. of fragmentation steps
-    :return: net after edge removal
-    """
-
-    for i in range(n):
-        edges = list(nx.edges(m))
-        edges_to_remove = (random.sample(edges, k=1))  # choose a random edge
-        m.remove_edge(*(edges_to_remove[0]))
-
-    print(f'I removed {n} edges')
-
-    # pos = nx.spring_layout(m, seed=50)
-    # nx.draw(m, pos = pos,  with_labels=True)
-    # plt.show()
-
-
-def calculate_fst(m) -> list:
+def calculate_fst(m: np.ndarray, frag_process) -> list:
     """
     Calculate Fst of M matrix after each random edge removal
+    :param frag_process: type of fragmentation (random, correlated)
     :param m: initial migration network M of networkx
     :return: list of lists of Fst matrices for each step of fragmentation
     """
@@ -81,13 +31,31 @@ def calculate_fst(m) -> list:
     for i in range(n_frag):
         M = nx.attr_matrix(m)[0]  # take the matrix of the net
         F = m_to_f(M)  # migration to fst function
-        remove_edge_random(m, 1)  # use the remove edge function
+        frag_process(m=m, n=1)  # use the remove edge function
         fst_list.append(F)  # add another item (fragmentation step) to the list
 
     return fst_list
 
 
-array = calculate_fst(net)
+def calculate_het(m: np.ndarray, frag_process) -> list:
+    """
+    Calculate heterozygosity based on coalescence matrix diagonal of M matrix after each random edge removal
+    :param frag_process: type of fragmentation (random, correlated)
+    :param m: initial migration network M of networkx
+    :return: list of lists of coalescence matrices for each step of fragmentation
+    """
+    het_list = []
+    h = []
+    for i in range(n_frag):
+        M = nx.attr_matrix(m)[0]  # take the matrix of the net
+        T = m_to_t(M)  # migration to fst function
+        h = np.diag(T)
+        h = np.ndarray.tolist(h)
+        frag_process(m=m, n=1)  # use the remove edge function
+        het_list.append(h)  # add another item (fragmentation step) to the list
+
+    return het_list
+
 
 
 def make_fst_dens(f: list) -> pd.DataFrame:
@@ -107,13 +75,34 @@ def make_fst_dens(f: list) -> pd.DataFrame:
     df = df.drop(columns=['delete'])
     return df
 
+x=calculate_fst(net,remove_edge_random)
+print(make_fst_dens(x).head())
 
-fst_dens = make_fst_dens(array)
-print(fst_dens)
+def calculate_het(m: np.ndarray) -> pd.DataFrame:
+    """
+    calculate the unscaled heterozygosity from a diagonal of coalescence matrix
+    :return: list of heterozygosity values for each population
+    """
+    h = []
+    het = []
+    df = pd.DataFrame()
+    for i in range(n_frag):
+        h = m_to_t(nx.attr_matrix(m)[0])
+        h = np.diag(h)
+        h = np.ndarray.tolist(h)
+        het.append(h)
+        remove_edge_random(m, 1)
+    df = pd.DataFrame(het)
+    df = df.stack().rename_axis(('step', 'delete')).reset_index(name='het')
+    df = df.drop(columns=['delete'])
+    return df
+
+
+
 # make dataframe with one column of all values-need to remove "a"
 
 
-print(fst_dens)
+
 
 def calculate_fst_data(f: pd.DataFrame) -> pd.DataFrame:
     """
@@ -133,76 +122,3 @@ def calculate_fst_data(f: pd.DataFrame) -> pd.DataFrame:
     df = pd.DataFrame(data=d)
     return df
 
-
-fst_data = calculate_fst_data(fst_dens)
-
-def calculate_het(m) -> pd.DataFrame:
-    """
-    calculate the unscaled heterozygosity from a diagonal of coalescence matrix
-    :return: list of heterozygosity values for each population
-    """
-    h = []
-    het = []
-    df = pd.DataFrame()
-    for i in range(n_frag):
-        h = m_to_t(nx.attr_matrix(m)[0])
-        h = np.diag(h)
-        h = np.ndarray.tolist(h)
-        het.append(h)
-        remove_edge_random(m, 1)
-    df = pd.DataFrame(het)
-    # df = df.stack()
-    # df = pd.DataFrame(df)
-    df = df.stack().rename_axis(('step', 'delete')).reset_index(name='het')
-    df=df.drop(columns=['delete'])
-    return df
-
-x = calculate_het(net)
-
-print(x)
-
-
-
-################ plotting avg and median
-# plt.plot(fst_data['step'], fst_data['avg'], label="average")
-# plt.plot(fst_data['step'], fst_data['median'], label="median")
-#
-# plt.xlabel('fragmentation process')
-# plt.ylabel('Fst')
-# plt.legend()
-# plt.show()
-#
-# # plot distribution of Fst values - ridge-lines
-from joypy import joyplot
-
-plt.figure()
-joyplot(
-    data=fst_dens[['fst', 'step']],
-    by='step',
-    colormap=plt.cm.autumn, fade=True,
-    figsize=(12, 8)
-)
-plt.title('pairwise Fst along fragmentation', fontsize=20)
-plt.show()
-
-
-#
-#
-#
-plt.figure()
-joyplot(
-    data=x[['het', 'step']],
-    by='step',
-    colormap=plt.cm.autumn, fade=True,
-    figsize=(12, 8)
-)
-plt.title('pairwise Fst along fragmentation', fontsize=20)
-plt.show()
-
-#
-
-
-# the question is which process creates faster isolated populations
-# how to allow isolated populations in the analysis
-# should  I put all in a class?
-# func is slow in big networks
