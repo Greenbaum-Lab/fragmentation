@@ -37,18 +37,19 @@ def calculate_fst_and_plot(m: np.ndarray, frag_process, n: int) -> list:
     """
     fst_list = []
     fig, axs = plt.subplots(1, 2, figsize=(10, 5))
-
+    pos = nx.spring_layout(m, seed=1)
     for i in range(n):
         M = nx.attr_matrix(m)[0]  # take the matrix of the net
         F = m_to_f(M)  # migration to fst function
         frag_process(m=m, n=1)  # use the remove edge function
         fst_list.append(F)  # add another item (fragmentation step) to the list
+        print(f'I removed {i} edges')
+        if not nx.is_connected(m):
+            break
         if i == 0:
-            pos = nx.spring_layout(m, seed=55)
             nx.draw_networkx(m, pos=pos, ax=axs[i])
             axs[i].set_title(f"Original network")
         if i == n-1:
-            pos = nx.spring_layout(m, seed=55)
             nx.draw_networkx(m, pos=pos, ax=axs[1])
             axs[1].set_title(f"Network after {i} edges removed")
 

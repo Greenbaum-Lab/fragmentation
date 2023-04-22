@@ -17,8 +17,7 @@ def remove_edge_random(m, n: int):
         edges_to_remove = (random.sample(edges, k=1))  # choose a random edge
         m.remove_edge(*(edges_to_remove[0]))
 
-    print(f'I removed {n} edges')
-
+    return m
 
 
 def remove_edge_correlated(m, n: int):

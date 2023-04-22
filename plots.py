@@ -12,13 +12,14 @@ from fragmentation import remove_edge_random
 from funcs import calculate_fst_and_plot
 
 n = 10  # no. of nodes
-p = 0.8  # probability to connect nodes
+p = 0.3  # probability to connect nodes
 net = nx.erdos_renyi_graph(n, p)  # create ER network
-n_frag = 10  # no. of fragmentation steps
+n_frag = 25  # no. of fragmentation steps
 
 # pos = nx.spring_layout(net, seed=55)
 # nx.draw(net, with_labels=True)
 # plt.show()
+
 
 
 #
@@ -29,6 +30,7 @@ n_frag = 10  # no. of fragmentation steps
 # het_stat = make_het_stat(heterozygosity_dens)
 # print(het_stat)
 # print()
+
 
 # fst = calculate_fst(m=net, frag_process=remove_edge_random, n=n_frag)
 calculate_fst_and_plot(m=net, frag_process=remove_edge_random, n=n_frag)
