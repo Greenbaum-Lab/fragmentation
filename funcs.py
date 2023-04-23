@@ -37,22 +37,20 @@ def calculate_fst_and_plot(m: np.ndarray, frag_process, n: int) -> list:
     """
     fst_list = []
     fig, axs = plt.subplots(1, 2, figsize=(10, 5))
-    pos = nx.spring_layout(m, seed=1)
+    pos = nx.spring_layout(m, seed=55)
     for i in range(n):
+        if i == 0:
+            nx.draw_networkx(m, pos=pos, ax=axs[i])
+            axs[i].set_title(f"Original network")
+        if not nx.is_connected(m):
+            nx.draw_networkx(m, pos=pos, ax=axs[1])
+            axs[1].set_title(f"Network after {i} edges removed")
+            break
         M = nx.attr_matrix(m)[0]  # take the matrix of the net
         F = m_to_f(M)  # migration to fst function
         frag_process(m=m, n=1)  # use the remove edge function
         fst_list.append(F)  # add another item (fragmentation step) to the list
         print(f'I removed {i} edges')
-        if not nx.is_connected(m):
-            break
-        if i == 0:
-            nx.draw_networkx(m, pos=pos, ax=axs[i])
-            axs[i].set_title(f"Original network")
-        if i == n-1:
-            nx.draw_networkx(m, pos=pos, ax=axs[1])
-            axs[1].set_title(f"Network after {i} edges removed")
-
     plt.show()
     return fst_list
 
@@ -145,3 +143,68 @@ def make_het_stat(f: pd.DataFrame) -> pd.DataFrame:
     d = {'step': step, 'avg': avg, 'median': med}
     df = pd.DataFrame(data=d)
     return df
+
+
+
+
+import random
+n = 5  # no. of nodes
+p = 0.8  # probability to connect nodes
+seed = 666
+net = nx.erdos_renyi_graph(n, p, seed=seed)  # create network
+n_frag = 3  # no. of fragmentation steps
+pos = nx.spring_layout(net, seed=55)  # set the fixed position for plotting the network
+random.seed(12)  # set random seed
+
+
+print(mean(nx.degree_centrality(net)))
+
+
+
+def remove_edge_random(m, n: int):
+    """
+    Remove a random edge from net m of type networkx
+    :param m: initial migration net m
+    :param n: no. of fragmentation steps
+    :return: net after edge removal
+    """
+    migration = []
+    for i in range(n):
+        edges = list(nx.edges(m))
+        edges_to_remove = (random.sample(edges, k=1))  # choose a random edge
+        m.remove_edge(*(edges_to_remove[0]))
+        migration.append(m)
+
+    return migration
+
+#
+# nx.draw(net, pos=pos, with_labels=True)
+# plt.show()
+x = remove_edge_random(m=net, n=n_frag)
+print(type(x))
+# nx.draw(x[2], pos=pos, with_labels=True)
+# plt.show()
+print(x)
+print(nx.attr_matrix(x[0]))
+print(nx.attr_matrix(x[2]))
+print(mean(nx.degree_centrality(x[0])))
+def calculate_degree(m: list) -> pd.DataFrame:
+    """
+     calculate the degree of network
+    :param m: list of migration networks
+    :return: dataframe of degree and clustering for each step
+    """
+    degree = []
+    clustering = []
+    for i in range(len(m)):
+        temp = mean(nx.degree_centrality(m[i]))
+        degree.append(temp)
+        # fst_med = f[f['step'] == i]['fst']
+        # med.append(median(fst_med))
+    step = range(len(m))
+    d = {'step': step, 'degree': degree}
+    df = pd.DataFrame(data=d)
+    print(df)
+    return df
+
+calculate_degree(x)

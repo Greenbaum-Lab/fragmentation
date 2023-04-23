@@ -8,17 +8,31 @@ from funcs import make_het_stat
 from funcs import calculate_fst
 from funcs import make_fst_dist
 from funcs import make_fst_stat
+
 from fragmentation import remove_edge_random
+from fragmentation import remove_edges_distance
+
 from funcs import calculate_fst_and_plot
 
 n = 10  # no. of nodes
-p = 0.3  # probability to connect nodes
-net = nx.erdos_renyi_graph(n, p)  # create ER network
-n_frag = 25  # no. of fragmentation steps
+p = 0.5  # probability to connect nodes
+seed = 666
+net = nx.erdos_renyi_graph(n, p, seed=seed)  # create network
+n_frag = 500  # no. of fragmentation steps
+pos = nx.spring_layout(net, seed=55)  # set the fixed position for plotting the network
+random.seed(12)  # set random seed
 
-# pos = nx.spring_layout(net, seed=55)
-# nx.draw(net, with_labels=True)
-# plt.show()
+# 50 nodes- 15 min per fst calculation
+
+nx.draw(net, pos=pos, with_labels=True)
+plt.show()
+
+# fst = calculate_fst(m=net, frag_process=remove_edge_random, n=n_frag)
+calculate_fst_and_plot(m=net, frag_process=remove_edge_random, n=n_frag)
+
+
+# fst_dens = make_fst_dist(fst)
+# fst_stat = make_fst_stat(fst_dens)
 
 
 
@@ -30,33 +44,6 @@ n_frag = 25  # no. of fragmentation steps
 # het_stat = make_het_stat(heterozygosity_dens)
 # print(het_stat)
 # print()
-
-
-# fst = calculate_fst(m=net, frag_process=remove_edge_random, n=n_frag)
-calculate_fst_and_plot(m=net, frag_process=remove_edge_random, n=n_frag)
-# x=nx.from_numpy_array(fst[2])
-
-#
-# def plot_matrices_as_networks_single_plot(matrices: list):
-#     num_matrices = len(matrices)
-#     increment = int(num_matrices / 4)
-#
-#     fig, axs = plt.subplots(1, 4, figsize=(20, 5))
-#
-#     for i in range(4):
-#         matrix = matrices[i * increment]
-#         G = nx.from_numpy_array(matrix)
-#         pos = nx.spring_layout(G, seed=5)
-#         nx.draw_networkx(G, pos=pos, ax=axs[i])
-#         axs[i].set_title(f"Matrix {i * increment + 1} to {(i + 1) * increment}")
-#
-#     plt.show()
-#
-#
-# plot_matrices_as_networks_single_plot(fst)
-
-# fst_dens = make_fst_dist(fst)
-# fst_stat = make_fst_stat(fst_dens)
 
 
 # plotting avg and median

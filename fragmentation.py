@@ -1,7 +1,6 @@
-import matplotlib.pyplot as plt
 import networkx as nx
-import numpy as np
 import random
+import math
 
 
 def remove_edge_random(m, n: int):
@@ -11,10 +10,9 @@ def remove_edge_random(m, n: int):
     :param n: no. of fragmentation steps
     :return: net after edge removal
     """
-
     for i in range(n):
         edges = list(nx.edges(m))
-        edges_to_remove = (random.sample(edges, k=1))  # choose a random edge
+        edges_to_remove = (random.sample(edges, k=1, ))  # choose a random edge
         m.remove_edge(*(edges_to_remove[0]))
 
     return m
@@ -50,4 +48,23 @@ def remove_edge_correlated(m, n: int):
             edges = [e for e in edges if e[0] != node and e[1] != node]
 
     # return the modified network
+    return m
+
+
+def remove_edges_distance(m):
+    edges = m.edges  # Get all the edges of the graph
+    distances = {}  # empty dict of distances
+    pos = nx.spring_layout(m)
+    for edge in edges:  # calculate the euclidean distance between all nodes
+        startnode = edge[0]
+        endnode = edge[1]
+        distances[edge] = round(math.sqrt(((pos[endnode][1] - pos[startnode][1]) ** 2) +
+                                          ((pos[endnode][0] - pos[startnode][0]) ** 2)), 2)
+
+    # Sort the edges by their distances in descending order
+    edges = sorted(edges, key=distances.get, reverse=True)
+
+    # remove the longest edge
+    m.remove_edge(edges[0][0], edges[0][1])
+
     return m
