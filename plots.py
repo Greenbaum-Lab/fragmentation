@@ -16,11 +16,11 @@ from funcs import calculate_fst_and_plot
 
 n = 10  # no. of nodes
 p = 0.5  # probability to connect nodes
-seed = 666
+# seed = 666
 net = nx.erdos_renyi_graph(n, p, seed=seed)  # create network
 n_frag = 500  # no. of fragmentation steps
 pos = nx.spring_layout(net, seed=55)  # set the fixed position for plotting the network
-random.seed(12)  # set random seed
+# random.seed(12)  # set random seed
 
 # 50 nodes- 15 min per fst calculation
 
