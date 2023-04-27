@@ -1,55 +1,76 @@
 import networkx as nx
 import random
 import math
+from matplotlib import pyplot as plt
 
 
-def remove_edge_random(m, n: int):
+def remove_edge_random(migration, n: int) -> list:
     """
-    Remove a random edge from net m of type networkx
-    :param m: initial migration net m
+    Remove a random edge from migration network of type networkx
+    :param migration:  initial migration network
     :param n: no. of fragmentation steps
-    :return: net after edge removal
+    :return: list of networks after n edge removal
     """
+    migration_list = []
+    fig, axs = plt.subplots(1, 2, figsize=(10, 5))
+    pos = nx.spring_layout(migration, seed=55)
+
     for i in range(n):
-        edges = list(nx.edges(m))
-        edges_to_remove = (random.sample(edges, k=1, ))  # choose a random edge
-        m.remove_edge(*(edges_to_remove[0]))
+        if i == 0:
+            nx.draw_networkx(migration, pos=pos, ax=axs[i])
+            axs[i].set_title(f"Original network")
+        if not nx.is_connected(migration):  # stop when network breaks and plot last network
+            nx.draw_networkx(migration_list[i - 2], pos=pos, ax=axs[1])
+            axs[1].set_title(f"Network after {i} edges removed randomly")
+            break
+        edges = list(nx.edges(migration))
+        edges_to_remove = (random.sample(edges, k=1))  # choose a random edge
+        migration.remove_edge(*(edges_to_remove[0]))
+        migration_list.append(migration.copy())
+    plt.show()
+    return migration_list
 
-    return m
+#np.random.choice
 
 
-def remove_edge_correlated(m, n: int):
+def remove_edge_correlated(migration, n: int) -> list:
     """
-    remove edges from a migration network in a correlated sequence where the probability
-    of removing an edge from a specific node increases if an edge was removed from the
-    node in the previous iteration.
-    :param m: migration network
-    :param n: number of edges to remove
-    :return: migration network after edge removal
+    Remove a random edge from migration network of type networkx
+    :param migration:  initial migration network
+    :param n: no. of fragmentation steps
+    :return: list of networks after n edge removal
     """
+    migration_list = []
     prob_increase = 0.8
-    # create a list of all edges in the network
-    edges = list(m.edges())
+    fig, axs = plt.subplots(1, 2, figsize=(10, 5))
+    pos = nx.spring_layout(migration, seed=55)
 
-    # iterate for the specified number of iterations
     for i in range(n):
+        if i == 0:
+            nx.draw_networkx(migration, pos=pos, ax=axs[i])
+            axs[i].set_title(f"Original network")
+        if not nx.is_connected(migration):  # stop when network breaks and plot last network
+            nx.draw_networkx(migration_list[i - 2], pos=pos, ax=axs[1])
+            axs[1].set_title(f"Network after {i} edges removed correlated ")
+            break
+        # make a list of all edges
+        edges = list(migration.edges())  # create a list of all edges in the network
+
         # choose a random edge from the remaining edges
         edge = random.choice(edges)
 
         # remove the chosen edge from the network
-        m.remove_edge(*edge)
-
-        # update the list of remaining edges
-        edges.remove(edge)
+        migration.remove_edge(*edge)
 
         # increase the probability of removing another edge from the same node
         if random.random() < prob_increase:
-            node = random.choice(list(m.nodes()))
+            node = random.choice(list(migration.nodes()))
             edges = [e for e in edges if e[0] != node and e[1] != node]
 
-    # return the modified network
-    return m
+        migration_list.append(migration.copy())
 
+    plt.show()
+    return migration_list
 
 def remove_edges_distance(m):
     edges = m.edges  # Get all the edges of the graph

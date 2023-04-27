@@ -8,48 +8,27 @@ from statistics import mean
 from statistics import median
 
 
-def calculate_fst(m: np.ndarray, frag_process, n: int) -> list:
-    """
-    Calculate Fst of M matrix after each random edge removal
-    :param frag_process: type of fragmentation (random, correlated)
-    :param m: initial migration network M of networkx
-    :return: list of lists of Fst matrices for each step of fragmentation
-    """
+def make_fst_list(migration_list: list) -> list:
     fst_list = []
-    for i in range(n):
-        M = nx.attr_matrix(m)[0]  # take the matrix of the net
+    for i in range(len(migration_list)):
+        M = nx.attr_matrix(migration_list[i])[0]  # take the matrix of the net
         F = m_to_f(M)  # migration to fst function
-        frag_process(m=m, n=1)  # use the remove edge function
-        fst_list.append(F)  # add another item (fragmentation step) to the list
+        fst_list.append(F.copy())  # add another network step to the list
 
     return fst_list
 
 
-def calculate_fst_and_plot(m: np.ndarray, frag_process, n: int) -> list:
-    """
-    Calculate Fst of M matrix after each random edge removal
-    :param frag_process: type of fragmentation (random, correlated)
-    :param m: initial migration network M of networkx
-    :return: list of lists of Fst matrices for each step of fragmentation
-    """
-    fst_list = []
-    fig, axs = plt.subplots(1, 2, figsize=(10, 5))
-    pos = nx.spring_layout(m, seed=55)
-    for i in range(n):
-        if i == 0:
-            nx.draw_networkx(m, pos=pos, ax=axs[i])
-            axs[i].set_title(f"Original network")
-        if not nx.is_connected(m):
-            nx.draw_networkx(m, pos=pos, ax=axs[1])
-            axs[1].set_title(f"Network after {i} edges removed")
-            break
-        M = nx.attr_matrix(m)[0]  # take the matrix of the net
-        F = m_to_f(M)  # migration to fst function
-        frag_process(m=m, n=1)  # use the remove edge function
-        fst_list.append(F)  # add another item (fragmentation step) to the list
-        print(f'I removed {i} edges')
-    plt.show()
-    return fst_list
+def make_het_list(migration_list: list) -> list:
+    het_list = []
+    for i in range(len(migration_list)):
+        M = nx.attr_matrix(migration_list[i])[0]  # take the matrix of the net
+        T = m_to_t(M)  # migration to coalescence
+        het = np.diag(T) #take diagonals values (within pop coalesence time=heterozygosity)
+        het = np.ndarray.tolist(het)
+        het_list.append(het.copy())  # add another network step to the list
+
+    return het_list
+
 
 
 def calculate_het(m: np.ndarray, frag_process, n: int) -> list:
@@ -142,65 +121,6 @@ def make_het_stat(f: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-import random
-
-n = 15  # no. of nodes
-p = 0.8  # probability to connect nodes
-seed = 666
-net = nx.erdos_renyi_graph(n, p, seed=seed)  # create network
-n_frag = 25  # no. of fragmentation steps
-pos = nx.spring_layout(net, seed=55)  # set the fixed position for plotting the network
-random.seed(5)
-
-
-def remove_edge_random(m, n: int) -> list:
-    """
-    Remove a random edge from net m of type networkx
-    :param m: initial migration net m
-    :param n: no. of fragmentation steps
-    :return: net after edge removal
-    """
-    migration = []
-    for i in range(n):
-        edges = list(nx.edges(m))
-        edges_to_remove = (random.sample(edges, k=1))  # choose a random edge
-        m.remove_edge(*(edges_to_remove[0]))
-        migration.append(m.copy())
-
-    return migration
-
-
-nx.draw(net, pos=pos, with_labels=True)
-plt.show()
-
-x = remove_edge_random(m=net, n=n_frag)
-
-nx.draw(x[n_frag - 1], pos=pos, with_labels=True)
-plt.show()
-
-#
-# def calculate_centrality(m: list) -> pd.DataFrame:
-#     """
-#      calculate the degree of network
-#     :param m: list of migration networks
-#     :return: dataframe of degree and clustering for each step
-#     """
-#     betweenes = []
-#     clustering = []
-#     for i in range(len(m)):
-#         temp = nx.average_clustering(m[i])  # calculate avg clustering
-#         clustering.append(temp)
-#         temp = nx.betweenness_centrality(m[i])  # calculate betweenes of all nodes
-#         temp = mean(list(temp.values()))  # calculate the mean of nodes from dict
-#         betweenes.append(temp)
-#     step = range(len(m))
-#     d = {'step': step, 'clustering': clustering, 'betweenes': betweenes}  # create dict of data
-#     df = pd.DataFrame(data=d)
-#     print(df)
-#     return df
-
-
-
 def calculate_centrality(m: list) -> pd.DataFrame:
     """
     Calculate the degree of network
@@ -212,8 +132,4 @@ def calculate_centrality(m: list) -> pd.DataFrame:
     step = range(len(m))
     d = {'step': step, 'clustering': clustering, 'betweenes': betweenes}
     df = pd.DataFrame(data=d)
-    print(df)
     return df
-
-
-calculate_centrality(x)
