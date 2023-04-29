@@ -30,26 +30,6 @@ def make_het_list(migration_list: list) -> list:
     return het_list
 
 
-
-def calculate_het(m: np.ndarray, frag_process, n: int) -> list:
-    """
-    Calculate heterozygosity based on coalescence matrix diagonal of M matrix after each random edge removal
-    :param frag_process: type of fragmentation (random, correlated)
-    :param m: initial migration network M of networkx
-    :return: list of lists of coalescence matrices for each step of fragmentation
-    """
-    het_list = []
-    for i in range(n):
-        M = nx.attr_matrix(m)[0]  # take the matrix of the net
-        T = m_to_t(M)  # migration to coalescence
-        h = np.diag(T)
-        h = np.ndarray.tolist(h)
-        frag_process(m=m, n=1)  # use the remove edge function
-        het_list.append(h)  # add another item (fragmentation step) to the list
-
-    return het_list
-
-
 def make_fst_dist(f: list) -> pd.DataFrame:
     """
     take a list of F metrics and return a dataframe without diagonal values (zero)
@@ -112,7 +92,7 @@ def make_het_stat(f: pd.DataFrame) -> pd.DataFrame:
     med = []
     for i in range(max(f['step'])):
         het_avg = f[f['step'] == i]['het']
-        avg.append(mean(het_avg))
+        avg.append(mean(het_avg.copy()))
         het_med = f[f['step'] == i]['het']
         med.append(median(het_med))
         step = range(max(f['step']))
