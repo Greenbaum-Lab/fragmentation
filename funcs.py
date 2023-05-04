@@ -6,9 +6,6 @@ from Transformation import m_to_f
 from Transformation import m_to_t
 from statistics import mean
 from statistics import median
-from fragmentation import remove_edge_random
-from fragmentation import remove_edge_correlated
-from fragmentation import remove_edge_distance
 
 
 def make_fst_list(migration_list: list) -> list:
@@ -104,61 +101,15 @@ def make_het_stat(f: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def calculate_centrality(net: list) -> pd.DataFrame:
+def calculate_centrality(m: list) -> pd.DataFrame:
     """
     Calculate the degree of network
-    :param net: list of migration networks
+    :param m: list of migration networks
     :return: dataframe of degree and clustering for each step
     """
-    m = net.copy()
     clustering = list(map(lambda x: nx.average_clustering(x), m))
-    betweenness = list(map(lambda x: sum(nx.betweenness_centrality(x).values())/len(x), m))
+    betweenes = list(map(lambda x: mean(list(nx.betweenness_centrality(x).values())), m))
     step = range(len(m))
-    d = {'step': step, 'clustering': clustering, 'betweenness': betweenness}
+    d = {'step': step, 'clustering': clustering, 'betweenes': betweenes}
     df = pd.DataFrame(data=d)
     return df
-
-
-def frag_random(net, n_frag:int):
-    """
-    run the random fragmentation pipeline to get fst data
-    :param net: network
-    :param n_frag: no. of steps
-    :return: df with fst statistics
-    """
-    migration = remove_edge_random(net=net, n=n_frag)
-    fst = make_fst_list(migration_list=migration)
-    fst_dens = make_fst_dist(fst)
-    fst_stat = make_fst_stat(fst_dens)
-
-    return fst_stat
-
-
-def frag_cor(net, n_frag:int):
-    """
-    run the correlated fragmentation pipeline to get fst data
-    :param net: network
-    :param n_frag: no. of steps
-    :return: df with fst statistics
-    """
-    migration = remove_edge_correlated(net=net, n=n_frag)
-    fst = make_fst_list(migration_list=migration)
-    fst_dens = make_fst_dist(fst)
-    fst_stat = make_fst_stat(fst_dens)
-
-    return fst_stat
-
-
-def frag_dist(net, n_frag:int):
-    """
-    run the distance fragmentation pipeline to get fst data
-    :param net: network
-    :param n_frag: no. of steps
-    :return: df with fst statistics
-    """
-    migration = remove_edge_distance(net=net, n=n_frag)
-    fst = make_fst_list(migration_list=migration)
-    fst_dens = make_fst_dist(fst)
-    fst_stat = make_fst_stat(fst_dens)
-
-    return fst_stat
