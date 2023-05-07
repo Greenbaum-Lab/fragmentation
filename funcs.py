@@ -162,3 +162,19 @@ def frag_dist(net, n_frag:int):
     fst_stat = make_fst_stat(fst_dens)
 
     return fst_stat
+
+
+from fragmentation import remove_edge_random_giant_comp
+def frag_random_giant_comp(net):
+    """
+    run the random fragmentation pipeline to get fst data
+    :param net: network
+    :param n_frag: no. of steps
+    :return: df with fst statistics
+    """
+    migration = remove_edge_random_giant_comp(net=net)
+    fst = make_fst_list(migration_list=migration)
+    fst_dens = make_fst_dist(fst)
+    fst_stat = make_fst_stat(fst_dens)
+
+    return fst_stat, fst_dens
