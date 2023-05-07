@@ -1,3 +1,5 @@
+import copy
+
 import networkx as nx
 import random
 import math
@@ -215,19 +217,6 @@ def remove_edge_distance(net: nx.Graph, n: int) -> list:
     return migration_list
 
 
-
-net = nx.random_geometric_graph(n=10, radius=0.9)
-
-nx.draw_networkx(net)
-plt.show()
-# Extract the giant component
-# components = nx.connected_components(net)
-# largest_component = max(components, key=len)
-# giant_component = net.subgraph(largest_component)
-# nx.draw_networkx(giant_component)
-# plt.show()
-
-
 def remove_edge_random(net: nx.Graph, n: int) -> list:
     """
     Remove a random edge from migration network of type networkx
@@ -248,6 +237,79 @@ def remove_edge_random(net: nx.Graph, n: int) -> list:
 
     return migration_list
 
-x=remove_edge_random(net,50)
-nx.draw_networkx(x[23])
+
+# def remove_edge_random_gc(net: nx.Graph, n: int) -> list:
+#     """
+#     Remove a random edge from migration network of type networkx
+#     :param net:  initial migration network
+#     :param n: no. of fragmentation steps
+#     :return: list of networks after n edge removal
+#     """
+#     migration_list = [net.copy()]
+#
+#     for i in range(n):
+#         giant_net = migration_list[-1]
+#         edges = list(nx.edges(giant_net))
+#         edges_to_remove = random.sample(edges, k=1)
+#         giant_net.remove_edge(*edges_to_remove[0])
+#         edges.remove(edges_to_remove[0])
+#         if nx.is_connected(giant_net):
+#             migration_list.append(giant_net.copy())
+#
+#         else:
+#             # if len(giant_net) > 2:
+#             compon = max(nx.connected_components(giant_net), key=len)
+#             giant_component = giant_net.subgraph(compon)
+#             if nx.is_connected(giant_component):
+#                 migration_list.append(giant_component.copy())
+#
+#     return migration_list
+
+
+import networkx as nx
+import random
+
+
+def remove_edge_random_gc(net: nx.Graph) -> list:
+    """
+    Remove a random edge from a networkx graph
+    :param net: initial graph
+    :param n: number of edge removals
+    :return: list of connected graphs after edge removal
+    """
+    migration = net.copy()
+    migration_list = []
+    while nx.is_connected(migration):
+        migration_list.append(migration.copy())
+
+        edges = list(nx.edges(migration))
+        edges_to_remove = random.sample(edges, k=1)
+        migration.remove_edge(*edges_to_remove[0])
+        print(migration_list[-1].edges)
+        print(nx.is_connected(migration_list[-1]))
+
+        if not nx.is_connected(migration):
+
+            components = sorted(nx.connected_components(migration), key=len, reverse=True)
+            giant_component = migration.subgraph(components[0])
+            migration_list.append(giant_component.copy())
+            print(migration_list[-1].edges)
+            print(nx.is_connected(migration_list[-1]))
+            # if len(giant_component) < 2:
+            #     break
+
+    return migration_list
+
+
+net = nx.erdos_renyi_graph(10, 0.8,seed=54)
+nx.draw_networkx(net)
 plt.show()
+
+print(len(net))
+#
+# nx.draw_networkx(x[70])
+# plt.show()
+
+y = remove_edge_random_gc(net)
+print(len(y[-1]))
+print(len(y))
