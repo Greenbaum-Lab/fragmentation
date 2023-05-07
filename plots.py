@@ -2,6 +2,7 @@ import random
 from statistics import mean
 import networkx as nx
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 from joypy import joyplot
 
@@ -19,18 +20,23 @@ from funcs import frag_random
 from funcs import frag_cor
 from funcs import frag_dist
 from funcs import calculate_centrality
+from funcs import frag_random_giant_comp
+
+
+
+
 n = 15  # no. of nodes
 p = 0.8  # probability to connect nodes
 seed = 79
 # net = nx.erdos_renyi_graph(n=n, p=p)  # create network
-net = nx.random_geometric_graph(n=n, radius=0.7, seed=seed)
+net = nx.random_geometric_graph(n=n, radius=0.8, seed=seed)
 n_frag = 5000  # no. of fragmentation steps
-pos = nx.spring_layout(net, seed=55)  # set the fixed position for plotting the network
-random.seed(12)  # set random seed
+pos = nx.spring_layout(net, seed=98)  # set the fixed position for plotting the network
+random.seed(65)  # set random seed
 
-# central_rand = calculate_centrality(remove_edge_random(net, n_frag))
-# central_cor = calculate_centrality(remove_edge_correlated(net, n_frag))
-# central_dist = calculate_centrality(remove_edge_distance(net, n_frag))
+central_rand = calculate_centrality(remove_edge_random(net, n_frag))
+central_cor = calculate_centrality(remove_edge_correlated(net, n_frag))
+central_dist = calculate_centrality(remove_edge_distance(net, n_frag))
 
 rand = frag_random(net=net, n_frag=n_frag)
 cor = frag_cor(net=net, n_frag=n_frag)
@@ -59,26 +65,37 @@ plt.show()
 
 
 
+
 # merge centrality measures and fst
-# merged_rand = pd.merge(central_rand, rand, on='step')
-# merged_cor = pd.merge(central_cor, cor, on='step')
-# merged_dist = pd.merge(central_dist, dist, on='step')
-#
-# plt.plot(merged_rand['clustering'], merged_rand['avg'], label="Random", color="blue")
-# plt.plot(merged_cor['clustering'], merged_cor['avg'], label="Correlated", color="red")
-# plt.plot(merged_dist['clustering'], merged_dist['avg'], label="Distance", color="green")
-#
-# plt.xlim(max(merged_rand['clustering']), 0.2)
-# plt.xlabel("Clustering")
-# plt.ylabel("Average Fst")
-# plt.legend()
-# plt.show()
+merged_rand = pd.merge(central_rand, rand, on='step')
+merged_cor = pd.merge(central_cor, cor, on='step')
+merged_dist = pd.merge(central_dist, dist, on='step')
+
+plt.plot(merged_rand['clustering'], merged_rand['avg'], label="Random", color="blue")
+plt.plot(merged_cor['clustering'], merged_cor['avg'], label="Correlated", color="red")
+plt.plot(merged_dist['clustering'], merged_dist['avg'], label="Distance", color="green")
+
+plt.xlim(max(merged_rand['clustering']), 0.2)
+plt.xlabel("Clustering")
+plt.ylabel("Average Fst")
+plt.legend()
+plt.show()
 
 
-# # # # plot distribution of Fst values - ridge-lines
+plt.plot(merged_rand['betweenness'], merged_rand['avg'], label="Random", color="blue")
+plt.plot(merged_cor['betweenness'], merged_cor['avg'], label="Correlated", color="red")
+plt.plot(merged_dist['betweenness'], merged_dist['avg'], label="Distance", color="green")
+
+plt.xlabel("betweenness")
+plt.ylabel("Average Fst")
+plt.legend()
+plt.show()
+
+
+# # # plot distribution of Fst values - ridge-lines
 # plt.figure()
 # joyplot(
-#     data=het_dist[['het', 'step']],
+#     data=rand[1][['fst', 'step']],
 #     by='step',
 #     colormap=plt.cm.autumn, fade=True,
 #     figsize=(12, 8)
