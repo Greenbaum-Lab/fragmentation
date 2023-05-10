@@ -9,6 +9,8 @@ from statistics import median
 from fragmentation import remove_edge_random
 from fragmentation import remove_edge_correlated
 from fragmentation import remove_edge_distance
+from fragmentation import remove_edge_random_giant_comp
+from fragmentation import remove_edge_correlated_giant_comp
 
 
 def make_fst_list(migration_list: list) -> list:
@@ -26,7 +28,7 @@ def make_het_list(migration_list: list) -> list:
     for i in range(len(migration_list)):
         M = nx.attr_matrix(migration_list[i])[0]  # take the matrix of the net
         T = m_to_t(M)  # migration to coalescence
-        het = np.diag(T) #take diagonals values (within pop coalesence time=heterozygosity)
+        het = np.diag(T)  # take diagonals values (within pop coalesence time=heterozygosity)
         het = np.ndarray.tolist(het)
         het_list.append(het.copy())  # add another network step to the list
 
@@ -112,14 +114,14 @@ def calculate_centrality(net: list) -> pd.DataFrame:
     """
     m = net.copy()
     clustering = list(map(lambda x: nx.average_clustering(x), m))
-    betweenness = list(map(lambda x: sum(nx.betweenness_centrality(x).values())/len(x), m))
+    betweenness = list(map(lambda x: sum(nx.betweenness_centrality(x).values()) / len(x), m))
     step = range(len(m))
     d = {'step': step, 'clustering': clustering, 'betweenness': betweenness}
     df = pd.DataFrame(data=d)
     return df
 
 
-def frag_random(net, n_frag:int):
+def frag_random(net, n_frag: int):
     """
     run the random fragmentation pipeline to get fst data
     :param net: network
@@ -134,7 +136,7 @@ def frag_random(net, n_frag:int):
     return fst_stat
 
 
-def frag_cor(net, n_frag:int):
+def frag_cor(net, n_frag: int):
     """
     run the correlated fragmentation pipeline to get fst data
     :param net: network
@@ -149,7 +151,7 @@ def frag_cor(net, n_frag:int):
     return fst_stat
 
 
-def frag_dist(net, n_frag:int):
+def frag_dist(net, n_frag: int):
     """
     run the distance fragmentation pipeline to get fst data
     :param net: network
@@ -164,7 +166,6 @@ def frag_dist(net, n_frag:int):
     return fst_stat
 
 
-from fragmentation import remove_edge_random_giant_comp
 def frag_random_giant_comp(net):
     """
     run the random fragmentation pipeline to get fst data
@@ -178,3 +179,34 @@ def frag_random_giant_comp(net):
     fst_stat = make_fst_stat(fst_dens)
 
     return fst_stat, fst_dens
+
+
+def frag_cor_giant_comp(net):
+    """
+    run the correlated fragmentation pipeline to get fst data
+    :param net: network
+    :return: df with fst statistics
+    """
+    migration = remove_edge_correlated_giant_comp(net=net)
+    fst = make_fst_list(migration_list=migration)
+    fst_dens = make_fst_dist(fst)
+    fst_stat = make_fst_stat(fst_dens)
+
+    return fst_stat, fst_dens
+
+
+
+def frag_dist_giant_comp(net):
+    """
+    run the distance-dependent fragmentation pipeline to get fst data
+    :param net: network
+    :return: df with fst statistics
+    """
+    migration = remove_edge_correlated_giant_comp(net=net)
+    fst = make_fst_list(migration_list=migration)
+    fst_dens = make_fst_dist(fst)
+    fst_stat = make_fst_stat(fst_dens)
+
+    return fst_stat, fst_dens
+
+
