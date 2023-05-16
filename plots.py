@@ -23,42 +23,50 @@ from funcs import calculate_centrality
 from funcs import frag_random_giant_comp
 from funcs import frag_cor_giant_comp
 from funcs import frag_dist_giant_comp
+from funcs import find_breaking_point
 
 
 
 
-n = 20  # no. of nodes
+n = 10  # no. of nodes
 p = 0.8  # probability to connect nodes
 seed = 9
 # net = nx.erdos_renyi_graph(n=n, p=p)  # create network
 net = nx.random_geometric_graph(n=n, radius=0.8)
-# n_frag = 5000  # no. of fragmentation steps
 pos = nx.spring_layout(net, seed=98)  # set the fixed position for plotting the network
 random.seed(65)  # set random seed
-
-# central_rand = calculate_centrality(remove_edge_random(net, 10))
-# central_cor = calculate_centrality(remove_edge_correlated(net, n_frag))
-# central_dist = calculate_centrality(remove_edge_distance(net, n_frag))
-
-# rand = frag_random(net=net, n_frag=n_frag)
-# cor = frag_cor(net=net, n_frag=n_frag)
-# dist = frag_dist(net=net, n_frag=n_frag)
 
 rand = frag_random_giant_comp(net=net)
 cor = frag_cor_giant_comp(net=net)
 dist = frag_dist_giant_comp(net=net)
 
+central_rand = calculate_centrality(rand[2])
+central_cor = calculate_centrality(cor[2])
+central_dist = calculate_centrality(dist[2])
+
+
+
+
+brk_rand = find_breaking_point(rand[2])
+brk_cor = find_breaking_point(cor[2])
+brk_dist = find_breaking_point(dist[2])
+
+
 
 # plotting avg and median
-plt.plot(rand[0]['step'], rand[0]['avg'], label="avg rand", color="blue")
-plt.plot(rand[0]['step'], rand[0]['median'], label="med rand", color="blue", linestyle='dashed')
-plt.plot(cor[0]['step'], cor[0]['avg'], label="med cor", color="red")
-plt.plot(cor[0]['step'], cor[0]['median'], label="med cor", color="red", linestyle='dashed')
-plt.plot(dist[0]['step'], dist[0]['avg'], label="avg dist", color="green")
-plt.plot(dist[0]['step'], dist[0]['median'], label="med dist", color="green", linestyle='dashed')
 
-# line =
-# plt.axvline(x = 7, color = 'b', label = 'axvline - full height')
+color_palette = plt.get_cmap('tab10')  # You can change 'tab10' to any other available palette
+
+plt.plot(rand[0]['step'], rand[0]['avg'], label="avg rand", color=color_palette(0))
+plt.plot(rand[0]['step'], rand[0]['median'], label="med rand", color=color_palette(0), linestyle='dashed')
+plt.plot(cor[0]['step'], cor[0]['avg'], label="med cor", color=color_palette(1))
+plt.plot(cor[0]['step'], cor[0]['median'], label="med cor", color=color_palette(1), linestyle='dashed')
+plt.plot(dist[0]['step'], dist[0]['avg'], label="avg dist", color=color_palette(2))
+plt.plot(dist[0]['step'], dist[0]['median'], label="med dist", color=color_palette(2), linestyle='dashed')
+
+plt.axvline(x=brk_rand, color=color_palette(0),ymax=0.1)
+plt.axvline(x=brk_cor, color=color_palette(1),ymax=0.1)
+plt.axvline(x=brk_dist, color=color_palette(2),ymax=0.1)
 plt.xlabel('fragmentation process')
 plt.ylabel('pairwise fst')
 plt.legend()
@@ -68,29 +76,29 @@ plt.show()
 
 
 # # merge centrality measures and fst
-# merged_rand = pd.merge(central_rand, rand, on='step')
-# merged_cor = pd.merge(central_cor, cor, on='step')
-# merged_dist = pd.merge(central_dist, dist, on='step')
-#
-# plt.plot(merged_rand['clustering'], merged_rand['avg'], label="Random", color="blue")
-# plt.plot(merged_cor['clustering'], merged_cor['avg'], label="Correlated", color="red")
-# plt.plot(merged_dist['clustering'], merged_dist['avg'], label="Distance", color="green")
-#
+merged_rand = pd.merge(central_rand, rand[0], on='step')
+merged_cor = pd.merge(central_cor, cor[0], on='step')
+merged_dist = pd.merge(central_dist, dist[0], on='step')
+
+plt.plot(merged_rand['clustering'], merged_rand['avg'], label="Random", color=color_palette(0))
+plt.plot(merged_cor['clustering'], merged_cor['avg'], label="Correlated", color=color_palette(1))
+plt.plot(merged_dist['clustering'], merged_dist['avg'], label="Distance", color=color_palette(2))
+
 # plt.xlim(max(merged_rand['clustering']), 0.2)
-# plt.xlabel("Clustering")
-# plt.ylabel("Average Fst")
-# plt.legend()
-# plt.show()
-#
-#
-# plt.plot(merged_rand['betweenness'], merged_rand['avg'], label="Random", color="blue")
-# plt.plot(merged_cor['betweenness'], merged_cor['avg'], label="Correlated", color="red")
-# plt.plot(merged_dist['betweenness'], merged_dist['avg'], label="Distance", color="green")
-#
-# plt.xlabel("betweenness")
-# plt.ylabel("Average Fst")
-# plt.legend()
-# plt.show()
+plt.xlabel("Clustering")
+plt.ylabel("Average Fst")
+plt.legend()
+plt.show()
+
+
+plt.plot(merged_rand['betweenness'], merged_rand['avg'], label="Random", color=color_palette(0))
+plt.plot(merged_cor['betweenness'], merged_cor['avg'], label="Correlated", color=color_palette(1))
+plt.plot(merged_dist['betweenness'], merged_dist['avg'], label="Distance", color=color_palette(2))
+
+plt.xlabel("betweenness")
+plt.ylabel("Average Fst")
+plt.legend()
+plt.show()
 
 #
 # # # plot distribution of Fst values - ridge-lines
@@ -106,15 +114,15 @@ plt.show()
 # plt.show()
 
 #
-plt.figure()
-joyplot(
-    data=dist[1][['fst', 'step']],
-    by='step',
-    colormap=plt.cm.autumn, fade=True,
-    figsize=(12, 8)
-)
-plt.title('pairwise Fst along distance fragmentation', fontsize=16)
-plt.show()
+# plt.figure()
+# joyplot(
+#     data=dist[1][['fst', 'step']],
+#     by='step',
+#     colormap=plt.cm.autumn, fade=True,
+#     figsize=(12, 8)
+# )
+# plt.title('pairwise Fst along distance fragmentation', fontsize=16)
+# plt.show()
 
 #
 # plt.figure()

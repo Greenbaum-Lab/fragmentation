@@ -183,7 +183,7 @@ def frag_random_giant_comp(net):
     fst_dens = make_fst_dist(fst)
     fst_stat = make_fst_stat(fst_dens)
 
-    return fst_stat, fst_dens
+    return fst_stat, fst_dens, migration2
 
 
 def frag_cor_giant_comp(net):
@@ -200,7 +200,7 @@ def frag_cor_giant_comp(net):
     fst_dens = make_fst_dist(fst)
     fst_stat = make_fst_stat(fst_dens)
 
-    return fst_stat, fst_dens
+    return fst_stat, fst_dens, migration2
 
 
 def frag_dist_giant_comp(net):
@@ -217,7 +217,7 @@ def frag_dist_giant_comp(net):
     fst_dens = make_fst_dist(fst)
     fst_stat = make_fst_stat(fst_dens)
 
-    return fst_stat, fst_dens,
+    return fst_stat, fst_dens, migration2
 
 
 def normalize(array: np.array) -> np.array:
@@ -250,11 +250,17 @@ def normalize_list(migration_list: list):
     return new_list
 
 def intervals(lst):
-    if len(lst) <= 20:
+    if len(lst) <= 40:
         return lst
 
     interval = max((len(lst) - 1) // 19, 1)
     return lst[:19*interval:interval] + [lst[-1]]
 
-checkcheckcheckcheck
-new
+def find_breaking_point(lst):
+    first_element = lst[0]
+
+    for i, element in enumerate(lst):
+        if len(element) < len(first_element):
+            return i
+
+    return -1  # Return -1 if no element is found
