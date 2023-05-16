@@ -3,6 +3,8 @@ import copy
 import networkx as nx
 import random
 import math
+
+import numpy as np
 from matplotlib import pyplot as plt
 
 
@@ -218,7 +220,7 @@ def remove_edge_correlated_giant_comp(net: nx.Graph) -> list:
     # choose a random edge for start
     edge = random.choice(list(migration.edges))
 
-    #take the initial nodes to remove edges from
+    # take the initial nodes to remove edges from
     edge_a = edge[0]
     edge_b = edge[1]
 
@@ -261,7 +263,6 @@ def remove_edge_correlated_giant_comp(net: nx.Graph) -> list:
     return migration_list
 
 
-
 def remove_edge_distance_giant_comp(net: nx.Graph) -> list:
     """
     Remove edge based on distance from migration network of type networkx
@@ -302,11 +303,3 @@ def remove_edge_distance_giant_comp(net: nx.Graph) -> list:
 
     return migration_list
 
-n=5
-net=nx.erdos_renyi_graph(n,0.8)
-frag = remove_edge_random_giant_comp(net)
-lengths = [nx.number_of_nodes(net) for net in frag]
-print(lengths)
-
-index = next((i for i, x in enumerate(lengths) if x != n), None)
-print(index)
