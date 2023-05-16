@@ -257,3 +257,4 @@ def intervals(lst):
     return lst[:19*interval:interval] + [lst[-1]]
 
 checkcheckcheckcheck
+new
