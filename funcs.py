@@ -11,12 +11,14 @@ from fragmentation import remove_edge_correlated
 from fragmentation import remove_edge_distance
 from fragmentation import remove_edge_random_giant_comp
 from fragmentation import remove_edge_correlated_giant_comp
+from fragmentation import remove_edge_distance_giant_comp
 
 
 def make_fst_list(migration_list: list) -> list:
     fst_list = []
     for i in range(len(migration_list)):
-        M = nx.attr_matrix(migration_list[i])[0]  # take the matrix of the net
+        # M = nx.attr_matrix(migration_list[i])[0]  # take the matrix of the net
+        M = migration_list[i]
         F = m_to_f(M)  # migration to fst function
         fst_list.append(F.copy())  # add another network step to the list
 
@@ -173,8 +175,11 @@ def frag_random_giant_comp(net):
     :param n_frag: no. of steps
     :return: df with fst statistics
     """
-    migration = remove_edge_random_giant_comp(net=net)
-    fst = make_fst_list(migration_list=migration)
+    migration1 = remove_edge_random_giant_comp(net=net)
+    migration2 = intervals(migration1)
+    migration3 = [nx.attr_matrix(net)[0] for net in migration2]
+    migration4 = normalize_list(migration3)
+    fst = make_fst_list(migration_list=migration4)
     fst_dens = make_fst_dist(fst)
     fst_stat = make_fst_stat(fst_dens)
 
@@ -187,13 +192,15 @@ def frag_cor_giant_comp(net):
     :param net: network
     :return: df with fst statistics
     """
-    migration = remove_edge_correlated_giant_comp(net=net)
-    fst = make_fst_list(migration_list=migration)
+    migration1 = remove_edge_correlated_giant_comp(net=net)
+    migration2 = intervals(migration1)
+    migration3 = [nx.attr_matrix(net)[0] for net in migration2]
+    migration4 = normalize_list(migration3)
+    fst = make_fst_list(migration_list=migration4)
     fst_dens = make_fst_dist(fst)
     fst_stat = make_fst_stat(fst_dens)
 
     return fst_stat, fst_dens
-
 
 
 def frag_dist_giant_comp(net):
@@ -202,11 +209,50 @@ def frag_dist_giant_comp(net):
     :param net: network
     :return: df with fst statistics
     """
-    migration = remove_edge_correlated_giant_comp(net=net)
-    fst = make_fst_list(migration_list=migration)
+    migration1 = remove_edge_distance_giant_comp(net=net)
+    migration2 = intervals(migration1)
+    migration3 = [nx.attr_matrix(net)[0] for net in migration2]
+    migration4 = normalize_list(migration3)
+    fst = make_fst_list(migration_list=migration4)
     fst_dens = make_fst_dist(fst)
     fst_stat = make_fst_stat(fst_dens)
 
-    return fst_stat, fst_dens
+    return fst_stat, fst_dens,
 
+
+def normalize(array: np.array) -> np.array:
+    """
+    normalize the migration matrix so that all row sums will be the same
+    the sum will be equal to the sum of the row with the lowest sum
+    :param array:  migration network with 0,1
+    :return: scaled migration network
+    """
+    # Find the row with the lowest sum
+    min_sum_row = np.argmin(np.sum(array, axis=1))
+
+    # Calculate the desired row sum
+    desired_sum = np.sum(array[min_sum_row])
+
+    # Calculate the current row sums
+    row_sums = np.sum(array, axis=1)
+
+    # Calculate the scaling factors needed for each row
+    scaling_factors = desired_sum / row_sums
+
+    # Replace the values in the array with the scaled values
+    scaled_arr = array * scaling_factors[:, np.newaxis]
+
+    return scaled_arr
+
+
+def normalize_list(migration_list: list):
+    new_list = list(map(lambda x: normalize(x), migration_list))
+    return new_list
+
+def intervals(lst):
+    if len(lst) <= 20:
+        return lst
+
+    interval = max((len(lst) - 1) // 19, 1)
+    return lst[:19*interval:interval] + [lst[-1]]
 
