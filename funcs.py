@@ -264,3 +264,4 @@ def find_breaking_point(lst):
             return i
 
     return -1  # Return -1 if no element is found
+lalala
