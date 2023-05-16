@@ -256,3 +256,4 @@ def intervals(lst):
     interval = max((len(lst) - 1) // 19, 1)
     return lst[:19*interval:interval] + [lst[-1]]
 
+checkcheckcheckcheck
