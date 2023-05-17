@@ -28,7 +28,8 @@ def make_fst_list(migration_list: list) -> list:
 def make_het_list(migration_list: list) -> list:
     het_list = []
     for i in range(len(migration_list)):
-        M = nx.attr_matrix(migration_list[i])[0]  # take the matrix of the net
+        # M = nx.attr_matrix(migration_list[i])[0]  # take the matrix of the net
+        M = migration_list[i]
         T = m_to_t(M)  # migration to coalescence
         het = np.diag(T)  # take diagonals values (within pop coalesence time=heterozygosity)
         het = np.ndarray.tolist(het)
@@ -123,49 +124,49 @@ def calculate_centrality(net: list) -> pd.DataFrame:
     return df
 
 
-def frag_random(net, n_frag: int):
-    """
-    run the random fragmentation pipeline to get fst data
-    :param net: network
-    :param n_frag: no. of steps
-    :return: df with fst statistics
-    """
-    migration = remove_edge_random(net=net, n=n_frag)
-    fst = make_fst_list(migration_list=migration)
-    fst_dens = make_fst_dist(fst)
-    fst_stat = make_fst_stat(fst_dens)
-
-    return fst_stat
-
-
-def frag_cor(net, n_frag: int):
-    """
-    run the correlated fragmentation pipeline to get fst data
-    :param net: network
-    :param n_frag: no. of steps
-    :return: df with fst statistics
-    """
-    migration = remove_edge_correlated(net=net, n=n_frag)
-    fst = make_fst_list(migration_list=migration)
-    fst_dens = make_fst_dist(fst)
-    fst_stat = make_fst_stat(fst_dens)
-
-    return fst_stat
-
-
-def frag_dist(net, n_frag: int):
-    """
-    run the distance fragmentation pipeline to get fst data
-    :param net: network
-    :param n_frag: no. of steps
-    :return: df with fst statistics
-    """
-    migration = remove_edge_distance(net=net, n=n_frag)
-    fst = make_fst_list(migration_list=migration)
-    fst_dens = make_fst_dist(fst)
-    fst_stat = make_fst_stat(fst_dens)
-
-    return fst_stat
+# def frag_random(net, n_frag: int):
+#     """
+#     run the random fragmentation pipeline to get fst data
+#     :param net: network
+#     :param n_frag: no. of steps
+#     :return: df with fst statistics
+#     """
+#     migration = remove_edge_random(net=net, n=n_frag)
+#     fst = make_fst_list(migration_list=migration)
+#     fst_dens = make_fst_dist(fst)
+#     fst_stat = make_fst_stat(fst_dens)
+#
+#     return fst_stat
+#
+#
+# def frag_cor(net, n_frag: int):
+#     """
+#     run the correlated fragmentation pipeline to get fst data
+#     :param net: network
+#     :param n_frag: no. of steps
+#     :return: df with fst statistics
+#     """
+#     migration = remove_edge_correlated(net=net, n=n_frag)
+#     fst = make_fst_list(migration_list=migration)
+#     fst_dens = make_fst_dist(fst)
+#     fst_stat = make_fst_stat(fst_dens)
+#
+#     return fst_stat
+#
+#
+# def frag_dist(net, n_frag: int):
+#     """
+#     run the distance fragmentation pipeline to get fst data
+#     :param net: network
+#     :param n_frag: no. of steps
+#     :return: df with fst statistics
+#     """
+#     migration = remove_edge_distance(net=net, n=n_frag)
+#     fst = make_fst_list(migration_list=migration)
+#     fst_dens = make_fst_dist(fst)
+#     fst_stat = make_fst_stat(fst_dens)
+#
+#     return fst_stat
 
 
 def frag_random_giant_comp(net):
@@ -203,7 +204,7 @@ def frag_cor_giant_comp(net):
     return fst_stat, fst_dens, migration2
 
 
-def frag_dist_giant_comp(net):
+def frag_dist_giant_comp(net:nx.Graph):
     """
     run the distance-dependent fragmentation pipeline to get fst data
     :param net: network
@@ -219,6 +220,54 @@ def frag_dist_giant_comp(net):
 
     return fst_stat, fst_dens, migration2
 
+
+def het_rand(net:nx.Graph):
+    """
+    run the radom fragmentation pipeline to get heterozygosity data
+    :param net: network
+    :return: df with heterozygosity statistics
+    """
+    migration1 = remove_edge_random_giant_comp(net=net)
+    migration2 = intervals(migration1)
+    migration3 = [nx.attr_matrix(net)[0] for net in migration2]
+    migration4 = normalize_list(migration3)
+    het = make_het_list(migration_list=migration4)
+    het_dens = make_het_dist(het)
+    het_stat = make_het_stat(het_dens)
+
+    return het_stat, het_dens, migration2
+
+def het_cor(net:nx.Graph):
+    """
+    run the correlated fragmentation pipeline to get fst data
+    :param net: network
+    :return: df with heterozygosity statistics
+    """
+    migration1 = remove_edge_correlated_giant_comp(net=net)
+    migration2 = intervals(migration1)
+    migration3 = [nx.attr_matrix(net)[0] for net in migration2]
+    migration4 = normalize_list(migration3)
+    het = make_het_list(migration_list=migration4)
+    het_dens = make_het_dist(het)
+    het_stat = make_het_stat(het_dens)
+
+    return het_stat, het_dens, migration2
+
+def het_dist(net:nx.Graph):
+    """
+    run the distance-dependent fragmentation pipeline to get fst data
+    :param net: network
+    :return: df with fst statistics
+    """
+    migration1 = remove_edge_distance_giant_comp(net=net)
+    migration2 = intervals(migration1)
+    migration3 = [nx.attr_matrix(net)[0] for net in migration2]
+    migration4 = normalize_list(migration3)
+    het = make_het_list(migration_list=migration4)
+    het_dens = make_het_dist(het)
+    het_stat = make_het_stat(het_dens)
+
+    return het_stat, het_dens, migration2
 
 def normalize(array: np.array) -> np.array:
     """
@@ -264,4 +313,17 @@ def find_breaking_point(lst):
             return i
 
     return -1  # Return -1 if no element is found
-lalala
+
+net = nx.erdos_renyi_graph(n=10, p=0.8)  # create network
+
+rand = frag_random_giant_comp(net=net)
+central_rand = calculate_centrality(rand[2])
+
+brk_rand = find_breaking_point(rand[2])
+
+
+print(max(central_rand['clustering']))
+print(brk_rand)
+print(len(rand[2]))
+line=(brk_rand/len(rand[2]))*max(central_rand['clustering'])
+print(line)
