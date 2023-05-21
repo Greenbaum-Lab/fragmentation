@@ -314,16 +314,3 @@ def find_breaking_point(lst):
 
     return -1  # Return -1 if no element is found
 
-net = nx.erdos_renyi_graph(n=10, p=0.8)  # create network
-
-rand = frag_random_giant_comp(net=net)
-central_rand = calculate_centrality(rand[2])
-
-brk_rand = find_breaking_point(rand[2])
-
-
-print(max(central_rand['clustering']))
-print(brk_rand)
-print(len(rand[2]))
-line=(brk_rand/len(rand[2]))*max(central_rand['clustering'])
-print(line)
