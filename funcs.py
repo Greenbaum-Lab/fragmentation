@@ -299,13 +299,17 @@ def normalize_list(migration_list: list):
     return new_list
 
 def intervals(lst):
-    if len(lst) <= 40:
+    if len(lst) <= 20:
         return lst
 
     interval = max((len(lst) - 1) // 19, 1)
     return lst[:19*interval:interval] + [lst[-1]]
 
+
 def find_breaking_point(lst):
+    """
+    find the index of the list where the network is no longer connected
+    """
     first_element = lst[0]
 
     for i, element in enumerate(lst):
@@ -314,3 +318,74 @@ def find_breaking_point(lst):
 
     return -1  # Return -1 if no element is found
 
+net1 = nx.random_geometric_graph(n=15, radius=0.8)
+net2 = nx.random_geometric_graph(n=15, radius=0.8)
+net3 = nx.random_geometric_graph(n=15, radius=0.8)
+net4 = nx.random_geometric_graph(n=15, radius=0.8)
+net5 = nx.random_geometric_graph(n=15, radius=0.8)
+
+nets = [net1, net2, net3, net4, net5]
+
+def make_iterations(nets:list, fragmentation) -> pd.DataFrame:
+    """
+    run multiple iterations of the fragmentation process
+    :param nets: list of networks
+    :param fragmentation: fragmentation process
+    :return: dataframe of avg fst for each net
+    """
+    all_nets = []
+
+    # Get the corresponding function based on the nickname
+    selected_frag = function_mapping[fragmentation]
+
+    #calculate fst for each network in the list
+    for i in range(len(nets)):
+        net = selected_frag(net=nets[i])
+        all_nets.append(net[0])
+
+    # Combine the dataframes into a single dataframe
+    combined_rand = pd.concat(all_nets)
+    return combined_rand
+#
+
+#create short name to call the desired function
+function_mapping = {
+    'rand': frag_random_giant_comp,
+    'dist': frag_dist_giant_comp,
+    'cor': frag_cor_giant_comp
+}
+
+
+
+
+rand=make_iterations(nets, fragmentation='rand')
+cor=make_iterations(nets, fragmentation='cor')
+dist=make_iterations(nets, fragmentation='dist')
+
+# Calculate the mean and median values over the 'step' column
+mean_rand = rand.groupby('step')['avg'].mean()
+mean_cor = cor.groupby('step')['avg'].mean()
+mean_dist = dist.groupby('step')['avg'].mean()
+
+# Calculate the confidence interval
+confidence_rand = rand.groupby('step')['avg'].std()
+confidence_cor = cor.groupby('step')['avg'].std()
+confidence_dist = dist.groupby('step')['avg'].std()
+
+# Plotting the line graph with mean and median values
+plt.plot(mean_rand, label='Rand')
+plt.plot(mean_cor, label='Cor')
+plt.plot(mean_dist, label='Dist')
+
+# Adding the confidence interval
+plt.fill_between(mean_rand.index, mean_rand - confidence_rand, mean_rand + confidence_rand, alpha=0.2)
+plt.fill_between(mean_cor.index, mean_cor - confidence_cor, mean_cor + confidence_cor, alpha=0.2)
+plt.fill_between(mean_dist.index, mean_dist - confidence_dist, mean_dist + confidence_dist, alpha=0.2)
+
+# Add labels and legend
+plt.xlabel('Fragmentation step')
+plt.ylabel('Pairwise Fst')
+plt.legend()
+
+# Display the plot
+plt.show()

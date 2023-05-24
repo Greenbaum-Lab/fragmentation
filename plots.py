@@ -29,15 +29,52 @@ from funcs import het_cor
 
 
 
-n = 20  # no. of nodes
+n = 15  # no. of nodes
 p = 0.8  # probability to connect nodes
 seed = 987
 # net = nx.erdos_renyi_graph(n=n, p=p)  # create network
 net = nx.random_geometric_graph(n=n, radius=0.8)
+net2 = nx.random_geometric_graph(n=n, radius=0.8)
+net3 = nx.random_geometric_graph(n=n, radius=0.8)
 pos = nx.spring_layout(net, seed=98)  # set the fixed position for plotting the network
 # random.seed(65)  # set random seed
 
-rand = frag_random_giant_comp(net=net)
+
+
+rand1 = frag_random_giant_comp(net=net)
+rand2 = frag_random_giant_comp(net=net2)
+rand3 = frag_random_giant_comp(net=net3)
+cor1 = frag_cor_giant_comp(net=net)
+cor2 = frag_cor_giant_comp(net=net2)
+cor3 = frag_cor_giant_comp(net=net3)
+dist1 = frag_dist_giant_comp(net=net)
+dist2 = frag_dist_giant_comp(net=net2)
+dist3 = frag_dist_giant_comp(net=net3)
+
+# Combine the dataframes into a single dataframe
+combined_df = pd.concat([rand1[0], rand2[0], rand3[0]])
+
+# Calculate the mean and median values over the 'step' column
+mean_values = combined_df.groupby('step')['avg'].mean()
+
+# Calculate the confidence interval
+confidence_interval = combined_df.groupby('step')['avg'].std()
+
+# Plotting the line graph with mean and median values
+plt.plot(mean_values, label='Mean')
+
+# Adding the confidence interval
+plt.fill_between(mean_values.index, mean_values - confidence_interval, mean_values + confidence_interval, alpha=0.2)
+
+# Add labels and legend
+plt.xlabel('Step')
+plt.ylabel('Values')
+plt.legend()
+
+# Display the plot
+plt.show()
+
+# rand = frag_random_giant_comp(net=net)
 # cor = frag_cor_giant_comp(net=net)
 # dist = frag_dist_giant_comp(net=net)
 #
@@ -45,7 +82,7 @@ rand = frag_random_giant_comp(net=net)
 # central_cor = calculate_centrality(cor[2])
 # central_dist = calculate_centrality(dist[2])
 #
-#
+# print(rand[0])
 #
 #
 # brk_rand = find_breaking_point(rand[2])
@@ -72,13 +109,14 @@ rand = frag_random_giant_comp(net=net)
 # plt.legend()
 # plt.show()
 #
-#
-#
-#
-# # # merge centrality measures and fst
+# #
+# #
+# #
+# # # # merge centrality measures and fst
 # merged_rand = pd.merge(central_rand, rand[0], on='step')
 # merged_cor = pd.merge(central_cor, cor[0], on='step')
 # merged_dist = pd.merge(central_dist, dist[0], on='step')
+#
 #
 # #find breaking point in clustering
 # line1=(brk_rand/len(rand[2]))*max(central_rand['clustering'])
@@ -116,51 +154,51 @@ rand = frag_random_giant_comp(net=net)
 # plt.ylabel("Average Fst")
 # plt.legend()
 # plt.show()
-
-
-# # plot distribution of Fst values - ridge-lines
-plt.figure()
-joyplot(
-    data=rand[1][['fst', 'step']],
-    by='step', ylim=0, overlap=0.5,
-    colormap=plt.cm.autumn, fade=True,
-    figsize=(12, 8)
-)
-
-plt.title('pairwise Fst along random fragmentation', fontsize=16)
-plt.show()
-
-
-
+#
+#
+# # # plot distribution of Fst values - ridge-lines
+# plt.figure()
+# joyplot(
+#     data=rand[1][['fst', 'step']],
+#     by='step', ylim=0, overlap=0.5,
+#     colormap=plt.cm.autumn, fade=True,
+#     figsize=(12, 8)
+# )
+#
+# plt.title('pairwise Fst along random fragmentation', fontsize=16)
+# plt.show()
+#
+#
+#
 # plt.figure()
 # joyplot(
 #     data=dist[1][['fst', 'step']],
-#     by='step',
+#     by='step', ylim=0, overlap=0.5,
 #     colormap=plt.cm.autumn, fade=True,
 #     figsize=(12, 8)
 # )
 # plt.title('pairwise Fst along distance fragmentation', fontsize=16)
 # plt.show()
-
+#
 #
 # plt.figure()
 # joyplot(
 #     data=cor[1][['fst', 'step']],
-#     by='step',
+#     by='step', ylim=0, overlap=0.5,
 #     colormap=plt.cm.autumn, fade=True,
 #     figsize=(12, 8)
 # )
 # plt.title('pairwise Fst along correlated fragmentation', fontsize=16)
 # plt.show()
 #
-
-
-
-
-
-
-#######################
-####################### heterozygosity
+#
+#
+#
+#
+#
+#
+# #######################
+# ####################### heterozygosity
 #
 # het_rand = het_rand(net)
 # het_cor = het_cor(net)
@@ -181,5 +219,3 @@ plt.show()
 # plt.ylabel('Heterozygosity')
 # plt.legend()
 # plt.show()
-#
-#
