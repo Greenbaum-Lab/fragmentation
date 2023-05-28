@@ -1,6 +1,7 @@
 import networkx as nx
 import numpy as np
 import pandas as pd
+from joypy import joyplot
 from matplotlib import pyplot as plt
 from Transformation import m_to_f
 from Transformation import m_to_t
@@ -204,7 +205,7 @@ def frag_cor_giant_comp(net):
     return fst_stat, fst_dens, migration2
 
 
-def frag_dist_giant_comp(net:nx.Graph):
+def frag_dist_giant_comp(net: nx.Graph):
     """
     run the distance-dependent fragmentation pipeline to get fst data
     :param net: network
@@ -221,7 +222,7 @@ def frag_dist_giant_comp(net:nx.Graph):
     return fst_stat, fst_dens, migration2
 
 
-def het_rand(net:nx.Graph):
+def het_rand(net: nx.Graph):
     """
     run the radom fragmentation pipeline to get heterozygosity data
     :param net: network
@@ -237,7 +238,8 @@ def het_rand(net:nx.Graph):
 
     return het_stat, het_dens, migration2
 
-def het_cor(net:nx.Graph):
+
+def het_cor(net: nx.Graph):
     """
     run the correlated fragmentation pipeline to get fst data
     :param net: network
@@ -253,7 +255,8 @@ def het_cor(net:nx.Graph):
 
     return het_stat, het_dens, migration2
 
-def het_dist(net:nx.Graph):
+
+def het_dist(net: nx.Graph):
     """
     run the distance-dependent fragmentation pipeline to get fst data
     :param net: network
@@ -268,6 +271,7 @@ def het_dist(net:nx.Graph):
     het_stat = make_het_stat(het_dens)
 
     return het_stat, het_dens, migration2
+
 
 def normalize(array: np.array) -> np.array:
     """
@@ -298,12 +302,13 @@ def normalize_list(migration_list: list):
     new_list = list(map(lambda x: normalize(x), migration_list))
     return new_list
 
+
 def intervals(lst):
     if len(lst) <= 20:
         return lst
 
     interval = max((len(lst) - 1) // 19, 1)
-    return lst[:19*interval:interval] + [lst[-1]]
+    return lst[:19 * interval:interval] + [lst[-1]]
 
 
 def find_breaking_point(lst):
@@ -318,74 +323,100 @@ def find_breaking_point(lst):
 
     return -1  # Return -1 if no element is found
 
-net1 = nx.random_geometric_graph(n=15, radius=0.8)
-net2 = nx.random_geometric_graph(n=15, radius=0.8)
-net3 = nx.random_geometric_graph(n=15, radius=0.8)
-net4 = nx.random_geometric_graph(n=15, radius=0.8)
-net5 = nx.random_geometric_graph(n=15, radius=0.8)
 
-nets = [net1, net2, net3, net4, net5]
+def make_networks(n_nets: int, n_nodes: int, connectivity: float, net_type) -> list:
+    nets = []
+    for net in range(n_nets):
+        if net_type == 'ER':
+            net = nx.erdos_renyi_graph(n=n_nodes, p=connectivity)
+            nets.append(net)
+        if net_type == 'RGG':
+            net = nx.random_geometric_graph(n=n_nodes, radius=connectivity)
+            nets.append(net)
+        if net_type == 'SF':
+            net = nx.barabasi_albert_graph(n=n_nodes, m=2)
+            nets.append(net)
+    return nets
 
-def make_iterations(nets:list, fragmentation) -> pd.DataFrame:
+
+nets=make_networks(n_nets=3, n_nodes=20, connectivity=0.8, net_type='ER')
+
+
+def make_iterations(nets: list, fragmentation) -> pd.DataFrame:
     """
     run multiple iterations of the fragmentation process
     :param nets: list of networks
     :param fragmentation: fragmentation process
     :return: dataframe of avg fst for each net
     """
-    all_nets = []
+    all_stat = []
+    all_dens = []
 
     # Get the corresponding function based on the nickname
     selected_frag = function_mapping[fragmentation]
 
-    #calculate fst for each network in the list
+    # calculate fst for each network in the list
     for i in range(len(nets)):
         net = selected_frag(net=nets[i])
-        all_nets.append(net[0])
+        all_stat.append(net[0])
+        all_dens.append(net[1])
 
     # Combine the dataframes into a single dataframe
-    combined_rand = pd.concat(all_nets)
-    return combined_rand
+    combined_stat = pd.concat(all_stat)
+    combined_dens = pd.concat(all_dens)
+    return combined_stat, combined_dens
+
+
 #
 
-#create short name to call the desired function
+# create short name to call the desired function
 function_mapping = {
     'rand': frag_random_giant_comp,
     'dist': frag_dist_giant_comp,
     'cor': frag_cor_giant_comp
 }
 
+rand = make_iterations(nets, fragmentation='rand')
+# cor = make_iterations(nets, fragmentation='cor')
+# dist = make_iterations(nets, fragmentation='dist')
 
 
+# # plot distribution of Fst values - ridge-lines
+plt.figure()
+joyplot(
+    data=rand[1][['fst', 'step']],
+    by='step', ylim=0, overlap=0.5,
+    colormap=plt.cm.autumn, fade=True,
+    figsize=(12, 8)
+)
 
-rand=make_iterations(nets, fragmentation='rand')
-cor=make_iterations(nets, fragmentation='cor')
-dist=make_iterations(nets, fragmentation='dist')
-
-# Calculate the mean and median values over the 'step' column
-mean_rand = rand.groupby('step')['avg'].mean()
-mean_cor = cor.groupby('step')['avg'].mean()
-mean_dist = dist.groupby('step')['avg'].mean()
-
-# Calculate the confidence interval
-confidence_rand = rand.groupby('step')['avg'].std()
-confidence_cor = cor.groupby('step')['avg'].std()
-confidence_dist = dist.groupby('step')['avg'].std()
-
-# Plotting the line graph with mean and median values
-plt.plot(mean_rand, label='Rand')
-plt.plot(mean_cor, label='Cor')
-plt.plot(mean_dist, label='Dist')
-
-# Adding the confidence interval
-plt.fill_between(mean_rand.index, mean_rand - confidence_rand, mean_rand + confidence_rand, alpha=0.2)
-plt.fill_between(mean_cor.index, mean_cor - confidence_cor, mean_cor + confidence_cor, alpha=0.2)
-plt.fill_between(mean_dist.index, mean_dist - confidence_dist, mean_dist + confidence_dist, alpha=0.2)
-
-# Add labels and legend
-plt.xlabel('Fragmentation step')
-plt.ylabel('Pairwise Fst')
-plt.legend()
-
-# Display the plot
+plt.title('pairwise Fst along random fragmentation', fontsize=16)
 plt.show()
+
+# # Calculate the mean and median values over the 'step' column
+# mean_rand = rand[0].groupby('step')['avg'].mean()
+# mean_cor = cor[0].groupby('step')['avg'].mean()
+# mean_dist = dist[0].groupby('step')['avg'].mean()
+#
+# # Calculate the confidence interval
+# confidence_rand = rand[0].groupby('step')['avg'].std()
+# confidence_cor = cor[0].groupby('step')['avg'].std()
+# confidence_dist = dist[0].groupby('step')['avg'].std()
+#
+# # Plotting the line graph with mean and median values
+# plt.plot(mean_rand, label='Rand')
+# plt.plot(mean_cor, label='Cor')
+# plt.plot(mean_dist, label='Dist')
+#
+# # Adding the confidence interval
+# plt.fill_between(mean_rand.index, mean_rand - confidence_rand, mean_rand + confidence_rand, alpha=0.2)
+# plt.fill_between(mean_cor.index, mean_cor - confidence_cor, mean_cor + confidence_cor, alpha=0.2)
+# plt.fill_between(mean_dist.index, mean_dist - confidence_dist, mean_dist + confidence_dist, alpha=0.2)
+#
+# # Add labels and legend
+# plt.xlabel('Fragmentation step')
+# plt.ylabel('Pairwise Fst')
+# plt.legend()
+#
+# # Display the plot
+# plt.show()

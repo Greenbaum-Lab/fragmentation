@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from joypy import joyplot
-
 import Transformation
 from fragmentation import remove_edge_random
 from fragmentation import remove_edge_correlated
@@ -16,7 +15,6 @@ from funcs import make_fst_stat
 from funcs import make_het_list
 from funcs import make_het_dist
 from funcs import make_het_stat
-
 from funcs import calculate_centrality
 from funcs import frag_random_giant_comp
 from funcs import frag_cor_giant_comp
@@ -25,54 +23,80 @@ from funcs import find_breaking_point
 from funcs import het_dist
 from funcs import het_rand
 from funcs import het_cor
-
+from funcs import make_networks
+from funcs import make_iterations
 
 
 
 n = 15  # no. of nodes
 p = 0.8  # probability to connect nodes
 seed = 987
-# net = nx.erdos_renyi_graph(n=n, p=p)  # create network
-net = nx.random_geometric_graph(n=n, radius=0.8)
-net2 = nx.random_geometric_graph(n=n, radius=0.8)
-net3 = nx.random_geometric_graph(n=n, radius=0.8)
-pos = nx.spring_layout(net, seed=98)  # set the fixed position for plotting the network
+
+# pos = nx.spring_layout(net, seed=98)  # set the fixed position for plotting the network
 # random.seed(65)  # set random seed
 
 
 
-rand1 = frag_random_giant_comp(net=net)
-rand2 = frag_random_giant_comp(net=net2)
-rand3 = frag_random_giant_comp(net=net3)
-cor1 = frag_cor_giant_comp(net=net)
-cor2 = frag_cor_giant_comp(net=net2)
-cor3 = frag_cor_giant_comp(net=net3)
-dist1 = frag_dist_giant_comp(net=net)
-dist2 = frag_dist_giant_comp(net=net2)
-dist3 = frag_dist_giant_comp(net=net3)
+nets=make_networks(n_nets=3, n_nodes=n, connectivity=p, net_type='ER')
 
-# Combine the dataframes into a single dataframe
-combined_df = pd.concat([rand1[0], rand2[0], rand3[0]])
+rand = make_iterations(nets, fragmentation='rand')
+# cor = make_iterations(nets, fragmentation='cor')
+# dist = make_iterations(nets, fragmentation='dist')
 
-# Calculate the mean and median values over the 'step' column
-mean_values = combined_df.groupby('step')['avg'].mean()
 
-# Calculate the confidence interval
-confidence_interval = combined_df.groupby('step')['avg'].std()
 
-# Plotting the line graph with mean and median values
-plt.plot(mean_values, label='Mean')
 
-# Adding the confidence interval
-plt.fill_between(mean_values.index, mean_values - confidence_interval, mean_values + confidence_interval, alpha=0.2)
+# # Calculate the mean and median values over the 'step' column
+# mean_rand = rand[0].groupby('step')['avg'].mean()
+# mean_cor = cor[0].groupby('step')['avg'].mean()
+# mean_dist = dist[0].groupby('step')['avg'].mean()
+#
+# # Calculate the confidence interval
+# confidence_rand = rand[0].groupby('step')['avg'].std()
+# confidence_cor = cor[0].groupby('step')['avg'].std()
+# confidence_dist = dist[0].groupby('step')['avg'].std()
+#
+# # Plotting the line graph with mean and median values
+# plt.plot(mean_rand, label='Rand')
+# plt.plot(mean_cor, label='Cor')
+# plt.plot(mean_dist, label='Dist')
+#
+# # Adding the confidence interval
+# plt.fill_between(mean_rand.index, mean_rand - confidence_rand, mean_rand + confidence_rand, alpha=0.2)
+# plt.fill_between(mean_cor.index, mean_cor - confidence_cor, mean_cor + confidence_cor, alpha=0.2)
+# plt.fill_between(mean_dist.index, mean_dist - confidence_dist, mean_dist + confidence_dist, alpha=0.2)
+#
+# # Add labels and legend
+# plt.xlabel('Fragmentation step')
+# plt.ylabel('Pairwise Fst')
+# plt.legend()
+#
+# # Display the plot
+# plt.show()
 
-# Add labels and legend
-plt.xlabel('Step')
-plt.ylabel('Values')
-plt.legend()
 
-# Display the plot
-plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+##############single net plots
+
+# net = nx.erdos_renyi_graph(n=n, p=p)  # create network
+# net = nx.random_geometric_graph(n=n, radius=0.8)
 
 # rand = frag_random_giant_comp(net=net)
 # cor = frag_cor_giant_comp(net=net)
@@ -81,9 +105,6 @@ plt.show()
 # central_rand = calculate_centrality(rand[2])
 # central_cor = calculate_centrality(cor[2])
 # central_dist = calculate_centrality(dist[2])
-#
-# print(rand[0])
-#
 #
 # brk_rand = find_breaking_point(rand[2])
 # brk_cor = find_breaking_point(cor[2])
@@ -155,7 +176,7 @@ plt.show()
 # plt.legend()
 # plt.show()
 #
-#
+
 # # # plot distribution of Fst values - ridge-lines
 # plt.figure()
 # joyplot(
@@ -168,7 +189,7 @@ plt.show()
 # plt.title('pairwise Fst along random fragmentation', fontsize=16)
 # plt.show()
 #
-#
+
 #
 # plt.figure()
 # joyplot(
