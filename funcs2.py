@@ -1,17 +1,12 @@
 import networkx as nx
 import numpy as np
-import pandas as pd
 from matplotlib import pyplot as plt
 from Transformation import m_to_f
 import random
-net = nx.random_geometric_graph(10, 0.2,seed=337)
-nx.draw_networkx(net, with_labels=False)
-plt.show()
-
+net = nx.random_geometric_graph(8, 0.2, seed=12)
 random.seed(56)
 
-
-
+# function to extract all the connected components from a network
 def get_components(net):
 
     # Get the connected components
@@ -26,16 +21,7 @@ def get_components(net):
     return subgraphs
 
 
-test=get_components(net)
-print(test)
-
-
-for i in range(len(test)):
-    test[i]=nx.attr_matrix(test[i])[0]
-
-print(test)
-
-
+# function to combine arrays
 def combine_arrays(arrays):
 
     # Calculate the total number of rows and columns
@@ -57,16 +43,38 @@ def combine_arrays(arrays):
 
     return combined_array
 
-combo=combine_arrays(test)
+
+test1 = get_components(net)
+
+for i in range(len(test1)):
+    test1[i]=nx.attr_matrix(test1[i])[0]
+
+combo=combine_arrays(test1)
 print(combo)
 
+#plot network
 nx.draw_networkx(nx.Graph(combo))
 plt.show()
 
-array1 = np.array([[0, 1, 1], [1, 0, 1], [1, 1, 0]])
-array2 = np.array([[0, 1], [1, 0]])
+from funcs import normalize
+combo = normalize(combo)
+print(combo)
+#it works!
+print(m_to_f(combo))
 
-x=combine_arrays([array1,array2])
-print(x)
-print(m_to_f(x))
-
+#
+# #when i do the same thing with similar network it doesnt work
+# net2 = nx.random_geometric_graph(8, 0.2, seed=123)
+# test2 = get_components(net2)
+#
+# for i in range(len(test2)):
+#     test2[i]=nx.attr_matrix(test2[i])[0]
+#
+# combo2=combine_arrays(test2)
+# print(combo2)
+#
+# #plot network
+# nx.draw_networkx(nx.Graph(combo2))
+# plt.show()
+#
+# print(m_to_f(combo2))

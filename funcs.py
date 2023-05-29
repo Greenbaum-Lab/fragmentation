@@ -339,8 +339,6 @@ def make_networks(n_nets: int, n_nodes: int, connectivity: float, net_type) -> l
     return nets
 
 
-nets=make_networks(n_nets=3, n_nodes=20, connectivity=0.8, net_type='ER')
-
 
 def make_iterations(nets: list, fragmentation) -> pd.DataFrame:
     """
@@ -376,47 +374,3 @@ function_mapping = {
     'cor': frag_cor_giant_comp
 }
 
-rand = make_iterations(nets, fragmentation='rand')
-# cor = make_iterations(nets, fragmentation='cor')
-# dist = make_iterations(nets, fragmentation='dist')
-
-
-# # plot distribution of Fst values - ridge-lines
-plt.figure()
-joyplot(
-    data=rand[1][['fst', 'step']],
-    by='step', ylim=0, overlap=0.5,
-    colormap=plt.cm.autumn, fade=True,
-    figsize=(12, 8)
-)
-
-plt.title('pairwise Fst along random fragmentation', fontsize=16)
-plt.show()
-
-# # Calculate the mean and median values over the 'step' column
-# mean_rand = rand[0].groupby('step')['avg'].mean()
-# mean_cor = cor[0].groupby('step')['avg'].mean()
-# mean_dist = dist[0].groupby('step')['avg'].mean()
-#
-# # Calculate the confidence interval
-# confidence_rand = rand[0].groupby('step')['avg'].std()
-# confidence_cor = cor[0].groupby('step')['avg'].std()
-# confidence_dist = dist[0].groupby('step')['avg'].std()
-#
-# # Plotting the line graph with mean and median values
-# plt.plot(mean_rand, label='Rand')
-# plt.plot(mean_cor, label='Cor')
-# plt.plot(mean_dist, label='Dist')
-#
-# # Adding the confidence interval
-# plt.fill_between(mean_rand.index, mean_rand - confidence_rand, mean_rand + confidence_rand, alpha=0.2)
-# plt.fill_between(mean_cor.index, mean_cor - confidence_cor, mean_cor + confidence_cor, alpha=0.2)
-# plt.fill_between(mean_dist.index, mean_dist - confidence_dist, mean_dist + confidence_dist, alpha=0.2)
-#
-# # Add labels and legend
-# plt.xlabel('Fragmentation step')
-# plt.ylabel('Pairwise Fst')
-# plt.legend()
-#
-# # Display the plot
-# plt.show()
