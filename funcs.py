@@ -7,12 +7,12 @@ from Transformation import m_to_f
 from Transformation import m_to_t
 from statistics import mean
 from statistics import median
-from fragmentation import remove_edge_random
-from fragmentation import remove_edge_correlated
-from fragmentation import remove_edge_distance
-from fragmentation import remove_edge_random_giant_comp
-from fragmentation import remove_edge_correlated_giant_comp
-from fragmentation import remove_edge_distance_giant_comp
+from processes import remove_edge_random
+from processes import remove_edge_correlated
+from processes import remove_edge_distance
+from processes import remove_edge_random_giant_comp
+from processes import remove_edge_correlated_giant_comp
+from processes import remove_edge_distance_giant_comp
 
 
 def make_fst_list(migration_list: list) -> list:

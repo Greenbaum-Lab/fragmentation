@@ -6,9 +6,9 @@ import numpy as np
 import pandas as pd
 from joypy import joyplot
 import Transformation
-from fragmentation import remove_edge_random
-from fragmentation import remove_edge_correlated
-from fragmentation import remove_edge_distance
+from processes import remove_edge_random
+from processes import remove_edge_correlated
+from processes import remove_edge_distance
 from funcs import make_fst_list
 from funcs import make_fst_dist
 from funcs import make_fst_stat
