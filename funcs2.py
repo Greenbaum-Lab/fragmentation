@@ -62,8 +62,8 @@ print(combo)
 #it works!
 print(m_to_f(combo))
 
-#
-# #when i do the same thing with similar network it doesnt work
+
+# #when i do the same thing with similar network it doesn't work
 # net2 = nx.random_geometric_graph(8, 0.2, seed=123)
 # test2 = get_components(net2)
 #

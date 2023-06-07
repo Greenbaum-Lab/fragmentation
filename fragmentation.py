@@ -1,178 +1,156 @@
 import copy
-
 import networkx as nx
 import random
 import math
-
 import numpy as np
 from matplotlib import pyplot as plt
+from funcs import intervals
 
 
-def remove_edge_random(net: nx.Graph, n: int) -> list:
+def remove_edge_random(net: nx.Graph) -> list:
     """
-    Remove a random edge from migration network of type networkx
-    :param net:  initial migration network
-    :param n: no. of fragmentation steps
-    :return: list of networks after n edge removal
+    Remove a random edge from the input network in each iteration.
+    Keep track of all generated graphs in a list until only two nodes remain.
+
+    :param net: initial networkx object
+    :return: list of networkx objects
     """
-    migration_list = [net.copy()]
-    fig, axs = plt.subplots(1, 2, figsize=(10, 5))
-    pos = nx.spring_layout(net.copy(), seed=55)
+    migration = net.copy()
+    migration_list = []  # initialize list with the original network
+    while nx.number_connected_components(migration) < len(migration.nodes):  # stop when the network includes only two connected nodes
+        # choose a random edge and remove it
+        edges = list(migration.edges())
+        edge = random.choice(edges)
+        migration.remove_edge(*edge)
 
-    for i in range(n):
-        migration = migration_list[-1].copy()  # takes the last item in list
+        # add the resulting graph to the list
+        migration_list.append(migration.copy())
 
-        #  plot initial network
-        if i == 0:
-            nx.draw_networkx(migration, pos=pos, ax=axs[i])
-            axs[i].set_title(f"Original network")
-
-        edges = list(nx.edges(migration))
-        edges_to_remove = (random.sample(edges, k=1))  # choose a random edge
-        migration.remove_edge(*(edges_to_remove[0]))
-
-        # stop when network breaks
-        if nx.is_connected(migration):
-            migration_list.append(migration)
-
-        else:
-
-            #  plot last network before breaking
-            nx.draw_networkx(migration_list[i], pos=pos, ax=axs[1])
-            axs[1].set_title(f"{i} edges removed randomly")
-
-            break
-
-    plt.show()
     return migration_list
 
 
-def remove_edge_correlated(net: nx.Graph, n: int) -> list:
+import networkx as nx
+
+
+def get_connected_nodes(net: nx.Graph) -> set:
+    """
+    Get all the nodes in a network that are connected (exclude isolated nodes).
+    used in  correlated fragmentation
+
+    :param net: networkx graph object
+    :return: set of connected nodes
+    """
+    connected_nodes = set()
+    components = nx.connected_components(net)
+
+    for component in components:
+        if len(component) > 1:  # Exclude isolated nodes
+            connected_nodes.update(component)
+
+    return connected_nodes
+
+
+def get_connected_edges(net: nx.Graph, connected_nodes: set) -> list:
+    """
+    Get all the edges that are connected to the specified connected nodes.
+    used in  correlated fragmentation
+
+    :param net: networkx graph object
+    :param connected_nodes: set of connected nodes
+    :return: list of connected edges
+    """
+    connected_edges = []
+
+    for u, v in net.edges():
+        if u in connected_nodes or v in connected_nodes:
+            connected_edges.append((u, v))
+
+    return connected_edges
+
+
+def remove_edge_correlated(net: nx.Graph) -> list:
     """
     Remove a correlated edge from migration network of type networkx
+    each iteration we choose an edge to remove from the list of edges connected to it
     :param net: initial migration network
-    :param n: no. of fragmentation steps
     :return: list of networks after n edge removal
     """
-    migration_list = [net.copy()]
-    fig, axs = plt.subplots(1, 2, figsize=(10, 5))
-    pos = nx.spring_layout(net.copy(), seed=55)
 
-    # takes the last item in list
-    migration = migration_list[-1].copy()
+    migration = net.copy()
+    migration_list = [net.copy()]  # initialize list with the original network
 
-    # choose a random edge from the remaining edges
+    # choose a random edge for start
     edge = random.choice(list(migration.edges))
 
-    # remove the chosen edge from the network
-    migration.remove_edge(*edge)
+    # take the initial nodes to remove edges from
+    node_a = edge[0]
+    node_b = edge[1]
 
-    # add the network to the list
-    migration_list.append(migration)
-
-    for i in range(n):
-
-        #  plot initial network
-        if i == 0:
-            nx.draw_networkx(migration, pos=pos, ax=axs[i])
-            axs[i].set_title(f"Original network")
-
-        # takes the last item in list
-        migration = migration_list[-1].copy()
-
+    while nx.number_connected_components(migration) < len(migration.nodes):  # stop when the network includes only two connected nodes
         # takes the edges of the nodes of the removed edge
-        edges_a = list(migration.edges(edge[1]))
-        edges_b = list(migration.edges(edge[0]))
+        edges_a = list(migration.edges(node_a))
+        edges_b = list(migration.edges(node_b))
 
         # make a list of the edges of the two nodes
         edges = edges_a + edges_b
 
-        # sample an edge from the edges
-        edge = random.choice(edges)
+        # if nodes doesn't have more connected edges choose a random edge
+        if len(edges) < 1:
+            connected_nodes = get_connected_nodes(migration)
+            connected_edges = get_connected_edges(migration, connected_nodes)
+            edge = random.choice(list(connected_edges))
+
+        else:
+            # sample an edge from the edges
+            edge = random.choice(list(edges))
 
         # remove the chosen edge from the network
         migration.remove_edge(*edge)
 
-        if nx.is_connected(migration):
-            migration_list.append(migration)
-        else:
+        # choose the nodes to remove edges from
+        # if node doesn't exist in new network choose a random node
+        node_a = edge[0]
+        node_b = edge[1]
 
-            #  plot last network before breaking
-            nx.draw_networkx(migration_list[i], pos=pos, ax=axs[1])
-            axs[1].set_title(f"{i} edges removed by correlation")
-            break
+        # add the resulting graph to the list
+        migration_list.append(migration.copy())
 
-    plt.show()
     return migration_list
 
 
-def remove_edge_distance(net: nx.Graph, n: int) -> list:
+def remove_edge_distance(net: nx.Graph) -> list:
     """
-    Remove edge from migration network of type networkx
+    Remove edge based on distance from migration network of type networkx
     :param net:  initial migration network
-    :param n: no. of fragmentation steps
     :return: list of networks after n edge removal
     """
 
-    fig, axs = plt.subplots(1, 2, figsize=(10, 5))
     pos = nx.spring_layout(net.copy(), seed=55)
-    migration_list = [net.copy()]
-    # Get all the edges of the graph
-    edges = net.copy().edges()
-    # Calculate the euclidean distance between all nodes
-    distances = {edge: round(
-        ((pos[edge[1]][1] - pos[edge[0]][1]) ** 2 + (pos[edge[1]][0] - pos[edge[0]][0]) ** 2) ** 0.5, 2)
-        for edge in edges}
-    # Sort the edges by their distances in descending order
-    edges = sorted(edges, key=distances.get, reverse=True)
 
-    for i in range(n):
-        # takes the last item in list
-        migration = migration_list[-1].copy()
+    migration = net.copy()
+    migration_list = []  # initialize list of networks
 
-        if i == 0:
-            #  plot initial network
-            nx.draw_networkx(migration, pos=pos, ax=axs[i])
-            axs[i].set_title(f"Original network")
+    while nx.number_connected_components(migration) < len(migration.nodes):  # stop when the network includes only two connected nodes
+
+        edges = migration.edges()
+
+        # Calculate the euclidean distance between all nodes and create a dict
+        distances = {edge: round(
+            ((pos[edge[1]][1] - pos[edge[0]][1]) ** 2 + (pos[edge[1]][0] - pos[edge[0]][0]) ** 2) ** 0.5, 2)
+            for edge in edges}
+
+        edges = sorted(edges, key=distances.get, reverse=True)
 
         # Remove the longest edge from network
         migration.remove_edge(*edges[0])
+
         # Remove the longest edge from the edges list
         edges.pop(0)
 
-        #  add new network to list if it is connected
-        if nx.is_connected(migration):
-            migration_list.append(migration)
+        # add the resulting graph to the list
+        migration_list.append(migration.copy())
 
-        else:
-            #  plot last network before breaking
-            nx.draw_networkx(migration_list[i], pos=pos, ax=axs[1])
-            axs[1].set_title(f"{i} edges removed by distance")
-            break
-
-    plt.show()
     return migration_list
-
-
-# def remove_edge_random(net: nx.Graph, n: int) -> list:
-#     """
-#     Remove a random edge from migration network of type networkx
-#     :param net:  initial migration network
-#     :param n: no. of fragmentation steps
-#     :return: list of networks after n edge removal
-#     """
-#     migration_list = [net.copy()]
-#
-#     for i in range(n):
-#         migration = migration_list[-1].copy()  # takes the last item in list
-#
-#         edges = list(nx.edges(migration))
-#         edges_to_remove = (random.sample(edges, k=1))  # choose a random edge
-#         migration.remove_edge(*(edges_to_remove[0]))
-#         edges.remove(edges_to_remove[0])
-#         migration_list.append(migration)
-#
-#     return migration_list
 
 
 def remove_edge_random_giant_comp(net: nx.Graph) -> list:
@@ -303,3 +281,23 @@ def remove_edge_distance_giant_comp(net: nx.Graph) -> list:
 
     return migration_list
 
+
+
+
+random.seed(6)
+from Transformation import m_to_f
+net = nx.random_geometric_graph(100,0.5,seed=2)
+# Create a new figure and axis
+fig, ax = plt.subplots(figsize=(20, 20))
+pos = nx.spring_layout(net, seed=98)  # set the fixed position for plotting the network
+print(m_to_f(nx.attr_matrix(net)))
+# Draw the networkx graph on the axis
+nx.draw_networkx(net, with_labels=False, ax=ax,width=0.5,pos=pos)
+plt.show()
+new = remove_edge_random(net)
+rand = intervals(new)
+fig2, ax2 = plt.subplots(figsize=(20, 20))
+
+nx.draw_networkx(rand[10], with_labels=False,width=0.5,pos=pos)
+plt.show()
+# plt.savefig("original.svg", format="svg")
