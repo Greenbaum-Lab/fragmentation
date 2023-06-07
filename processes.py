@@ -1,10 +1,7 @@
-import copy
-import networkx as nx
 import random
-import math
-import numpy as np
+import networkx as nx
 from matplotlib import pyplot as plt
-from funcs import intervals
+
 
 
 def remove_edge_random(net: nx.Graph) -> list:
@@ -27,45 +24,6 @@ def remove_edge_random(net: nx.Graph) -> list:
         migration_list.append(migration.copy())
 
     return migration_list
-
-
-import networkx as nx
-
-
-def get_connected_nodes(net: nx.Graph) -> set:
-    """
-    Get all the nodes in a network that are connected (exclude isolated nodes).
-    used in  correlated fragmentation
-
-    :param net: networkx graph object
-    :return: set of connected nodes
-    """
-    connected_nodes = set()
-    components = nx.connected_components(net)
-
-    for component in components:
-        if len(component) > 1:  # Exclude isolated nodes
-            connected_nodes.update(component)
-
-    return connected_nodes
-
-
-def get_connected_edges(net: nx.Graph, connected_nodes: set) -> list:
-    """
-    Get all the edges that are connected to the specified connected nodes.
-    used in  correlated fragmentation
-
-    :param net: networkx graph object
-    :param connected_nodes: set of connected nodes
-    :return: list of connected edges
-    """
-    connected_edges = []
-
-    for u, v in net.edges():
-        if u in connected_nodes or v in connected_nodes:
-            connected_edges.append((u, v))
-
-    return connected_edges
 
 
 def remove_edge_correlated(net: nx.Graph) -> list:
@@ -283,21 +241,94 @@ def remove_edge_distance_giant_comp(net: nx.Graph) -> list:
 
 
 
+def get_connected_nodes(net: nx.Graph) -> set:
+    """
+    Get all the nodes in a network that are connected (exclude isolated nodes).
+    used in  correlated fragmentation
+
+    :param net: networkx graph object
+    :return: set of connected nodes
+    """
+    connected_nodes = set()
+    components = nx.connected_components(net)
+
+    for component in components:
+        if len(component) > 1:  # Exclude isolated nodes
+            connected_nodes.update(component)
+
+    return connected_nodes
+
+
+def get_connected_edges(net: nx.Graph, connected_nodes: set) -> list:
+    """
+    Get all the edges that are connected to the specified connected nodes.
+    used in  correlated fragmentation
+
+    :param net: networkx graph object
+    :param connected_nodes: set of connected nodes
+    :return: list of connected edges
+    """
+    connected_edges = []
+
+    for u, v in net.edges():
+        if u in connected_nodes or v in connected_nodes:
+            connected_edges.append((u, v))
+
+    return connected_edges
+
+
+def intervals(lst):
+    if len(lst) <= 20:
+        return lst
+
+    interval = max((len(lst) - 1) // 19, 1)
+    return lst[:19 * interval:interval] + [lst[-1]]
+
+
+def find_breaking_point(lst):
+    """
+    find the index of the list where the network is no longer connected
+    """
+    first_element = lst[0]
+
+    for i, element in enumerate(lst):
+        if len(element) < len(first_element):
+            return i
+
+    return -1  # Return -1 if no element is found
+
+
 
 random.seed(6)
-from Transformation import m_to_f
-net = nx.random_geometric_graph(100,0.5,seed=2)
+net = nx.random_geometric_graph(50,0.5,seed=2)
 # Create a new figure and axis
 fig, ax = plt.subplots(figsize=(20, 20))
 pos = nx.spring_layout(net, seed=98)  # set the fixed position for plotting the network
-print(m_to_f(nx.attr_matrix(net)))
 # Draw the networkx graph on the axis
-nx.draw_networkx(net, with_labels=False, ax=ax,width=0.5,pos=pos)
+nx.draw_networkx(net, with_labels=False, ax=ax, width=0.5, pos=pos)
 plt.show()
-new = remove_edge_random(net)
-rand = intervals(new)
-fig2, ax2 = plt.subplots(figsize=(20, 20))
+# plt.savefig("main.svg", format="svg")
 
-nx.draw_networkx(rand[10], with_labels=False,width=0.5,pos=pos)
-plt.show()
-# plt.savefig("original.svg", format="svg")
+rand = remove_edge_random(net)
+rand = intervals(rand)
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10))
+nx.draw_networkx(rand[10], with_labels=False, ax=ax2, width=0.5, pos=pos)
+nx.draw_networkx(rand[18], with_labels=False, ax=ax1, width=0.5, pos=pos)
+# plt.show()
+plt.savefig("rand.svg", format="svg")
+
+cor = remove_edge_correlated(net)
+cor = intervals(cor)
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10))
+nx.draw_networkx(cor[10], with_labels=False, ax=ax2, width=0.5, pos=pos)
+nx.draw_networkx(cor[18], with_labels=False, ax=ax1, width=0.5, pos=pos)
+# plt.show()
+plt.savefig("cor.svg", format="svg")
+
+dist = remove_edge_distance(net)
+dist = intervals(dist)
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10))
+nx.draw_networkx(dist[10], with_labels=False, ax=ax2, width=0.5, pos=pos)
+nx.draw_networkx(dist[18], with_labels=False, ax=ax1, width=0.5, pos=pos)
+
+plt.savefig("dist.svg", format="svg")

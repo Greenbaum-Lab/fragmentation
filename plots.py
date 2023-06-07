@@ -1,32 +1,5 @@
-import random
-from statistics import mean
-import networkx as nx
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-from joypy import joyplot
-import Transformation
-from processes import remove_edge_random
-from processes import remove_edge_correlated
-from processes import remove_edge_distance
-from funcs import make_fst_list
-from funcs import make_fst_dist
-from funcs import make_fst_stat
-from funcs import make_het_list
-from funcs import make_het_dist
-from funcs import make_het_stat
-from funcs import calculate_centrality
-from funcs import frag_random_giant_comp
-from funcs import frag_cor_giant_comp
-from funcs import frag_dist_giant_comp
-from funcs import find_breaking_point
-from funcs import het_dist
-from funcs import het_rand
-from funcs import het_cor
+from funcs import make_networks, make_iterations
 from funcs import make_networks
-from funcs import make_iterations
-
-
 
 n = 15  # no. of nodes
 p = 0.8  # probability to connect nodes

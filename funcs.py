@@ -1,18 +1,15 @@
+from statistics import mean
+from statistics import median
+
 import networkx as nx
 import numpy as np
 import pandas as pd
-from joypy import joyplot
-from matplotlib import pyplot as plt
+
 from Transformation import m_to_f
 from Transformation import m_to_t
-from statistics import mean
-from statistics import median
-from processes import remove_edge_random
-from processes import remove_edge_correlated
-from processes import remove_edge_distance
-from processes import remove_edge_random_giant_comp
-from processes import remove_edge_correlated_giant_comp
+from processes import remove_edge_correlated_giant_comp, intervals
 from processes import remove_edge_distance_giant_comp
+from processes import remove_edge_random_giant_comp
 
 
 def make_fst_list(migration_list: list) -> list:
@@ -303,25 +300,6 @@ def normalize_list(migration_list: list):
     return new_list
 
 
-def intervals(lst):
-    if len(lst) <= 20:
-        return lst
-
-    interval = max((len(lst) - 1) // 19, 1)
-    return lst[:19 * interval:interval] + [lst[-1]]
-
-
-def find_breaking_point(lst):
-    """
-    find the index of the list where the network is no longer connected
-    """
-    first_element = lst[0]
-
-    for i, element in enumerate(lst):
-        if len(element) < len(first_element):
-            return i
-
-    return -1  # Return -1 if no element is found
 
 
 def make_networks(n_nets: int, n_nodes: int, connectivity: float, net_type) -> list:
