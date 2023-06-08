@@ -298,37 +298,37 @@ def find_breaking_point(lst):
     return -1  # Return -1 if no element is found
 
 
-
-random.seed(6)
-net = nx.random_geometric_graph(50,0.5,seed=2)
-# Create a new figure and axis
-fig, ax = plt.subplots(figsize=(20, 20))
-pos = nx.spring_layout(net, seed=98)  # set the fixed position for plotting the network
-# Draw the networkx graph on the axis
-nx.draw_networkx(net, with_labels=False, ax=ax, width=0.5, pos=pos)
-plt.show()
-# plt.savefig("main.svg", format="svg")
-
-rand = remove_edge_random(net)
-rand = intervals(rand)
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10))
-nx.draw_networkx(rand[10], with_labels=False, ax=ax2, width=0.5, pos=pos)
-nx.draw_networkx(rand[18], with_labels=False, ax=ax1, width=0.5, pos=pos)
-# plt.show()
-plt.savefig("rand.svg", format="svg")
-
-cor = remove_edge_correlated(net)
-cor = intervals(cor)
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10))
-nx.draw_networkx(cor[10], with_labels=False, ax=ax2, width=0.5, pos=pos)
-nx.draw_networkx(cor[18], with_labels=False, ax=ax1, width=0.5, pos=pos)
-# plt.show()
-plt.savefig("cor.svg", format="svg")
-
-dist = remove_edge_distance(net)
-dist = intervals(dist)
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10))
-nx.draw_networkx(dist[10], with_labels=False, ax=ax2, width=0.5, pos=pos)
-nx.draw_networkx(dist[18], with_labels=False, ax=ax1, width=0.5, pos=pos)
-
-plt.savefig("dist.svg", format="svg")
+#
+# random.seed(6)
+# net = nx.barabasi_albert_graph(100,2,seed=2)
+# # Create a new figure and axis
+# fig, ax = plt.subplots(figsize=(20, 20))
+# pos = nx.spring_layout(net, seed=98)  # set the fixed position for plotting the network
+# # Draw the networkx graph on the axis
+# nx.draw_networkx(net, with_labels=False, ax=ax, width=0.5, pos=pos)
+# # plt.show()
+# plt.savefig("main_AB.svg", format="svg")
+#
+# rand = remove_edge_random(net)
+# rand = intervals(rand)
+# fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10))
+# nx.draw_networkx(rand[10], with_labels=False, ax=ax2, width=0.5, pos=pos)
+# nx.draw_networkx(rand[18], with_labels=False, ax=ax1, width=0.5, pos=pos)
+# # plt.show()
+# plt.savefig("rand_AB.svg", format="svg")
+#
+# cor = remove_edge_correlated(net)
+# cor = intervals(cor)
+# fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10))
+# nx.draw_networkx(cor[10], with_labels=False, ax=ax2, width=0.5, pos=pos)
+# nx.draw_networkx(cor[18], with_labels=False, ax=ax1, width=0.5, pos=pos)
+# # plt.show()
+# plt.savefig("cor_AB.svg", format="svg")
+#
+# dist = remove_edge_distance(net)
+# dist = intervals(dist)
+# fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 10))
+# nx.draw_networkx(dist[10], with_labels=False, ax=ax2, width=0.5, pos=pos)
+# nx.draw_networkx(dist[18], with_labels=False, ax=ax1, width=0.5, pos=pos)
+# # plt.show()
+# plt.savefig("dist_AB.svg", format="svg")
