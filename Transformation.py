@@ -1,7 +1,9 @@
-import math
-
 import numpy as np
+import math
+from collections import deque
 
+
+# This is a file for other users to copy to their projects.
 
 class Coalescence:
     def __init__(self, matrix: np.ndarray) -> None:
@@ -157,35 +159,143 @@ def comb(n: int, k: int) -> int:
     return int(math.factorial(n) / (math.factorial(k) * math.factorial(n - k)))
 
 
-def m_to_f(m: np.ndarray) -> np.ndarray:
+def find_fst(m: np.ndarray) -> np.ndarray:
     """
-    Receives a migration matrix(a squared, positive matrix with zeroes on the diagonal), and returns its
-    corresponding Fst matrix according to Wilkinson-Herbot's equations. Note that matrices that represent migration
-    networks where one or more of the subpopulations are isolated will cause an error, since their coalescence times
-    are interpreted as infinite, and Fst as 0. In this case, use the migration matrix that doesn't include the isolated
-    subpopulations.
+    Receives a migration matrix with one connected component(a squared, positive matrix with zeroes on the diagonal),
+    and returns it's corresponding Fst matrix according to Wilkinson-Herbot's equations.
     :param m: Migration matrix- squared, positive, with zeroes on the diagonal.
     :return: Corresponding Fst matrix according to Wilkinson-Herbot's equations. If there is no solution, an error will
     occur.
     """
+    if m.shape[0] == 1:
+        return np.array([[0]])
     M = Migration(m)
     t = M.produce_coalescence()
     T = Coalescence(t)
     return T.produce_fst()
 
 
-def m_to_t(m: np.ndarray) -> np.ndarray:
+def find_coalescence(m: np.ndarray) -> np.ndarray:
     """
-       Receives a migration matrix (a squared, positive matrix with zeroes on the diagonal), and returns its
-       corresponding Coalescent times (T) matrix according to Wilkinson-Herbot's equations.
-       Note that matrices that represent migration networks where one or more of the subpopulations are isolated
-       will cause an error, since their coalescence times are interpreted as infinite, and Fst as 1.
-       In this case, use the migration matrix that doesn't include the isolated subpopulations.
+       Receives a migration matrix with one connected component
+       (a squared, positive matrix with zeroes on the diagonal), and returns it's corresponding Coalescent times
+       (T) matrix according to Wilkinson-Herbot's equations.
        :param m: Migration matrix- squared, positive, with zeroes on the diagonal.
        :return: Corresponding T matrix according to Wilkinson-Herbot's equations. If there is no solution,
        an error will occur.
        """
+    if m.shape[0] == 1:
+        return np.array([[1]])
     M = Migration(m)
     return M.produce_coalescence()
 
 
+def find_components(matrix: np.ndarray) -> dict:
+    """
+    Find connected components in a connected graph represented by adjacency matrix.
+    :param matrix: adjacency matrix representing a directed graph
+    :return:something
+    """
+    components = 1
+    n = matrix.shape[0]
+    queue = deque()
+    visited = set()
+    not_visited = set([i for i in range(1, n)])
+    visited.add(0)
+    comp_dict = {components: [0]}
+    queue.append(0)
+    while len(not_visited) != 0:
+        while len(queue) != 0:
+            cur_vertex = queue.popleft()
+            for i in range(n):
+                if i not in visited and (matrix[cur_vertex, i] != 0 or matrix[i, cur_vertex] != 0):
+                    queue.append(i)
+                    visited.add(i)
+                    not_visited.remove(i)
+                    comp_dict[components].append(i)
+        for vertex in not_visited:
+            components += 1
+            queue.append(vertex)
+            visited.add(vertex)
+            not_visited.remove(vertex)
+            comp_dict[components] = [vertex]
+            break
+    return comp_dict
+
+
+def split_migration_matrix(migration_matrix: np.ndarray, connected_components: list) -> list:
+    """
+    Splits a migration matrix to sub-matrices according to it's connected components.
+    :param migration_matrix: A valid migration matrix.
+    :param connected_components: list of lists, where each list represents a connected component's vertices
+    (populations).
+    :return: A list of sub-matrices, where each sun-matrix is the migration matrix of a connected component. Note that
+    in order to interpret which populations are described in each sub matrix the connected components list is needed.
+    """
+    sub_matrices = []
+    for component in connected_components:
+        sub_matrix = migration_matrix[np.ix_(component, component)]
+        sub_matrices.append(sub_matrix)
+
+    return sub_matrices
+
+
+def split_migration(migration_matrix: np.ndarray) -> tuple:
+    """
+    Finds a migration matrix connected components, and splits the matrix to it's connected components.
+    :param migration_matrix: A valid migration matrix.
+    :return: A tuple (sub_matrices, components). Sub matrices is a list of numpy arrays, where each array is a
+    component's migration matrix. components is a list of lists, where each list represents a component vertices
+    (populations). The order of the components corresponds to the order of the sub-matrices.
+    """
+    components = list(find_components(migration_matrix).values())
+    sub_matrices = split_migration_matrix(migration_matrix, components)
+    return sub_matrices, components
+
+
+def reassemble_matrix(sub_matrices: list, connected_components: list, which: str) -> np.ndarray:
+    num_nodes = sum(len(component) for component in connected_components)
+    if which == "fst":
+        adjacency_matrix = np.ones((num_nodes, num_nodes), dtype=float)
+    else:
+        adjacency_matrix = np.full((num_nodes, num_nodes), np.inf)
+
+    for component, sub_matrix in zip(connected_components, sub_matrices):
+        indices = np.array(component)
+        adjacency_matrix[np.ix_(indices, indices)] = sub_matrix
+
+    return adjacency_matrix
+
+
+def m_to_f(m: np.ndarray) -> np.ndarray:
+    """
+    Receives a migration matrix(a squared, positive matrix with zeroes on the diagonal) with any number
+    of connected components, and returns it's corresponding Fst matrix according to Wilkinson-Herbot's equations and
+    Slatkin equations.
+    :param m: Migration matrix- squared, positive, with zeroes on the diagonal.
+    :return: Corresponding Fst matrix according to Wilkinson-Herbot's equations. If there is no solution, an error will
+    occur.
+    """
+    split = split_migration(m)
+    sub_matrices, components = split[0], split[1]
+    f_matrices = []
+    for matrix in sub_matrices:
+        f_matrices.append(find_fst(matrix))
+    return reassemble_matrix(f_matrices, components, "fst")
+
+
+def m_to_t(m: np.ndarray) -> np.ndarray:
+    """
+       Receives a migration matrix(a squared, positive matrix with zeroes on the diagonal) with any number
+       of connected components, and returns it's corresponding Coalescent times (T) matrix according to
+       Wilkinson-Herbot's equations.
+       :param m: Migration matrix- squared, positive, with zeroes on the diagonal.
+       :return: Corresponding T matrix according to Wilkinson-Herbot's equations. If there is no solution,
+       an error will occur.
+       """
+    split = split_migration(m)
+    sub_matrices, components = split[0], split[1]
+    t_matrices = []
+    for matrix in sub_matrices:
+        t_matrices.append(find_coalescence(matrix))
+    return reassemble_matrix(t_matrices, components, "coalescence")

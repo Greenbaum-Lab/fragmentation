@@ -76,7 +76,10 @@ random.seed(65)  # set random seed
 ##############single net plots
 
 # net = nx.erdos_renyi_graph(n=n, p=p)  # create network
-net = nx.random_geometric_graph(n=n, radius=0.8)
+# net = nx.erdos_renyi_graph(n=n,p=0.8)
+net = nx.barabasi_albert_graph(n=n, m=2,seed=5)
+nx.draw_networkx(net)
+plt.show()
 
 rand = frag_random_giant_comp(net=net)
 cor = frag_cor_giant_comp(net=net)
