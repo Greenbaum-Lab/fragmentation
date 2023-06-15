@@ -7,7 +7,7 @@ import pandas as pd
 
 from Transformation import m_to_f
 from Transformation import m_to_t
-from processes import remove_edge_correlated_giant_comp, intervals
+from processes import remove_edge_correlated_giant_comp, intervals, remove_edge_random
 from processes import remove_edge_distance_giant_comp
 from processes import remove_edge_random_giant_comp
 

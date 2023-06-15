@@ -322,7 +322,6 @@ def make_networks(n_nets: int, n_nodes: int, connectivity: float, net_type) -> l
     return nets
 
 
-
 def make_iterations(nets: list, fragmentation) -> pd.DataFrame:
     """
     run multiple iterations of the fragmentation process
@@ -348,8 +347,6 @@ def make_iterations(nets: list, fragmentation) -> pd.DataFrame:
     return combined_stat, combined_dens
 
 
-#
-
 # create short name to call the desired function
 function_mapping = {
     'rand': frag_random_giant_comp,
@@ -357,31 +354,69 @@ function_mapping = {
     'cor': frag_cor_giant_comp
 }
 
-# def frag_random(net):
-#     """
-#     run the random fragmentation pipeline to get fst data
-#     :param net: network
-#     :param n_frag: no. of steps
-#     :return: df with fst statistics
-#     """
-#     migration1 = remove_edge_random(net=net)
-#     print(migration1)
-#     # migration2 = intervals(migration1)
-#     # print(migration2)
-#     migration3 = [nx.attr_matrix(net)[0] for net in migration1]
-#     print(migration3)
-#     migration4 = normalize_list(migration3)
-#     print(migration4)
-#     fst = make_fst_list(migration_list=migration4)
-#     print(fst)
-#     fst_dens = make_fst_dist(fst)
-#     fst_stat = make_fst_stat(fst_dens)
+def frag_random(net):
+    """
+    run the random fragmentation pipeline to get fst data
+    :param net: network
+    :param n_frag: no. of steps
+    :return: df with fst statistics
+    """
+    migration1 = remove_edge_random(net=net)
+    print(migration1)
+    # migration2 = intervals(migration1)
+    # print(migration2)
+    migration3 = [nx.attr_matrix(net)[0] for net in migration1]
+    print(migration3)
+    migration4 = normalize_list(migration3)
+    print(migration4)
+    fst = make_fst_list(migration_list=migration4)
+    print(fst)
+    fst_dens = make_fst_dist(fst)
+    fst_stat = make_fst_stat(fst_dens)
+
+    return fst_stat, fst_dens, migration1
+net = nx.random_geometric_graph(5, 0.5, seed=123)
+
+nx.draw_networkx(net)
+plt.show()
+random.seed(56)
+x=frag_random(net)
+print(x)
+
+
+
+
+arr=np.array([[0., 0., 0., 0., 1.],
+       [0., 0., 1., 1., 1.],
+       [0., 1., 0., 0., 1.],
+       [0., 1., 0., 0., 0.],
+       [1., 1., 1., 0., 0.]])
+new=normalize(arr)
+print(new)
+print(m_to_f(new))
 #
-#     return fst_stat, fst_dens, migration1
-# net = nx.random_geometric_graph(10, 0.5, seed=123)
+# def measure_giant_component(network):
+#     largest_component = max(nx.connected_components(network), key=len)
+#     return len(largest_component)
 #
-# nx.draw_networkx(net)
+# # Create an original network with 50 nodes and desired edges
+# original_network = nx.random_geometric_graph(100, 0.2)
+#
+#
+# networks_list = remove_edge_random(original_network)
+# print(networks_list)
+# num_nodes_connected = []
+# for network in networks_list:
+#     num_nodes_connected.append(measure_giant_component(network))
+#
+# # Plotting the relationship
+# x = range(1, len(networks_list) + 1)
+# y = num_nodes_connected
+#
+# plt.plot(x, y, marker='o')
+# plt.xlabel('Network Index')
+# plt.ylabel('Number of Nodes in Giant Component')
+# plt.title('Number of Nodes in Giant Component vs. Network Index')
 # plt.show()
-# random.seed(56)
-# x=frag_random(net)
-# print(x)
+
+

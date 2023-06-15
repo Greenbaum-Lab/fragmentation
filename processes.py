@@ -1,5 +1,6 @@
 import random
 import networkx as nx
+import numpy as np
 from matplotlib import pyplot as plt
 
 
@@ -96,8 +97,10 @@ def remove_edge_distance(net: nx.Graph) -> list:
         distances = {edge: round(
             ((pos[edge[1]][1] - pos[edge[0]][1]) ** 2 + (pos[edge[1]][0] - pos[edge[0]][0]) ** 2) ** 0.5, 2)
             for edge in edges}
+        print(distances)
 
         edges = sorted(edges, key=distances.get, reverse=True)
+        print(edges)
 
         # Remove the longest edge from network
         migration.remove_edge(*edges[0])
@@ -299,8 +302,8 @@ def find_breaking_point(lst):
 
 
 #
-# random.seed(6)
-# net = nx.barabasi_albert_graph(100,2,seed=2)
+# # random.seed(6)
+# # net = nx.barabasi_albert_graph(100,2,seed=2)
 # # Create a new figure and axis
 # fig, ax = plt.subplots(figsize=(20, 20))
 # pos = nx.spring_layout(net, seed=98)  # set the fixed position for plotting the network

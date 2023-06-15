@@ -10,8 +10,8 @@ from funcs import make_networks
 from processes import find_breaking_point
 
 n = 50  # no. of nodes
-p = 0.8  # probability to connect nodes
-seed = 987
+p = 0.5  # probability to connect nodes
+seed = 98
 
 random.seed(65)  # set random seed
 
@@ -77,9 +77,8 @@ random.seed(65)  # set random seed
 
 # net = nx.erdos_renyi_graph(n=n, p=p)  # create network
 # net = nx.erdos_renyi_graph(n=n,p=0.8)
-net = nx.barabasi_albert_graph(n=n, m=2,seed=5)
-nx.draw_networkx(net)
-plt.show()
+net = nx.barabasi_albert_graph(n=50, m=2,seed=8)
+
 
 rand = frag_random_giant_comp(net=net)
 cor = frag_cor_giant_comp(net=net)
