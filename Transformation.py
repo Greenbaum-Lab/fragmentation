@@ -1,6 +1,28 @@
+import ctypes
+
 import numpy as np
 import math
 from collections import deque
+
+
+lib = ctypes.cdll.LoadLibrary('./libmigration.so')
+
+lib.coefficient_matrix_from_migration.restype = ctypes.POINTER(ctypes.c_double)
+lib.coefficient_matrix_from_migration.argtypes = [ctypes.POINTER(ctypes.c_double), ctypes.c_int]
+
+def coefficient_matrix_from_migration_wrapper(migration_matrix):
+    n = migration_matrix.shape[0]
+    mat_size = n + (n * (n - 1)) // 2  # size of the coefficient matrix
+    migration_matrix_c = migration_matrix.flatten().ctypes.data_as(ctypes.POINTER(ctypes.c_double))
+    result_c = lib.coefficient_matrix_from_migration(migration_matrix_c, n)
+    result = np.ctypeslib.as_array(result_c, shape=(mat_size*mat_size,)).reshape((mat_size, mat_size))
+
+    return result
+
+lib.coalescence_from_migration.restype = ctypes.POINTER(ctypes.c_double)
+lib.coalescence_from_migration.argtypes = [ctypes.POINTER(ctypes.c_double), ctypes.c_int]
+
+
 
 
 # This is a file for other users to copy to their projects.
@@ -41,23 +63,29 @@ class Migration:
         self.matrix = matrix
         self.shape = matrix.shape[0]
 
-    def produce_coalescence(self) -> np.ndarray:
-        """
-        produces and returns the corresponding coalescence matrix
-        :return: The corresponding coalescence matrix
-        """
-        A = self.produce_coefficient_matrix()
-        b = self.produce_solution_vector()
-        x = np.linalg.solve(A, b)
-        T_mat = np.zeros((self.shape, self.shape))
-        cur_ind = 0
-        for i in range(self.shape):
-            for j in range(i, self.shape):
-                T_mat[i, j] = x[cur_ind]
-                T_mat[j, i] = x[cur_ind]
-                cur_ind += 1
-        return T_mat
+    # def produce_coalescence(self) -> np.ndarray:
+    #     """
+    #     produces and returns the corresponding coalescence matrix
+    #     :return: The corresponding coalescence matrix
+    #     """
+    #     A = self.produce_coefficient_matrix()
+    #     b = self.produce_solution_vector()
+    #     x = np.linalg.solve(A, b)
+    #     T_mat = np.zeros((self.shape, self.shape))
+    #     cur_ind = 0
+    #     for i in range(self.shape):
+    #         for j in range(i, self.shape):
+    #             T_mat[i, j] = x[cur_ind]
+    #             T_mat[j, i] = x[cur_ind]
+    #             cur_ind += 1
+    #     return T_mat
 
+    def produce_coalescence(self) -> np.ndarray:
+        n = self.matrix.shape[0]
+        migration_matrix_c = self.matrix.flatten().ctypes.data_as(ctypes.POINTER(ctypes.c_double))
+        result_c = lib.coalescence_from_migration(migration_matrix_c, n)
+        T_mat = np.ctypeslib.as_array(result_c, shape=(n * n,)).reshape((n, n))
+        return T_mat
     def calculate_first_coefficients(self, j: int, i: int, same_pop: int, lower_bound: int, upper_bound: int,
                                      p_list: list, counter: list) -> float:
         """

@@ -277,6 +277,29 @@ def het_dist(net: nx.Graph):
     return het_stat, het_dens, migration2
 
 
+# def normalize(array: np.array) -> np.array:
+#     """
+#     normalize the migration matrix so that all row sums will be the same
+#     the sum will be equal to the sum of the row with the lowest sum
+#     :param array:  migration network with 0,1
+#     :return: scaled migration network
+#     """
+#     # Find the row with the lowest sum
+#     min_sum_row = np.argmin(np.sum(array, axis=1))
+#
+#     # Calculate the desired row sum
+#     # desired_sum = np.sum(array[min_sum_row])
+#     desired_sum = 1
+#     # Calculate the current row sums
+#     row_sums = np.sum(array, axis=1)
+#
+#     # Calculate the scaling factors needed for each row
+#     scaling_factors = desired_sum / row_sums
+#
+#     # Replace the values in the array with the scaled values
+#     scaled_arr = array * scaling_factors[:, np.newaxis]
+#
+#     return scaled_arr
 def normalize(array: np.array) -> np.array:
     """
     normalize the migration matrix so that all row sums will be the same
@@ -289,12 +312,19 @@ def normalize(array: np.array) -> np.array:
 
     # Calculate the desired row sum
     desired_sum = np.sum(array[min_sum_row])
+    # desired_sum = 1
 
     # Calculate the current row sums
     row_sums = np.sum(array, axis=1)
 
-    # Calculate the scaling factors needed for each row
-    scaling_factors = desired_sum / row_sums
+    # Create a mask of where row_sums is not zero
+    mask = row_sums != 0
+
+    # Initialize scaling_factors with zeros
+    scaling_factors = np.zeros_like(row_sums)
+
+    # Perform the division where the mask is true
+    scaling_factors[mask] = desired_sum / row_sums[mask]
 
     # Replace the values in the array with the scaled values
     scaled_arr = array * scaling_factors[:, np.newaxis]
@@ -362,39 +392,68 @@ def frag_random(net):
     :return: df with fst statistics
     """
     migration1 = remove_edge_random(net=net)
-    print(migration1)
     # migration2 = intervals(migration1)
     # print(migration2)
     migration3 = [nx.attr_matrix(net)[0] for net in migration1]
     print(migration3)
     migration4 = normalize_list(migration3)
-    print(migration4)
+    print(f'normalized {migration4}')
     fst = make_fst_list(migration_list=migration4)
-    print(fst)
+    print('fst {fst}')
     fst_dens = make_fst_dist(fst)
     fst_stat = make_fst_stat(fst_dens)
 
     return fst_stat, fst_dens, migration1
-net = nx.random_geometric_graph(5, 0.5, seed=123)
+net = nx.random_geometric_graph(5, 0.8, seed=123)
 
-nx.draw_networkx(net)
+# nx.draw_networkx(net)
+# plt.show()
+# random.seed(56)
+# x=frag_random(net)
+# print(x)
+
+# arr=np.array([[0., 0., 0., 1., 0.],
+#        [0., 0., 1., 1., 0.],
+#        [0., 1., 0., 1., 1.],
+#        [1., 1., 1., 0., 0.],
+#        [0., 0., 1., 0., 0.]])
+# print(normalize(arr))
+# arr= np.array([[0., 0., 0., 1., 0.],
+#        [0., 0., 1., 1., 0.],
+#        [0., 1., 0., 1., 0.],
+#        [1., 1., 1., 0., 0.],
+#        [0., 0., 0., 0., 0.]])
+# print(normalize(arr))
+
+# motif 13-should be 3 for all nodes#
+net3 = nx.erdos_renyi_graph(n=4, p=0.5, seed=12345678978943)
+nx.draw_networkx(net3)
 plt.show()
-random.seed(56)
-x=frag_random(net)
-print(x)
-
-
-
-
-arr=np.array([[0., 0., 0., 0., 1.],
-       [0., 0., 1., 1., 1.],
-       [0., 1., 0., 0., 1.],
-       [0., 1., 0., 0., 0.],
-       [1., 1., 1., 0., 0.]])
-new=normalize(arr)
+c=nx.attr_matrix(net3)[0]
+print(c)
+new=normalize(c)
 print(new)
-print(m_to_f(new))
+print(m_to_t(new))
+
 #
+#
+#
+# arr=np.array([[0., 0., 1., 0.,1],
+#               [0., 0., 0, 1,0],
+#               [1., 0., 0., 0,1],
+#               [0., 1., 0., 0.,0],
+#               [1,  0,  1,  0,0]])
+# nx.draw_networkx(nx.Graph(arr))
+# plt.show()
+# new=normalize(arr)
+# print(new)
+# print(m_to_f(new))
+#
+
+
+
+
+
 # def measure_giant_component(network):
 #     largest_component = max(nx.connected_components(network), key=len)
 #     return len(largest_component)

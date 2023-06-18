@@ -15,7 +15,9 @@ def remove_edge_random(net: nx.Graph) -> list:
     """
     migration = net.copy()
     migration_list = []  # initialize list with the original network
-    while nx.number_connected_components(migration) < len(migration.nodes):  # stop when the network includes only two connected nodes
+
+
+    while nx.number_of_edges(migration) > 2:  # stop when the network includes only two connected nodes
         # choose a random edge and remove it
         edges = list(migration.edges())
         edge = random.choice(edges)
