@@ -5,10 +5,9 @@ from joypy import joyplot
 from matplotlib import pyplot as plt
 import pandas as pd
 from funcs import make_networks, make_iterations, frag_random_giant_comp, frag_cor_giant_comp, frag_dist_giant_comp, \
-    calculate_centrality, het_rand, het_cor, het_dist
-from funcs import make_networks
+    calculate_centrality
 from processes import find_breaking_point
-
+from funcs2 import frag_rand, frag_cor, frag_dist, het_rand, het_cor, het_dist
 n = 50  # no. of nodes
 p = 0.5  # probability to connect nodes
 seed = 98
@@ -77,12 +76,11 @@ random.seed(65)  # set random seed
 
 # net = nx.erdos_renyi_graph(n=n, p=p)  # create network
 # net = nx.erdos_renyi_graph(n=n,p=0.8)
-net = nx.barabasi_albert_graph(n=50, m=2,seed=8)
+net = nx.random_geometric_graph(100, 0.5)
 
-
-rand = frag_random_giant_comp(net=net)
-cor = frag_cor_giant_comp(net=net)
-dist = frag_dist_giant_comp(net=net)
+rand = frag_rand(net=net)
+cor = frag_cor(net=net)
+dist = frag_dist(net=net)
 
 central_rand = calculate_centrality(rand[2])
 central_cor = calculate_centrality(cor[2])
@@ -98,11 +96,11 @@ brk_dist = find_breaking_point(dist[2])
 color_palette = plt.get_cmap('tab10')  # You can change 'tab10' to any other available palette
 
 plt.plot(rand[0]['step'], rand[0]['avg'], label="avg rand", color=color_palette(0))
-plt.plot(rand[0]['step'], rand[0]['median'], label="med rand", color=color_palette(0), linestyle='dashed')
+# plt.plot(rand[0]['step'], rand[0]['median'], label="med rand", color=color_palette(0), linestyle='dashed')
 plt.plot(cor[0]['step'], cor[0]['avg'], label="avg cor", color=color_palette(1))
-plt.plot(cor[0]['step'], cor[0]['median'], label="med cor", color=color_palette(1), linestyle='dashed')
+# plt.plot(cor[0]['step'], cor[0]['median'], label="med cor", color=color_palette(1), linestyle='dashed')
 plt.plot(dist[0]['step'], dist[0]['avg'], label="avg dist", color=color_palette(2))
-plt.plot(dist[0]['step'], dist[0]['median'], label="med dist", color=color_palette(2), linestyle='dashed')
+# plt.plot(dist[0]['step'], dist[0]['median'], label="med dist", color=color_palette(2), linestyle='dashed')
 
 plt.axvline(x=brk_rand, color=color_palette(0),ymax=0.1)
 plt.axvline(x=brk_cor, color=color_palette(1),ymax=0.1)
@@ -211,11 +209,11 @@ dist_het = het_dist(net)
 
 
 plt.plot(rand_het[0]['step'], rand_het[0]['avg'], label="avg rand", color=color_palette(0))
-plt.plot(rand_het[0]['step'], rand_het[0]['median'], label="med rand", color=color_palette(0), linestyle='dashed')
+# plt.plot(rand_het[0]['step'], rand_het[0]['median'], label="med rand", color=color_palette(0), linestyle='dashed')
 plt.plot(cor_het[0]['step'], cor_het[0]['avg'], label="avg rand", color=color_palette(1))
-plt.plot(cor_het[0]['step'], cor_het[0]['median'], label="med rand", color=color_palette(1), linestyle='dashed')
+# plt.plot(cor_het[0]['step'], cor_het[0]['median'], label="med rand", color=color_palette(1), linestyle='dashed')
 plt.plot(dist_het[0]['step'], dist_het[0]['avg'], label="avg dist", color=color_palette(2))
-plt.plot(dist_het[0]['step'], dist_het[0]['median'], label="med dist", color=color_palette(2), linestyle='dashed')
+# plt.plot(dist_het[0]['step'], dist_het[0]['median'], label="med dist", color=color_palette(2), linestyle='dashed')
 
 plt.axvline(x=brk_rand, color=color_palette(0), ymax=0.1)
 plt.axvline(x=brk_cor, color=color_palette(1), ymax=0.1)

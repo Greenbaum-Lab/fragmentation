@@ -47,7 +47,7 @@ def remove_edge_correlated(net: nx.Graph) -> list:
     node_a = edge[0]
     node_b = edge[1]
 
-    while nx.number_connected_components(migration) < len(migration.nodes):  # stop when the network includes only two connected nodes
+    while nx.number_of_edges(migration) > 2:  # stop when the network includes only two connected nodes
         # takes the edges of the nodes of the removed edge
         edges_a = list(migration.edges(node_a))
         edges_b = list(migration.edges(node_b))
@@ -91,7 +91,7 @@ def remove_edge_distance(net: nx.Graph) -> list:
     migration = net.copy()
     migration_list = []  # initialize list of networks
 
-    while nx.number_connected_components(migration) < len(migration.nodes):  # stop when the network includes only two connected nodes
+    while nx.number_of_edges(migration) > 2:  # stop when the network includes only two connected nodes
 
         edges = migration.edges()
 
@@ -99,10 +99,8 @@ def remove_edge_distance(net: nx.Graph) -> list:
         distances = {edge: round(
             ((pos[edge[1]][1] - pos[edge[0]][1]) ** 2 + (pos[edge[1]][0] - pos[edge[0]][0]) ** 2) ** 0.5, 2)
             for edge in edges}
-        print(distances)
 
         edges = sorted(edges, key=distances.get, reverse=True)
-        print(edges)
 
         # Remove the longest edge from network
         migration.remove_edge(*edges[0])

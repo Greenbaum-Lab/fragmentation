@@ -63,22 +63,22 @@ class Migration:
         self.matrix = matrix
         self.shape = matrix.shape[0]
 
-    # def produce_coalescence(self) -> np.ndarray:
-    #     """
-    #     produces and returns the corresponding coalescence matrix
-    #     :return: The corresponding coalescence matrix
-    #     """
-    #     A = self.produce_coefficient_matrix()
-    #     b = self.produce_solution_vector()
-    #     x = np.linalg.solve(A, b)
-    #     T_mat = np.zeros((self.shape, self.shape))
-    #     cur_ind = 0
-    #     for i in range(self.shape):
-    #         for j in range(i, self.shape):
-    #             T_mat[i, j] = x[cur_ind]
-    #             T_mat[j, i] = x[cur_ind]
-    #             cur_ind += 1
-    #     return T_mat
+    def produce_coalescence_old(self) -> np.ndarray:
+        """
+        produces and returns the corresponding coalescence matrix
+        :return: The corresponding coalescence matrix
+        """
+        A = self.produce_coefficient_matrix()
+        b = self.produce_solution_vector()
+        x = np.linalg.solve(A, b)
+        T_mat = np.zeros((self.shape, self.shape))
+        cur_ind = 0
+        for i in range(self.shape):
+            for j in range(i, self.shape):
+                T_mat[i, j] = x[cur_ind]
+                T_mat[j, i] = x[cur_ind]
+                cur_ind += 1
+        return T_mat
 
     def produce_coalescence(self) -> np.ndarray:
         n = self.matrix.shape[0]
@@ -217,7 +217,6 @@ def find_coalescence(m: np.ndarray) -> np.ndarray:
     M = Migration(m)
     return M.produce_coalescence()
 
-
 def find_components(matrix: np.ndarray) -> dict:
     """
     Find connected components in a connected graph represented by adjacency matrix.
@@ -327,3 +326,4 @@ def m_to_t(m: np.ndarray) -> np.ndarray:
     for matrix in sub_matrices:
         t_matrices.append(find_coalescence(matrix))
     return reassemble_matrix(t_matrices, components, "coalescence")
+
