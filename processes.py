@@ -4,7 +4,6 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 
-
 def remove_edge_random(net: nx.Graph) -> list:
     """
     Remove a random edge from the input network in each iteration.
@@ -15,7 +14,6 @@ def remove_edge_random(net: nx.Graph) -> list:
     """
     migration = net.copy()
     migration_list = []  # initialize list with the original network
-
 
     while nx.number_of_edges(migration) > 2:  # stop when the network includes only two connected nodes
         # choose a random edge and remove it
@@ -243,7 +241,6 @@ def remove_edge_distance_giant_comp(net: nx.Graph) -> list:
     return migration_list
 
 
-
 def get_connected_nodes(net: nx.Graph) -> set:
     """
     Get all the nodes in a network that are connected (exclude isolated nodes).
@@ -281,27 +278,42 @@ def get_connected_edges(net: nx.Graph, connected_nodes: set) -> list:
 
 
 def intervals(lst):
-    if len(lst) <= 20:
+    if len(lst) <= 50:
         return lst
 
-    interval = max((len(lst) - 1) // 19, 1)
-    return lst[:19 * interval:interval] + [lst[-1]]
+    interval = max((len(lst) - 1) // 49, 1)
+    return lst[:49 * interval:interval] + [lst[-1]]
 
 
-def find_breaking_point(lst):
+# def find_breaking_point(lst):
+#     """
+#     find the index of the list where the network is no longer connected
+#     """
+#     first_element = lst[0]
+#
+#     for i, element in enumerate(lst):
+#         if len(element) < len(first_element):
+#             return i
+#
+#     return -1  # Return -1 if no element is found
+
+
+def find_breaking_point(networks):
     """
     find the index of the list where the network is no longer connected
     """
-    first_element = lst[0]
+    for index, network in enumerate(networks):
+        if not nx.is_connected(network):
+            return index
+    return None
 
-    for i, element in enumerate(lst):
-        if len(element) < len(first_element):
-            return i
+def find_breakink_point_list(networks: list):
+    breaking_point = []
+    for net in networks:
+        x = find_breaking_point(net)
+        breaking_point.append(x)
+    return breaking_point
 
-    return -1  # Return -1 if no element is found
-
-
-#
 # # random.seed(6)
 # # net = nx.barabasi_albert_graph(100,2,seed=2)
 # # Create a new figure and axis
@@ -335,4 +347,3 @@ def find_breaking_point(lst):
 # nx.draw_networkx(dist[18], with_labels=False, ax=ax1, width=0.5, pos=pos)
 # # plt.show()
 # plt.savefig("dist_AB.svg", format="svg")
-
