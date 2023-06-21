@@ -21,8 +21,6 @@ from processes import remove_edge_correlated_giant_comp, intervals, remove_edge_
 from processes import remove_edge_distance_giant_comp
 from processes import remove_edge_random_giant_comp
 
-random.seed(56)
-
 
 def make_fst_list(migration_list: list) -> list:
     fst_list = []
@@ -295,59 +293,10 @@ def normalize(matrix: np.array) -> np.array:
     return normalized_matrix
 
 
-
-
 def normalize_list(migration_list: list):
     new_list = list(map(lambda x: normalize(x), migration_list))
     return new_list
 
-
-def make_networks(n_nets: int, n_nodes: int, connectivity: float, net_type) -> list:
-    nets = []
-    for net in range(n_nets):
-        if net_type == 'ER':
-            net = nx.erdos_renyi_graph(n=n_nodes, p=connectivity)
-            nets.append(net)
-        if net_type == 'RGG':
-            net = nx.random_geometric_graph(n=n_nodes, radius=connectivity)
-            nets.append(net)
-        if net_type == 'SF':
-            net = nx.barabasi_albert_graph(n=n_nodes, m=2)
-            nets.append(net)
-    return nets
-
-
-def make_iterations(nets: list, fragmentation) -> pd.DataFrame:
-    """
-    run multiple iterations of the fragmentation process
-    :param nets: list of networks
-    :param fragmentation: fragmentation process
-    :return: dataframe of avg fst for each net
-    """
-    all_stat = []
-    all_dens = []
-
-    # Get the corresponding function based on the nickname
-    selected_frag = function_mapping[fragmentation]
-
-    # calculate fst for each network in the list
-    for i in range(len(nets)):
-        net = selected_frag(net=nets[i])
-        all_stat.append(net[0])
-        all_dens.append(net[1])
-
-    # Combine the dataframes into a single dataframe
-    combined_stat = pd.concat(all_stat)
-    combined_dens = pd.concat(all_dens)
-    return combined_stat, combined_dens
-
-
-# create short name to call the desired function
-function_mapping = {
-    'rand': frag_random_giant_comp,
-    'dist': frag_dist_giant_comp,
-    'cor': frag_cor_giant_comp
-}
 
 def frag_rand(net):
     """
@@ -402,6 +351,66 @@ def frag_dist(net):
 
 
 
+def make_networks(n_nets: int, n_nodes: int, connectivity: float, net_type) -> list:
+    """
+    create a list of networks
+    :param n_nets: number of networks
+    :param n_nodes: number of nodes
+    :param connectivity: degree of connectivity
+    :param net_type: type of network: ER, RGG, or SF
+    :return: list of networks
+    """
+    nets = []
+    for net in range(n_nets):
+        if net_type == 'ER':
+            net = nx.erdos_renyi_graph(n=n_nodes, p=connectivity)
+            nets.append(net)
+        if net_type == 'RGG':
+            net = nx.random_geometric_graph(n=n_nodes, radius=connectivity)
+            nets.append(net)
+        if net_type == 'SF':
+            net = nx.barabasi_albert_graph(n=n_nodes, m=2)
+            nets.append(net)
+    return nets
+
+
+def make_iterations(nets: list, fragmentation: str) -> pd.DataFrame:
+    """
+    run multiple iterations of the fragmentation process
+    :param nets: list of networks
+    :param fragmentation: fragmentation process
+    :return: dataframe of avg fst for each net
+    """
+    all_stat = []
+    all_dens = []
+    all_nets = []
+    # Get the corresponding function based on the nickname
+    selected_frag = function_mapping[fragmentation]
+
+    # calculate fst for each network in the list
+    for i in range(len(nets)):
+        net = selected_frag(net=nets[i])
+        all_stat.append(net[0])
+        all_dens.append(net[1])
+        all_nets.append(net[2])
+    # Combine the dataframes into a single dataframe
+    combined_stat = pd.concat(all_stat)
+    combined_dens = pd.concat(all_dens)
+    return combined_stat, combined_dens, all_nets
+
+
+# create short name to call the desired function
+function_mapping = {
+    'rand': frag_rand,
+    'dist': frag_dist,
+    'cor': frag_cor
+}
+
+
+
+
+
+
 # def measure_giant_component(network):
 #     largest_component = max(nx.connected_components(network), key=len)
 #     return len(largest_component)
@@ -425,5 +434,4 @@ def frag_dist(net):
 # plt.ylabel('Number of Nodes in Giant Component')
 # plt.title('Number of Nodes in Giant Component vs. Network Index')
 # plt.show()
-
 
