@@ -327,3 +327,23 @@ def m_to_t(m: np.ndarray) -> np.ndarray:
         t_matrices.append(find_coalescence(matrix))
     return reassemble_matrix(t_matrices, components, "coalescence")
 
+def transform_matrix(m: np.ndarray) -> tuple:
+    """
+       Receives a migration matrix (a squared, positive matrix with zeroes on the diagonal) with any number
+       of connected components, and returns its corresponding Coalescent times (T) matrix according to
+       Wilkinson-Herbot's equations, and it's corresponding Fst matrix(F) according to Slatkin equations.
+       :param m: Migration matrix- squared, positive, with zeroes on the diagonal.
+       :return:  A tuple (T,F). Corresponding T matrix according to Wilkinson-Herbot's equations,
+       Corresponding F matrix according to Slatkin equations.
+       If there is no solution, an error will occur.
+       """
+    split = split_migration(m)
+    sub_matrices, components = split[0], split[1]
+    t_matrices = []
+    f_matrices = []
+    for matrix in sub_matrices:
+        t_matrix = find_coalescence(matrix)
+        t_matrices.append(t_matrix)
+        T = Coalescence(t_matrix)
+        f_matrices.append(T.produce_fst())
+    return reassemble_matrix(t_matrices, components, "coalescence"), reassemble_matrix(f_matrices, components, "fst")
