@@ -6,7 +6,7 @@ from matplotlib import pyplot as plt
 
 from Transformation import m_to_f, m_to_t
 from processes import remove_edge_random, remove_edge_correlated, remove_edge_distance
-
+from multiprocessing import Pool
 
 from statistics import mean
 from statistics import median
@@ -100,7 +100,6 @@ def make_het_dist(het_list: list) -> pd.DataFrame:
 #     return df
 
 
-
 def make_fst_stat(f: pd.DataFrame, ignore_ones: str) -> pd.DataFrame:
     """
      calculate the mean and median fst of each step excluding values of 1
@@ -131,6 +130,7 @@ def make_fst_stat(f: pd.DataFrame, ignore_ones: str) -> pd.DataFrame:
     d = {'step': step, 'avg': avg, 'median': med}
     df = pd.DataFrame(data=d)
     return df
+
 
 def make_het_stat(f: pd.DataFrame) -> pd.DataFrame:
     """
@@ -314,6 +314,7 @@ def frag_rand(net):
 
     return fst_stat, fst_dens, migration1, nets_number
 
+
 def frag_cor(net):
     """
     run the random fragmentation pipeline to get fst data
@@ -332,6 +333,7 @@ def frag_cor(net):
 
     return fst_stat, fst_dens, migration1, nets_number
 
+
 def frag_dist(net):
     """
     run the random fragmentation pipeline to get fst data
@@ -349,7 +351,6 @@ def frag_dist(net):
     fst_stat = make_fst_stat(fst_dens, ignore_ones=False)
 
     return fst_stat, fst_dens, migration1, nets_number
-
 
 
 def make_networks(n_nets: int, n_nodes: int, connectivity: float, net_type) -> list:
@@ -373,11 +374,16 @@ def make_networks(n_nets: int, n_nodes: int, connectivity: float, net_type) -> l
             net = nx.barabasi_albert_graph(n=n_nodes, m=2)
             nets.append(net)
     return nets
-from multiprocessing import Pool
+
+
+
+
 # Function to apply to each network in the list
 def apply_selected_frag(args):
     selected_frag, net = args
     return selected_frag(net=net)
+
+
 def make_iterations_new(nets: list, fragmentation: str) -> pd.DataFrame:
     """
     run multiple iterations of the fragmentation process
@@ -393,11 +399,14 @@ def make_iterations_new(nets: list, fragmentation: str) -> pd.DataFrame:
     with Pool() as p:
         results = p.map(apply_selected_frag, args)
     # Unpack the results
-    all_stat, all_dens, all_nets = zip(*results)
+    all_stat, all_dens, all_nets, nets_number = zip(*results)
     # Combine the dataframes into a single dataframe
     combined_stat = pd.concat(all_stat)
     combined_dens = pd.concat(all_dens)
-    return combined_stat, combined_dens, all_nets
+    nets_mean = mean(nets_number)
+    return combined_stat, combined_dens, all_nets, nets_mean
+
+
 def make_iterations_fst(nets: list, fragmentation: str) -> pd.DataFrame:
     """
     run multiple iterations of the fragmentation process
@@ -435,8 +444,6 @@ function_mapping = {
 }
 
 
-
-
 def make_iterations_het(nets: list, fragmentation: str) -> pd.DataFrame:
     """
     run multiple iterations of the fragmentation process
@@ -465,9 +472,6 @@ het_mapping = {
     'cor': het_cor
 }
 
-
-
-
 # def measure_giant_component(network):
 #     largest_component = max(nx.connected_components(network), key=len)
 #     return len(largest_component)
@@ -491,4 +495,3 @@ het_mapping = {
 # plt.ylabel('Number of Nodes in Giant Component')
 # plt.title('Number of Nodes in Giant Component vs. Network Index')
 # plt.show()
-
