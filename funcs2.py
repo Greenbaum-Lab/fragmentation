@@ -6,7 +6,7 @@ from matplotlib import pyplot as plt
 
 from Transformation import m_to_f, m_to_t
 from processes import remove_edge_random, remove_edge_correlated, remove_edge_distance
-
+from multiprocessing import Pool
 
 from statistics import mean
 from statistics import median
@@ -100,7 +100,6 @@ def make_het_dist(het_list: list) -> pd.DataFrame:
 #     return df
 
 
-
 def make_fst_stat(f: pd.DataFrame, ignore_ones: str) -> pd.DataFrame:
     """
      calculate the mean and median fst of each step excluding values of 1
@@ -131,6 +130,7 @@ def make_fst_stat(f: pd.DataFrame, ignore_ones: str) -> pd.DataFrame:
     d = {'step': step, 'avg': avg, 'median': med}
     df = pd.DataFrame(data=d)
     return df
+
 
 def make_het_stat(f: pd.DataFrame) -> pd.DataFrame:
     """
@@ -231,9 +231,7 @@ def het_rand(net: nx.Graph):
     migration4 = normalize_list(migration3)
     het = make_het_list(migration_list=migration4)
     het_dens = make_het_dist(het)
-    print(het_dens)
     het_stat = make_het_stat(het_dens)
-    print(het_stat)
     return het_stat, het_dens, migration2
 
 
@@ -306,6 +304,7 @@ def frag_rand(net):
     :return: df with fst statistics
     """
     migration1 = remove_edge_random(net=net)
+    nets_number = len(migration1)
     migration2 = intervals(migration1)
     migration3 = [nx.attr_matrix(net)[0] for net in migration2]
     migration4 = normalize_list(migration3)
@@ -313,7 +312,8 @@ def frag_rand(net):
     fst_dens = make_fst_dist(fst)
     fst_stat = make_fst_stat(fst_dens, ignore_ones=False)
 
-    return fst_stat, fst_dens, migration1
+    return fst_stat, fst_dens, migration1, nets_number
+
 
 def frag_cor(net):
     """
@@ -323,6 +323,7 @@ def frag_cor(net):
     :return: df with fst statistics
     """
     migration1 = remove_edge_correlated(net=net)
+    nets_number = len(migration1)
     migration2 = intervals(migration1)
     migration3 = [nx.attr_matrix(net)[0] for net in migration2]
     migration4 = normalize_list(migration3)
@@ -330,7 +331,8 @@ def frag_cor(net):
     fst_dens = make_fst_dist(fst)
     fst_stat = make_fst_stat(fst_dens, ignore_ones=False)
 
-    return fst_stat, fst_dens, migration1
+    return fst_stat, fst_dens, migration1, nets_number
+
 
 def frag_dist(net):
     """
@@ -340,6 +342,7 @@ def frag_dist(net):
     :return: df with fst statistics
     """
     migration1 = remove_edge_distance(net=net)
+    nets_number = len(migration1)
     migration2 = intervals(migration1)
     migration3 = [nx.attr_matrix(net)[0] for net in migration2]
     migration4 = normalize_list(migration3)
@@ -347,8 +350,7 @@ def frag_dist(net):
     fst_dens = make_fst_dist(fst)
     fst_stat = make_fst_stat(fst_dens, ignore_ones=False)
 
-    return fst_stat, fst_dens, migration1
-
+    return fst_stat, fst_dens, migration1, nets_number
 
 
 def make_networks(n_nets: int, n_nodes: int, connectivity: float, net_type) -> list:
@@ -374,7 +376,38 @@ def make_networks(n_nets: int, n_nodes: int, connectivity: float, net_type) -> l
     return nets
 
 
-def make_iterations(nets: list, fragmentation: str) -> pd.DataFrame:
+
+
+# Function to apply to each network in the list
+def apply_selected_frag(args):
+    selected_frag, net = args
+    return selected_frag(net=net)
+
+
+def make_iterations_new(nets: list, fragmentation: str) -> pd.DataFrame:
+    """
+    run multiple iterations of the fragmentation process
+    :param nets: list of networks
+    :param fragmentation: fragmentation process
+    :return: dataframe of avg fst for each net
+    """
+    # Get the corresponding function based on the nickname
+    selected_frag = function_mapping[fragmentation]
+    # Prepare arguments for the apply_selected_frag function
+    args = [(selected_frag, net) for net in nets]
+    # Use a pool of workers
+    with Pool() as p:
+        results = p.map(apply_selected_frag, args)
+    # Unpack the results
+    all_stat, all_dens, all_nets, nets_number = zip(*results)
+    # Combine the dataframes into a single dataframe
+    combined_stat = pd.concat(all_stat)
+    combined_dens = pd.concat(all_dens)
+    nets_mean = mean(nets_number)
+    return combined_stat, combined_dens, all_nets, nets_mean
+
+
+def make_iterations_fst(nets: list, fragmentation: str) -> pd.DataFrame:
     """
     run multiple iterations of the fragmentation process
     :param nets: list of networks
@@ -384,6 +417,7 @@ def make_iterations(nets: list, fragmentation: str) -> pd.DataFrame:
     all_stat = []
     all_dens = []
     all_nets = []
+    nets_number = []
     # Get the corresponding function based on the nickname
     selected_frag = function_mapping[fragmentation]
 
@@ -393,10 +427,13 @@ def make_iterations(nets: list, fragmentation: str) -> pd.DataFrame:
         all_stat.append(net[0])
         all_dens.append(net[1])
         all_nets.append(net[2])
+        nets_number.append(net[3])
+
     # Combine the dataframes into a single dataframe
     combined_stat = pd.concat(all_stat)
     combined_dens = pd.concat(all_dens)
-    return combined_stat, combined_dens, all_nets
+    nets_mean = mean(nets_number)
+    return combined_stat, combined_dens, all_nets, nets_mean
 
 
 # create short name to call the desired function
@@ -407,9 +444,33 @@ function_mapping = {
 }
 
 
+def make_iterations_het(nets: list, fragmentation: str) -> pd.DataFrame:
+    """
+    run multiple iterations of the fragmentation process
+    :param nets: list of networks
+    :param fragmentation: fragmentation process
+    :return: dataframe of avg fst for each net
+    """
+    all_stat = []
+    # Get the corresponding function based on the nickname
+    selected_frag = het_mapping[fragmentation]
+
+    # calculate fst for each network in the list
+    for i in range(len(nets)):
+        net = selected_frag(net=nets[i])
+        all_stat.append(net[0])
+
+    # Combine the dataframes into a single dataframe
+    combined_stat = pd.concat(all_stat)
+    return combined_stat
 
 
-
+# create short name to call the desired function
+het_mapping = {
+    'rand': het_rand,
+    'dist': het_dist,
+    'cor': het_cor
+}
 
 # def measure_giant_component(network):
 #     largest_component = max(nx.connected_components(network), key=len)
@@ -434,4 +495,3 @@ function_mapping = {
 # plt.ylabel('Number of Nodes in Giant Component')
 # plt.title('Number of Nodes in Giant Component vs. Network Index')
 # plt.show()
-
