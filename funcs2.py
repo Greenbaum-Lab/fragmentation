@@ -132,6 +132,49 @@ def make_fst_stat(f: pd.DataFrame, ignore_ones: str) -> pd.DataFrame:
     return df
 
 
+
+
+# def make_fst_stat(f: pd.DataFrame, ignore_ones: str) -> pd.DataFrame:
+#     """
+#      calculate the mean and median fst of each step excluding values of 1
+#     :param f: dataframe of fst distribution in each step
+#     :return: dataframe of average and median for each step
+#     """
+#     avg = []
+#     med = []
+#
+#     if ignore_ones == True:
+#         step_range = np.arange(max(f['step']) + 1)
+#
+#         for i in step_range:
+#             fst_avg = f[(f['step'] == i) & (f['fst'] != 1)]['fst'].values
+#             fst_med = f[(f['step'] == i) & (f['fst'] != 1)]['fst'].values
+#
+#             if len(fst_avg) > 0:
+#                 avg.append(np.mean(fst_avg))
+#             if len(fst_med) > 0:
+#                 med.append(np.median(fst_med))
+#
+#         step = step_range.tolist()
+#
+#     if ignore_ones == False:
+#         for i in range(max(f['step'])):
+#             fst_avg = f[f['step'] == i]['fst']
+#             avg.append(mean(fst_avg))
+#             fst_med = f[f['step'] == i]['fst']
+#             med.append(median(fst_med))
+#             step = range(max(f['step']))
+#     d = {'step': step, 'avg': avg, 'median': med}
+#     df = pd.DataFrame(data=d)
+#     return df
+
+
+
+
+
+
+
+
 def make_het_stat(f: pd.DataFrame) -> pd.DataFrame:
     """
      calculate the mean and median heterozygosity of each step
@@ -376,8 +419,6 @@ def make_networks(n_nets: int, n_nodes: int, connectivity: float, net_type) -> l
     return nets
 
 
-
-
 # Function to apply to each network in the list
 def apply_selected_frag(args):
     selected_frag, net = args
@@ -471,6 +512,41 @@ het_mapping = {
     'dist': het_dist,
     'cor': het_cor
 }
+
+from multiprocessing import Pool
+import pandas as pd
+
+# Function to apply to each network in the list
+def apply_selected_frag_het(args):
+    selected_frag, net = args
+    result = selected_frag(net=net)
+    # Assuming the function returns a tuple,
+    # and the first item of the tuple is the DataFrame/Series
+    return result[0]
+
+def make_iterations_het_new(nets: list, fragmentation: str) -> pd.DataFrame:
+    """
+    run multiple iterations of the fragmentation process
+    :param nets: list of networks
+    :param fragmentation: fragmentation process
+    :return: dataframe of avg fst for each net
+    """
+    # Get the corresponding function based on the nickname
+    selected_frag = het_mapping[fragmentation]
+
+    # Prepare arguments for the apply_selected_frag_het function
+    args = [(selected_frag, net) for net in nets]
+
+    # Use a pool of workers
+    with Pool() as p:
+        all_stat = p.map(apply_selected_frag_het, args)
+
+    # Combine the dataframes into a single dataframe
+    combined_stat = pd.concat(all_stat)
+
+    return combined_stat
+
+
 
 # def measure_giant_component(network):
 #     largest_component = max(nx.connected_components(network), key=len)
