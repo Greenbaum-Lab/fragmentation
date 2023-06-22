@@ -285,19 +285,6 @@ def intervals(lst):
     return lst[:49 * interval:interval] + [lst[-1]]
 
 
-# def find_breaking_point(lst):
-#     """
-#     find the index of the list where the network is no longer connected
-#     """
-#     first_element = lst[0]
-#
-#     for i, element in enumerate(lst):
-#         if len(element) < len(first_element):
-#             return i
-#
-#     return -1  # Return -1 if no element is found
-
-
 def find_breaking_point(networks):
     """
     find the index of the list where the network is no longer connected
