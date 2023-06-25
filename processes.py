@@ -280,22 +280,9 @@ def get_connected_edges(net: nx.Graph, connected_nodes: set) -> list:
 def intervals(lst):
     if len(lst) <= 50:
         return lst
-
-    interval = max((len(lst) - 1) // 49, 1)
-    return lst[:49 * interval:interval] + [lst[-1]]
-
-
-# def find_breaking_point(lst):
-#     """
-#     find the index of the list where the network is no longer connected
-#     """
-#     first_element = lst[0]
-#
-#     for i, element in enumerate(lst):
-#         if len(element) < len(first_element):
-#             return i
-#
-#     return -1  # Return -1 if no element is found
+    n = 49 # number of bins (-1)
+    interval = max((len(lst) - 1) // n, 1)
+    return lst[:n * interval:interval] + [lst[-1]]
 
 
 def find_breaking_point(networks):
