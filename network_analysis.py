@@ -16,7 +16,7 @@ from funcs2 import frag_rand, frag_cor, frag_dist, het_rand, het_cor, het_dist, 
 
 n = 50  # no. of nodes
 p = 0.4  # probability to connect nodes
-n_rep = 200
+n_rep = 100
 
 # Record the starting time
 start_time = time.time()
