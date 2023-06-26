@@ -1,8 +1,12 @@
 import random
+from _decimal import Decimal
+from fractions import Fraction
+from typing import Tuple, List, Any
 
 import networkx as nx
 import numpy as np
 from matplotlib import pyplot as plt
+from pandas import DataFrame, Series
 
 from Transformation import m_to_f, m_to_t
 from processes import remove_edge_random, remove_edge_correlated, remove_edge_distance
@@ -353,7 +357,7 @@ def frag_rand(net):
     migration4 = normalize_list(migration3)
     fst = make_fst_list(migration_list=migration4)
     fst_dens = make_fst_dist(fst)
-    fst_stat = make_fst_stat(fst_dens, ignore_ones=False)
+    fst_stat = make_fst_stat(fst_dens, ignore_ones=True)
 
     return fst_stat, fst_dens, migration1, nets_number
 
@@ -372,7 +376,7 @@ def frag_cor(net):
     migration4 = normalize_list(migration3)
     fst = make_fst_list(migration_list=migration4)
     fst_dens = make_fst_dist(fst)
-    fst_stat = make_fst_stat(fst_dens, ignore_ones=False)
+    fst_stat = make_fst_stat(fst_dens, ignore_ones=True)
 
     return fst_stat, fst_dens, migration1, nets_number
 
@@ -391,7 +395,7 @@ def frag_dist(net):
     migration4 = normalize_list(migration3)
     fst = make_fst_list(migration_list=migration4)
     fst_dens = make_fst_dist(fst)
-    fst_stat = make_fst_stat(fst_dens, ignore_ones=False)
+    fst_stat = make_fst_stat(fst_dens, ignore_ones=True)
 
     return fst_stat, fst_dens, migration1, nets_number
 
@@ -425,7 +429,7 @@ def apply_selected_frag(args):
     return selected_frag(net=net)
 
 
-def make_iterations_new(nets: list, fragmentation: str) -> pd.DataFrame:
+def make_iterations_new(nets: list, fragmentation: str) -> tuple[DataFrame | Series, DataFrame | Series, Any, Any]:
     """
     run multiple iterations of the fragmentation process
     :param nets: list of networks
@@ -448,7 +452,8 @@ def make_iterations_new(nets: list, fragmentation: str) -> pd.DataFrame:
     return combined_stat, combined_dens, all_nets, nets_mean
 
 
-def make_iterations_fst(nets: list, fragmentation: str) -> pd.DataFrame:
+def make_iterations_fst(nets: list, fragmentation: str) -> tuple[
+    DataFrame | Series, DataFrame | Series, list[Any], float | Decimal | Fraction | Any]:
     """
     run multiple iterations of the fragmentation process
     :param nets: list of networks
