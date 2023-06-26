@@ -56,3 +56,20 @@ plt.legend()
 plt.savefig("breaking.png", format="png")
 
 plt.show()
+
+#######add parameters of percolation
+def calculate_centrality(net: list) -> pd.DataFrame:
+    """
+    Calculate the degree of network
+    :param net: list of migration networks
+    :return: dataframe of degree and clustering for each step
+    """
+    m = net.copy()
+    clustering = list(map(lambda x: nx.average_clustering(x), m))
+    betweenness = list(map(lambda x: sum(nx.betweenness_centrality(x).values()) / len(x), m))
+    step = range(len(m))
+    d = {'step': step, 'clustering': clustering, 'betweenness': betweenness}
+    df = pd.DataFrame(data=d)
+    print(df)
+    return df
+

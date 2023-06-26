@@ -177,25 +177,47 @@ def make_fst_stat(f: pd.DataFrame, ignore_ones: str) -> pd.DataFrame:
 
 
 
-
-
-def make_het_stat(f: pd.DataFrame) -> pd.DataFrame:
+def make_het_stat(f: pd.DataFrame, ignore_isolated: bool) -> pd.DataFrame:
     """
      calculate the mean and median heterozygosity of each step
     :param f: dataframe of heterozygosity distribution in each step
+    :param ignore_isolated: if True, ignores rows where 'het' value is 1
     :return: dataframe of average and median for each step
     """
-    avg = []
-    med = []
-    for i in range(max(f['step'])):
-        het_avg = f[f['step'] == i]['het']
-        avg.append(mean(het_avg.copy()))
-        het_med = f[f['step'] == i]['het']
-        med.append(median(het_med))
-        step = range(max(f['step']))
-    d = {'step': step, 'avg': avg, 'median': med}
+
+    if ignore_isolated:
+        # Ignore rows where 'het' equals 1
+        f = f[f['het'] != 1]
+
+    # Get unique steps
+    unique_steps = f['step'].unique()
+
+    # Calculate mean and median heterozygosity for each step
+    avg = f.groupby('step')['het'].mean().reindex(unique_steps).tolist()
+    med = f.groupby('step')['het'].median().reindex(unique_steps).tolist()
+
+    d = {'step': unique_steps, 'avg': avg, 'median': med}
     df = pd.DataFrame(data=d)
     return df
+
+#
+# def make_het_stat(f: pd.DataFrame) -> pd.DataFrame:
+#     """
+#      calculate the mean and median heterozygosity of each step
+#     :param f: dataframe of heterozygosity distribution in each step
+#     :return: dataframe of average and median for each step
+#     """
+#     avg = []
+#     med = []
+#     for i in range(max(f['step'])):
+#         het_avg = f[f['step'] == i]['het']
+#         avg.append(mean(het_avg.copy()))
+#         het_med = f[f['step'] == i]['het']
+#         med.append(median(het_med))
+#         step = range(max(f['step']))
+#     d = {'step': step, 'avg': avg, 'median': med}
+#     df = pd.DataFrame(data=d)
+#     return df
 
 
 def calculate_centrality(net: list) -> pd.DataFrame:
@@ -278,7 +300,7 @@ def het_rand(net: nx.Graph):
     migration4 = normalize_list(migration3)
     het = make_het_list(migration_list=migration4)
     het_dens = make_het_dist(het)
-    het_stat = make_het_stat(het_dens)
+    het_stat = make_het_stat(het_dens,ignore_isolated=True)
     return het_stat, het_dens, migration2
 
 
@@ -294,7 +316,7 @@ def het_cor(net: nx.Graph):
     migration4 = normalize_list(migration3)
     het = make_het_list(migration_list=migration4)
     het_dens = make_het_dist(het)
-    het_stat = make_het_stat(het_dens)
+    het_stat = make_het_stat(het_dens,ignore_isolated=True)
 
     return het_stat, het_dens, migration2
 
@@ -311,7 +333,7 @@ def het_dist(net: nx.Graph):
     migration4 = normalize_list(migration3)
     het = make_het_list(migration_list=migration4)
     het_dens = make_het_dist(het)
-    het_stat = make_het_stat(het_dens)
+    het_stat = make_het_stat(het_dens,ignore_isolated=True)
 
     return het_stat, het_dens, migration2
 
@@ -429,7 +451,7 @@ def apply_selected_frag(args):
     return selected_frag(net=net)
 
 
-def make_iterations_new(nets: list, fragmentation: str) -> tuple[DataFrame | Series, DataFrame | Series, Any, Any]:
+def make_iterations_new(nets: list, fragmentation: str) -> tuple:
     """
     run multiple iterations of the fragmentation process
     :param nets: list of networks
@@ -452,8 +474,7 @@ def make_iterations_new(nets: list, fragmentation: str) -> tuple[DataFrame | Ser
     return combined_stat, combined_dens, all_nets, nets_mean
 
 
-def make_iterations_fst(nets: list, fragmentation: str) -> tuple[
-    DataFrame | Series, DataFrame | Series, list[Any], float | Decimal | Fraction | Any]:
+def make_iterations_fst(nets: list, fragmentation: str) -> tuple:
     """
     run multiple iterations of the fragmentation process
     :param nets: list of networks
