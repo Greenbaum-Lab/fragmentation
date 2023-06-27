@@ -6,6 +6,8 @@ import numpy as np
 import networkx as nx
 import pandas as pd
 from statistics import mean, median
+from multiprocessing import Pool
+
 
 def normalize(matrix: np.array) -> np.array:
     # Convert to numpy array in case it's a list
@@ -52,8 +54,6 @@ def calculate_genetics(migration_list: list) -> tuple:
     return het_list, fst_list
 
 
-
-
 def make_fst_dist(f: list) -> pd.DataFrame:
     """
     take a list of F metrics and return a dataframe without diagonal values (zero)
@@ -87,34 +87,59 @@ def make_het_dist(het_list: list) -> pd.DataFrame:
     return df
 
 
+#
+# def make_fst_stat(f: pd.DataFrame, ignore_isolated: bool) -> pd.DataFrame:
+#     """
+#      calculate the mean and median fst of each step excluding values of 1
+#     :param f: dataframe of fst distribution in each step
+#     :return: dataframe of average and median for each step
+#     """
+#     avg = []
+#     med = []
+#
+#     if ignore_isolated == True:
+#         for i in range(max(f['step']) + 1):  # We add 1 to include the max value in the range
+#             fst_avg = f[(f['step'] == i) & (f['fst'] != 1)]['fst']
+#             fst_med = f[(f['step'] == i) & (f['fst'] != 1)]['fst']
+#             # we only append values if the series is not empty
+#             if not fst_avg.empty:
+#                 avg.append(mean(fst_avg))
+#             if not fst_med.empty:
+#                 med.append(median(fst_med))
+#         step = list(range(max(f['step']) + 1))
+#
+#     if ignore_isolated == False:
+#         for i in range(max(f['step']) + 1):
+#             fst_avg = f[f['step'] == i]['fst']
+#             avg.append(mean(fst_avg))
+#             fst_med = f[f['step'] == i]['fst']
+#             med.append(median(fst_med))
+#             step = range(max(f['step']))
+#     d = {'step': step, 'avg': avg, 'median': med}
+#     df = pd.DataFrame(data=d)
+#     return df
+
+
 def make_fst_stat(f: pd.DataFrame, ignore_isolated: bool) -> pd.DataFrame:
     """
-     calculate the mean and median fst of each step excluding values of 1
-    :param f: dataframe of fst distribution in each step
-    :return: dataframe of average and median for each step
+     calculate the mean and median fst of each step
+     :param f: dataframe of fst distribution in each step
+     :param ignore_isolated: if True, ignores rows where 'fst' value is 1
+     :return: dataframe of average and median for each step
     """
-    avg = []
-    med = []
 
-    if ignore_isolated == True:
-        for i in range(max(f['step']) + 1):  # We add 1 to include the max value in the range
-            fst_avg = f[(f['step'] == i) & (f['fst'] != 1)]['fst']
-            fst_med = f[(f['step'] == i) & (f['fst'] != 1)]['fst']
-            # we only append values if the series is not empty
-            if not fst_avg.empty:
-                avg.append(mean(fst_avg))
-            if not fst_med.empty:
-                med.append(median(fst_med))
-        step = list(range(max(f['step']) + 1))
+    if ignore_isolated:
+        # Ignore rows where 'fst' equals 1
+        f = f[f['fst'] != 1]
 
-    if ignore_isolated == False:
-        for i in range(max(f['step']) + 1):
-            fst_avg = f[f['step'] == i]['fst']
-            avg.append(mean(fst_avg))
-            fst_med = f[f['step'] == i]['fst']
-            med.append(median(fst_med))
-            step = range(max(f['step']))
-    d = {'step': step, 'avg': avg, 'median': med}
+    # Get unique steps
+    unique_steps = f['step'].unique()
+
+    # Calculate mean and median fst for each step
+    avg = f.groupby('step')['fst'].mean().reindex(unique_steps).tolist()
+    med = f.groupby('step')['fst'].median().reindex(unique_steps).tolist()
+
+    d = {'step': unique_steps, 'avg': avg, 'median': med}
     df = pd.DataFrame(data=d)
     return df
 
@@ -142,6 +167,7 @@ def make_het_stat(f: pd.DataFrame, ignore_isolated: bool) -> pd.DataFrame:
     df = pd.DataFrame(data=d)
     return df
 
+
 # create short name to call the desired function
 function_mapping = {
     'rand': remove_edge_random,
@@ -158,12 +184,12 @@ def make_fragmentation(net: nx.Graph, frag_type: str, ignore_isolated: bool) -> 
     """
     frag_type = function_mapping[frag_type]
 
-    migration1 = frag_type(net=net)
-    nets_number = len(migration1)
+    migration = frag_type(net=net)
+    nets_number = len(migration)
 
     # migration2 = intervals(migration1) # take bins of the process
 
-    genetics = calculate_genetics(migration_list=migration1)
+    genetics = calculate_genetics(migration_list=migration)
 
     # calculate heterozygosity
     het_dens = make_het_dist(genetics[0])
@@ -173,5 +199,72 @@ def make_fragmentation(net: nx.Graph, frag_type: str, ignore_isolated: bool) -> 
     fst_dens = make_fst_dist(genetics[1])
     fst_stat = make_fst_stat(fst_dens, ignore_isolated=ignore_isolated)
 
-    return nets_number, migration1, migration2, het_dens, het_stat, fst_dens, fst_stat
+    return nets_number, migration, het_dens, het_stat, fst_dens, fst_stat
 
+
+def make_replicates(nets: list, frag_type: str, ignore_isolated: bool) -> tuple:
+    """
+    run multiple iterations of the fragmentation process
+    :param ignore_isolated: ignore isolated populations (1)
+    :param frag_type: fragmentation type
+    :param nets: list of networks
+    :return: tuple of all values in dataframes
+    """
+    nets_number = []
+    all_nets = []
+    het_dens = []
+    het_stat = []
+    fst_dens = []
+    fst_stat = []
+
+    for i in range(len(nets)):
+        net = make_fragmentation(net=nets[i], frag_type=frag_type, ignore_isolated=ignore_isolated)
+        nets_number.append(net[0])
+        all_nets.append(net[1])
+        het_dens.append(net[2])
+        het_stat.append(net[3])
+        fst_dens.append(net[4])
+        fst_stat.append(net[5])
+
+    # Combine the dataframes into a single dataframe
+    nets_number = mean(nets_number)
+    het_dens = pd.concat(het_dens)
+    het_stat = pd.concat(het_stat)
+    fst_dens = pd.concat(fst_dens)
+    fst_stat = pd.concat(fst_stat)
+
+    return nets_number, all_nets, het_dens, het_stat, fst_dens, fst_stat
+
+
+# Function to apply to each network in the list
+def apply_make_fragmentation(args):
+    net, frag_type, ignore_isolated = args
+    return make_fragmentation(net=net, frag_type=frag_type, ignore_isolated=ignore_isolated)
+
+def make_replicates_new(nets: list, frag_type: str, ignore_isolated: bool) -> tuple:
+    """
+    run multiple iterations of the fragmentation process
+    :param ignore_isolated: ignore isolated populations (1)
+    :param frag_type: fragmentation type
+    :param nets: list of networks
+    :return: tuple of all values in dataframes
+    """
+
+    # Prepare arguments for the apply_make_fragmentation function
+    args = [(net, frag_type, ignore_isolated) for net in nets]
+
+    # Use a pool of workers
+    with Pool() as p:
+        results = p.map(apply_make_fragmentation, args)
+
+    # Unpack the results
+    nets_number, all_nets, het_dens, het_stat, fst_dens, fst_stat = zip(*results)
+
+    # Combine the dataframes into a single dataframe
+    nets_number = np.mean(nets_number)
+    het_dens = pd.concat(het_dens)
+    het_stat = pd.concat(het_stat)
+    fst_dens = pd.concat(fst_dens)
+    fst_stat = pd.concat(fst_stat)
+
+    return nets_number, all_nets, het_dens, het_stat, fst_dens, fst_stat

@@ -73,3 +73,27 @@ def calculate_centrality(net: list) -> pd.DataFrame:
     print(df)
     return df
 
+
+# def measure_giant_component(network):
+#     largest_component = max(nx.connected_components(network), key=len)
+#     return len(largest_component)
+#
+# # Create an original network with 50 nodes and desired edges
+# original_network = nx.random_geometric_graph(100, 0.2)
+#
+#
+# networks_list = remove_edge_random(original_network)
+# print(networks_list)
+# num_nodes_connected = []
+# for network in networks_list:
+#     num_nodes_connected.append(measure_giant_component(network))
+#
+# # Plotting the relationship
+# x = range(1, len(networks_list) + 1)
+# y = num_nodes_connected
+#
+# plt.plot(x, y, marker='o')
+# plt.xlabel('Network Index')
+# plt.ylabel('Number of Nodes in Giant Component')
+# plt.title('Number of Nodes in Giant Component vs. Network Index')
+# plt.show()
