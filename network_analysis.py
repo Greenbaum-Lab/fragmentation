@@ -4,6 +4,7 @@ import statistics
 from statistics import mean
 import time
 import seaborn as sns
+from multiprocessing import Pool
 
 import networkx as nx
 from joypy import joyplot
@@ -16,15 +17,14 @@ from funcs2 import frag_rand, frag_cor, frag_dist, het_rand, het_cor, het_dist, 
 
 n = 50  # no. of nodes
 p = 0.4  # probability to connect nodes
-n_rep = 100
+n_rep = 200
 
 # Record the starting time
 start_time = time.time()
 
 # create list off nets
-nets = make_networks(n_nets=n_rep, n_nodes=n, connectivity=p, net_type='ER')
+nets = make_networks(n_nets=n_rep, n_nodes=n, connectivity=p, net_type='RGG')
 print("finish nets")
-from multiprocessing import Pool
 
 
 def parallelize_list_comprehension(nets, function):
@@ -45,9 +45,9 @@ breaking_point_dist = find_breakink_point_list(breaking_point_dist)
 running_time = time.time() - start_time
 print("Running time:", running_time, "seconds")
 bins = 100
-sns.histplot(data=breaking_point_rand, bins=bins, kde=True, color='blue', label='rand')
-sns.histplot(data=breaking_point_cor, bins=bins, kde=True, color='red', label='cor')
-sns.histplot(data=breaking_point_dist, bins=bins, kde=True, color='green', label='dist')
+sns.histplot(data=breaking_point_rand, bins=bins, kde=True, color='yellow', label='rand')
+sns.histplot(data=breaking_point_cor, bins=bins, kde=True, color='orange', label='cor')
+sns.histplot(data=breaking_point_dist, bins=bins, kde=True, color='grey', label='dist')
 
 plt.xlabel('Value')
 plt.ylabel('Count')
