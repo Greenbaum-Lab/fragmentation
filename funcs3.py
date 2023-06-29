@@ -87,39 +87,6 @@ def make_het_dist(het_list: list) -> pd.DataFrame:
     return df
 
 
-#
-# def make_fst_stat(f: pd.DataFrame, ignore_isolated: bool) -> pd.DataFrame:
-#     """
-#      calculate the mean and median fst of each step excluding values of 1
-#     :param f: dataframe of fst distribution in each step
-#     :return: dataframe of average and median for each step
-#     """
-#     avg = []
-#     med = []
-#
-#     if ignore_isolated == True:
-#         for i in range(max(f['step']) + 1):  # We add 1 to include the max value in the range
-#             fst_avg = f[(f['step'] == i) & (f['fst'] != 1)]['fst']
-#             fst_med = f[(f['step'] == i) & (f['fst'] != 1)]['fst']
-#             # we only append values if the series is not empty
-#             if not fst_avg.empty:
-#                 avg.append(mean(fst_avg))
-#             if not fst_med.empty:
-#                 med.append(median(fst_med))
-#         step = list(range(max(f['step']) + 1))
-#
-#     if ignore_isolated == False:
-#         for i in range(max(f['step']) + 1):
-#             fst_avg = f[f['step'] == i]['fst']
-#             avg.append(mean(fst_avg))
-#             fst_med = f[f['step'] == i]['fst']
-#             med.append(median(fst_med))
-#             step = range(max(f['step']))
-#     d = {'step': step, 'avg': avg, 'median': med}
-#     df = pd.DataFrame(data=d)
-#     return df
-
-
 def make_fst_stat(f: pd.DataFrame, ignore_isolated: bool) -> pd.DataFrame:
     """
      calculate the mean and median fst of each step
