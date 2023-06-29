@@ -15,9 +15,9 @@ from funcs2 import frag_rand, frag_cor, frag_dist, het_rand, het_cor, het_dist, 
 
 from funcs3 import make_replicates, make_replicates_new
 
-n = 20  # no. of nodes
+n = 50  # no. of nodes
 p = 0.4  # probability to connect nodes
-n_rep = 5
+n_rep = 100
 # seed = 98
 
 color_palette = plt.get_cmap('tab10')  # You can change 'tab10' to any other available palette
@@ -30,7 +30,9 @@ nets = make_networks(n_nets=n_rep, n_nodes=n, connectivity=p, net_type='RGG')
 
 # run the pipeline for all fragmentation types
 rand = make_replicates_new(nets=nets, frag_type='rand', ignore_isolated=True)
+print("1")
 cor = make_replicates_new(nets=nets, frag_type='cor', ignore_isolated=True)
+print("2")
 dist = make_replicates_new(nets=nets, frag_type='dist', ignore_isolated=True)
 
 breaking_point_rand = mean(find_breakink_point_list(rand[1]))
@@ -214,6 +216,7 @@ print("Running time:", running_time, "seconds")
 
 
 
+
 # Path and filename for the saved file using tuple
 pickle_filename = 'rand_ignore.pickle'
 with open(pickle_filename, 'wb') as file:
@@ -231,44 +234,8 @@ with open(pickle_filename, 'wb') as file:
 # # # Load the tuple using pickle
 # with open(pickle_filename, 'rb') as file:
 #     loaded_tuple = pickle.load(file)
-#
-# het_dens_include = rand[2]
-# csv_filename = '/home/lab-heavy/PycharmProjects/fragmentation/het_dens_include.csv'
-# het_dens_include.to_csv(csv_filename, index=True)
-#
-# het_stat_include = rand[3]
-# csv_filename = '/home/lab-heavy/PycharmProjects/fragmentation/het_stat_include.csv'
-# het_dens_include.to_csv(csv_filename, index=True)
-#
-# fst_dens_include = rand[4]
-# csv_filename = '/home/lab-heavy/PycharmProjects/fragmentation/fst_dens_include.csv'
-# het_dens_include.to_csv(csv_filename, index=True)
-#
-# fst_dens_include = rand[5]
-# csv_filename = '/home/lab-heavy/PycharmProjects/fragmentation/fst_dens_include.csv'
-# het_dens_include.to_csv(csv_filename, index=True)
-#
-#
-#
-# het_dens_ignore = rand[2]
-# csv_filename = '/home/lab-heavy/PycharmProjects/fragmentation/het_dens_ignore.csv'
-# het_dens_ignore.to_csv(csv_filename, index=True)
-#
-# het_stat_ignore = rand[3]
-# csv_filename = '/home/lab-heavy/PycharmProjects/fragmentation/het_stat_ignore.csv'
-# het_dens_ignore.to_csv(csv_filename, index=True)
-#
-# fst_dens_ignore = rand[4]
-# csv_filename = '/home/lab-heavy/PycharmProjects/fragmentation/fst_dens_ignore.csv'
-# het_dens_ignore.to_csv(csv_filename, index=True)
-#
-# fst_dens_ignore = rand[5]
-# csv_filename = '/home/lab-heavy/PycharmProjects/fragmentation/fst_dens_ignore.csv'
-# het_dens_ignore.to_csv(csv_filename, index=True)
-#
-# rand = df.read_csv
-#
-#
+
+
 
 
 #
