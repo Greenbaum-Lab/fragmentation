@@ -1,0 +1,99 @@
+import networkx
+import random
+import statistics
+from statistics import mean
+import time
+import seaborn as sns
+from multiprocessing import Pool
+
+import networkx as nx
+from joypy import joyplot
+from matplotlib import pyplot as plt
+import pandas as pd
+
+from processes import find_breaking_point, find_breakink_point_list, remove_edge_random, remove_edge_correlated, \
+    remove_edge_distance
+from funcs2 import frag_rand, frag_cor, frag_dist, het_rand, het_cor, het_dist, make_networks
+
+n = 50  # no. of nodes
+p = 0.4  # probability to connect nodes
+n_rep = 200
+
+# Record the starting time
+start_time = time.time()
+
+# create list off nets
+nets = make_networks(n_nets=n_rep, n_nodes=n, connectivity=p, net_type='RGG')
+print("finish nets")
+
+
+def parallelize_list_comprehension(nets, function):
+    with Pool() as pool:
+        return pool.map(function, nets)
+
+
+breaking_point_rand = parallelize_list_comprehension(nets, remove_edge_random)
+breaking_point_rand = find_breakink_point_list(breaking_point_rand)
+
+breaking_point_cor = parallelize_list_comprehension(nets, remove_edge_correlated)
+breaking_point_cor = find_breakink_point_list(breaking_point_cor)
+
+breaking_point_dist = parallelize_list_comprehension(nets, remove_edge_distance)
+breaking_point_dist = find_breakink_point_list(breaking_point_dist)
+
+
+running_time = time.time() - start_time
+print("Running time:", running_time, "seconds")
+bins = 100
+sns.histplot(data=breaking_point_rand, bins=bins, kde=True, color='yellow', label='rand')
+sns.histplot(data=breaking_point_cor, bins=bins, kde=True, color='orange', label='cor')
+sns.histplot(data=breaking_point_dist, bins=bins, kde=True, color='grey', label='dist')
+
+plt.xlabel('Value')
+plt.ylabel('Count')
+plt.title('Histogram')
+plt.legend()
+plt.savefig("breaking.png", format="png")
+
+plt.show()
+
+#######add parameters of percolation
+def calculate_centrality(net: list) -> pd.DataFrame:
+    """
+    Calculate the degree of network
+    :param net: list of migration networks
+    :return: dataframe of degree and clustering for each step
+    """
+    m = net.copy()
+    clustering = list(map(lambda x: nx.average_clustering(x), m))
+    betweenness = list(map(lambda x: sum(nx.betweenness_centrality(x).values()) / len(x), m))
+    step = range(len(m))
+    d = {'step': step, 'clustering': clustering, 'betweenness': betweenness}
+    df = pd.DataFrame(data=d)
+    print(df)
+    return df
+
+
+# def measure_giant_component(network):
+#     largest_component = max(nx.connected_components(network), key=len)
+#     return len(largest_component)
+#
+# # Create an original network with 50 nodes and desired edges
+# original_network = nx.random_geometric_graph(100, 0.2)
+#
+#
+# networks_list = remove_edge_random(original_network)
+# print(networks_list)
+# num_nodes_connected = []
+# for network in networks_list:
+#     num_nodes_connected.append(measure_giant_component(network))
+#
+# # Plotting the relationship
+# x = range(1, len(networks_list) + 1)
+# y = num_nodes_connected
+#
+# plt.plot(x, y, marker='o')
+# plt.xlabel('Network Index')
+# plt.ylabel('Number of Nodes in Giant Component')
+# plt.title('Number of Nodes in Giant Component vs. Network Index')
+# plt.show()

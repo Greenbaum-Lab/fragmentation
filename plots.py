@@ -2,7 +2,7 @@ import random
 import statistics
 from statistics import mean
 import time
-
+import pickle
 
 import networkx as nx
 from joypy import joyplot
@@ -11,46 +11,49 @@ import pandas as pd
 
 from processes import find_breaking_point, find_breakink_point_list
 from funcs2 import frag_rand, frag_cor, frag_dist, het_rand, het_cor, het_dist, make_networks, make_iterations_fst, \
-    calculate_centrality, make_iterations_het, make_iterations_new
+    calculate_centrality, make_iterations_het, make_iterations_new, make_iterations_het_new
+
+from funcs3 import make_replicates, make_replicates_new
 
 n = 50  # no. of nodes
 p = 0.4  # probability to connect nodes
-n_rep = 5
+n_rep = 100
 # seed = 98
 
-# random.seed(65)  # set random seed
+color_palette = plt.get_cmap('tab10')  # You can change 'tab10' to any other available palette
 
 # Record the starting time
 start_time = time.time()
 
-
-# create list off nets
+# # create list off nets
 nets = make_networks(n_nets=n_rep, n_nodes=n, connectivity=p, net_type='RGG')
 
-#fragment and calculate fst for all nets
-rand = make_iterations_new(nets, fragmentation='rand')
-cor = make_iterations_new(nets, fragmentation='cor')
-dist = make_iterations_new(nets, fragmentation='dist')
+# run the pipeline for all fragmentation types
+rand = make_replicates_new(nets=nets, frag_type='rand', ignore_isolated=True)
+print("1")
+cor = make_replicates_new(nets=nets, frag_type='cor', ignore_isolated=True)
+print("2")
+dist = make_replicates_new(nets=nets, frag_type='dist', ignore_isolated=True)
 
-# find breaking point distributions
-breaking_point_rand = (mean(find_breakink_point_list(rand[2]))/rand[3])*50
-breaking_point_cor = (mean(find_breakink_point_list(cor[2]))/cor[3])*50
-breaking_point_dist = (mean(find_breakink_point_list(dist[2]))/dist[3])*50
+breaking_point_rand = mean(find_breakink_point_list(rand[1]))
+breaking_point_cor = mean(find_breakink_point_list(cor[1]))
+breaking_point_dist = mean(find_breakink_point_list(dist[1]))
 
+#########plot fst
 # Calculate the mean and median values over the 'step' column
-mean_rand = rand[0].groupby('step')['avg'].mean()
-mean_cor = cor[0].groupby('step')['avg'].mean()
-mean_dist = dist[0].groupby('step')['avg'].mean()
+mean_rand = rand[5].groupby('step')['avg'].mean()
+mean_cor = cor[5].groupby('step')['avg'].mean()
+mean_dist = dist[5].groupby('step')['avg'].mean()
 
 # Calculate the confidence interval
-confidence_rand = rand[0].groupby('step')['avg'].std()
-confidence_cor = cor[0].groupby('step')['avg'].std()
-confidence_dist = dist[0].groupby('step')['avg'].std()
+confidence_rand = rand[5].groupby('step')['avg'].std()
+confidence_cor = cor[5].groupby('step')['avg'].std()
+confidence_dist = dist[5].groupby('step')['avg'].std()
 
 # Plotting the line graph with mean and median values
-plt.plot(mean_rand, label='Rand')
-plt.plot(mean_cor, label='Cor')
-plt.plot(mean_dist, label='Dist')
+plt.plot(mean_rand, label='Random')
+plt.plot(mean_cor, label='Correlated')
+plt.plot(mean_dist, label='Distance')
 
 # Adding the confidence interval
 plt.fill_between(mean_rand.index, mean_rand - confidence_rand, mean_rand + confidence_rand, alpha=0.2)
@@ -58,7 +61,6 @@ plt.fill_between(mean_cor.index, mean_cor - confidence_cor, mean_cor + confidenc
 plt.fill_between(mean_dist.index, mean_dist - confidence_dist, mean_dist + confidence_dist, alpha=0.2)
 
 # add breaking points
-color_palette = plt.get_cmap('tab10')  # You can change 'tab10' to any other available palette
 plt.axvline(x=breaking_point_rand, color=color_palette(0), ymax=0.1)
 plt.axvline(x=breaking_point_cor, color=color_palette(1), ymax=0.1)
 plt.axvline(x=breaking_point_dist, color=color_palette(2), ymax=0.1)
@@ -66,99 +68,176 @@ plt.axvline(x=breaking_point_dist, color=color_palette(2), ymax=0.1)
 # Add labels and legend
 plt.xlabel('Fragmentation step')
 plt.ylabel('Pairwise Fst')
-plt.title('50 nodes, 50 reps, 0.5, includeing ones ')
+plt.title('RGG(50,0.4), 100 reps, ignoring ones ')
 plt.legend()
 
 # Display the plot
-plt.savefig("fst.svg", format="svg")
+plt.savefig("fst_ignore.png", format="png")
 plt.show()
 
+####heterozygosity
 
-# Calculate the running time
+# Calculate the mean and median values over the 'step' column
+mean_rand = rand[3].groupby('step')['avg'].mean()
+mean_cor = cor[3].groupby('step')['avg'].mean()
+mean_dist = dist[3].groupby('step')['avg'].mean()
+
+# Calculate the confidence interval
+confidence_rand = rand[3].groupby('step')['avg'].std()
+confidence_cor = cor[3].groupby('step')['avg'].std()
+confidence_dist = dist[3].groupby('step')['avg'].std()
+
+# Plotting the line graph with mean and median values
+plt.plot(mean_rand, label='Random')
+plt.plot(mean_cor, label='Correlated')
+plt.plot(mean_dist, label='Distance')
+
+# Adding the confidence interval
+plt.fill_between(mean_rand.index, mean_rand - confidence_rand, mean_rand + confidence_rand, alpha=0.2)
+plt.fill_between(mean_cor.index, mean_cor - confidence_cor, mean_cor + confidence_cor, alpha=0.2)
+plt.fill_between(mean_dist.index, mean_dist - confidence_dist, mean_dist + confidence_dist, alpha=0.2)
+
+# add breaking points
+plt.axvline(x=breaking_point_rand, color=color_palette(0), ymax=0.1)
+plt.axvline(x=breaking_point_cor, color=color_palette(1), ymax=0.1)
+plt.axvline(x=breaking_point_dist, color=color_palette(2), ymax=0.1)
+
+# Add labels and legend
+plt.xlabel('Fragmentation step')
+plt.ylabel('Unscaled heterozygosity')
+plt.title('RGG(50,0.4), 100 reps, ignoring ones ')
+plt.legend()
+
+# Display the plot
+plt.savefig("het_ignore.png", format="png")
+plt.show()
 running_time = time.time() - start_time
-
 print("Running time:", running_time, "seconds")
 
-#
+
+# Path and filename for the saved file using tuple
+pickle_filename = 'rand_include.pickle'
+with open(pickle_filename, 'wb') as file:
+    pickle.dump(rand, file)
+
+pickle_filename = 'cor_include.pickle'
+with open(pickle_filename, 'wb') as file:
+    pickle.dump(cor, file)
+
+pickle_filename = 'dist_include.pickle'
+with open(pickle_filename, 'wb') as file:
+    pickle.dump(dist, file)
 
 
 
-#
-# ####heterozygosity
-#
-# #fragment and calculate fst for all nets
-# rand_het = make_iterations_het(nets, fragmentation='rand')
-# cor_het = make_iterations_het(nets, fragmentation='cor')
-# dist_het= make_iterations_het(nets, fragmentation='dist')
-#
-# # find breaking point distributions
-# breaking_point_rand = (mean(find_breakink_point_list(rand[2]))/rand[3])*50
-# breaking_point_cor = (mean(find_breakink_point_list(cor[2]))/cor[3])*50
-# breaking_point_dist = (mean(find_breakink_point_list(dist[2]))/dist[3])*50
-#
-# # Calculate the mean and median values over the 'step' column
-# mean_rand = rand_het.groupby('step')['avg'].mean()
-# mean_cor = cor_het.groupby('step')['avg'].mean()
-# mean_dist = dist_het.groupby('step')['avg'].mean()
-#
-# # Calculate the confidence interval
-# confidence_rand = rand_het.groupby('step')['avg'].std()
-# confidence_cor = cor_het.groupby('step')['avg'].std()
-# confidence_dist = dist_het.groupby('step')['avg'].std()
-#
-# # Plotting the line graph with mean and median values
-# plt.plot(mean_rand, label='Rand')
-# plt.plot(mean_cor, label='Cor')
-# plt.plot(mean_dist, label='Dist')
-#
-# # Adding the confidence interval
-# plt.fill_between(mean_rand.index, mean_rand - confidence_rand, mean_rand + confidence_rand, alpha=0.2)
-# plt.fill_between(mean_cor.index, mean_cor - confidence_cor, mean_cor + confidence_cor, alpha=0.2)
-# plt.fill_between(mean_dist.index, mean_dist - confidence_dist, mean_dist + confidence_dist, alpha=0.2)
-#
-# # add breaking points
-# color_palette = plt.get_cmap('tab10')  # You can change 'tab10' to any other available palette
-# plt.axvline(x=breaking_point_rand, color=color_palette(0), ymax=0.1)
-# plt.axvline(x=breaking_point_cor, color=color_palette(1), ymax=0.1)
-# plt.axvline(x=breaking_point_dist, color=color_palette(2), ymax=0.1)
-#
-# # Add labels and legend
-# plt.xlabel('Fragmentation step')
-# plt.ylabel('heterozygosity')
-# plt.title('50 nodes, 50 reps, 0.5, includeing ones ')
-# plt.legend()
-#
-# # Display the plot
-# plt.savefig("het.svg", format="svg")
-# plt.show()
-#
-#
-# # Calculate the running time
-# running_time = time.time() - start_time
-#
-# print("Running time:", running_time, "seconds")
+# run the pipeline for all fragmentation types
+rand = make_replicates_new(nets=nets, frag_type='rand', ignore_isolated=False)
+cor = make_replicates_new(nets=nets, frag_type='cor', ignore_isolated=False)
+dist = make_replicates_new(nets=nets, frag_type='dist', ignore_isolated=False)
+
+breaking_point_rand = mean(find_breakink_point_list(rand[1]))
+breaking_point_cor = mean(find_breakink_point_list(cor[1]))
+breaking_point_dist = mean(find_breakink_point_list(dist[1]))
+
+#########plot fst
+# Calculate the mean and median values over the 'step' column
+mean_rand = rand[5].groupby('step')['avg'].mean()
+mean_cor = cor[5].groupby('step')['avg'].mean()
+mean_dist = dist[5].groupby('step')['avg'].mean()
+
+# Calculate the confidence interval
+confidence_rand = rand[5].groupby('step')['avg'].std()
+confidence_cor = cor[5].groupby('step')['avg'].std()
+confidence_dist = dist[5].groupby('step')['avg'].std()
+
+# Plotting the line graph with mean and median values
+plt.plot(mean_rand, label='Random')
+plt.plot(mean_cor, label='Correlated')
+plt.plot(mean_dist, label='Distance')
+
+# Adding the confidence interval
+plt.fill_between(mean_rand.index, mean_rand - confidence_rand, mean_rand + confidence_rand, alpha=0.2)
+plt.fill_between(mean_cor.index, mean_cor - confidence_cor, mean_cor + confidence_cor, alpha=0.2)
+plt.fill_between(mean_dist.index, mean_dist - confidence_dist, mean_dist + confidence_dist, alpha=0.2)
+
+# add breaking points
+plt.axvline(x=breaking_point_rand, color=color_palette(0), ymax=0.1)
+plt.axvline(x=breaking_point_cor, color=color_palette(1), ymax=0.1)
+plt.axvline(x=breaking_point_dist, color=color_palette(2), ymax=0.1)
+
+# Add labels and legend
+plt.xlabel('Fragmentation step')
+plt.ylabel('Pairwise Fst')
+plt.title('RGG(50,0.4), 100 reps, not ignoring ones ')
+plt.legend()
+
+# Display the plot
+plt.savefig("fst_include.png", format="png")
+plt.show()
+
+####heterozygosity
+
+# Calculate the mean and median values over the 'step' column
+mean_rand = rand[3].groupby('step')['avg'].mean()
+mean_cor = cor[3].groupby('step')['avg'].mean()
+mean_dist = dist[3].groupby('step')['avg'].mean()
+
+# Calculate the confidence interval
+confidence_rand = rand[3].groupby('step')['avg'].std()
+confidence_cor = cor[3].groupby('step')['avg'].std()
+confidence_dist = dist[3].groupby('step')['avg'].std()
+
+# Plotting the line graph with mean and median values
+plt.plot(mean_rand, label='Random')
+plt.plot(mean_cor, label='Correlated')
+plt.plot(mean_dist, label='Distance')
+
+# Adding the confidence interval
+plt.fill_between(mean_rand.index, mean_rand - confidence_rand, mean_rand + confidence_rand, alpha=0.2)
+plt.fill_between(mean_cor.index, mean_cor - confidence_cor, mean_cor + confidence_cor, alpha=0.2)
+plt.fill_between(mean_dist.index, mean_dist - confidence_dist, mean_dist + confidence_dist, alpha=0.2)
+
+# add breaking points
+plt.axvline(x=breaking_point_rand, color=color_palette(0), ymax=0.1)
+plt.axvline(x=breaking_point_cor, color=color_palette(1), ymax=0.1)
+plt.axvline(x=breaking_point_dist, color=color_palette(2), ymax=0.1)
+
+# Add labels and legend
+plt.xlabel('Fragmentation step')
+plt.ylabel('Unscaled heterozygosity')
+plt.title('RGG(50,0.4), 100 reps, not ignoring ones ')
+plt.legend()
+
+# Display the plot
+plt.savefig("het_include.png", format="png")
+plt.show()
+running_time = time.time() - start_time
+print("Running time:", running_time, "seconds")
 
 
 
 
-# # plot breaking plot  distributions
-# plt.hist([breaking_point_rand, breaking_point_cor, breaking_point_dist], bins=10, color=['red', 'green', 'blue'],
-#          edgecolor='black', label=['rand', 'cor', 'dist'])
-# plt.xlabel('Values')
-# plt.ylabel('Frequency')
-# plt.title('Breaking point')
-# plt.legend()
-# plt.show()
-# plt.savefig("breaking.svg", format="svg")
+# Path and filename for the saved file using tuple
+pickle_filename = 'rand_ignore.pickle'
+with open(pickle_filename, 'wb') as file:
+    pickle.dump(rand, file)
 
-print('finish!')
+pickle_filename = 'cor_ignore.pickle'
+with open(pickle_filename, 'wb') as file:
+    pickle.dump(cor, file)
+
+pickle_filename = 'dist_ignore.pickle'
+with open(pickle_filename, 'wb') as file:
+    pickle.dump(dist, file)
 
 
-##############single net plots
+# # # Load the tuple using pickle
+# with open(pickle_filename, 'rb') as file:
+#     loaded_tuple = pickle.load(file)
 
-# net = nx.erdos_renyi_graph(n=n, p=p)  # create network
-# net = nx.erdos_renyi_graph(n=n,p=0.8)
-# net = nx.random_geometric_graph(100, 0.5)
+
+
+
 #
 # rand = frag_rand(net=net)
 # cor = frag_cor(net=net)

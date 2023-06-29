@@ -1,8 +1,12 @@
 import random
+from _decimal import Decimal
+from fractions import Fraction
+from typing import Tuple, List, Any
 
 import networkx as nx
 import numpy as np
 from matplotlib import pyplot as plt
+from pandas import DataFrame, Series
 
 from Transformation import m_to_f, m_to_t
 from processes import remove_edge_random, remove_edge_correlated, remove_edge_distance
@@ -173,25 +177,47 @@ def make_fst_stat(f: pd.DataFrame, ignore_ones: str) -> pd.DataFrame:
 
 
 
-
-
-def make_het_stat(f: pd.DataFrame) -> pd.DataFrame:
+def make_het_stat(f: pd.DataFrame, ignore_isolated: bool) -> pd.DataFrame:
     """
      calculate the mean and median heterozygosity of each step
     :param f: dataframe of heterozygosity distribution in each step
+    :param ignore_isolated: if True, ignores rows where 'het' value is 1
     :return: dataframe of average and median for each step
     """
-    avg = []
-    med = []
-    for i in range(max(f['step'])):
-        het_avg = f[f['step'] == i]['het']
-        avg.append(mean(het_avg.copy()))
-        het_med = f[f['step'] == i]['het']
-        med.append(median(het_med))
-        step = range(max(f['step']))
-    d = {'step': step, 'avg': avg, 'median': med}
+
+    if ignore_isolated:
+        # Ignore rows where 'het' equals 1
+        f = f[f['het'] != 1]
+
+    # Get unique steps
+    unique_steps = f['step'].unique()
+
+    # Calculate mean and median heterozygosity for each step
+    avg = f.groupby('step')['het'].mean().reindex(unique_steps).tolist()
+    med = f.groupby('step')['het'].median().reindex(unique_steps).tolist()
+
+    d = {'step': unique_steps, 'avg': avg, 'median': med}
     df = pd.DataFrame(data=d)
     return df
+
+#
+# def make_het_stat(f: pd.DataFrame) -> pd.DataFrame:
+#     """
+#      calculate the mean and median heterozygosity of each step
+#     :param f: dataframe of heterozygosity distribution in each step
+#     :return: dataframe of average and median for each step
+#     """
+#     avg = []
+#     med = []
+#     for i in range(max(f['step'])):
+#         het_avg = f[f['step'] == i]['het']
+#         avg.append(mean(het_avg.copy()))
+#         het_med = f[f['step'] == i]['het']
+#         med.append(median(het_med))
+#         step = range(max(f['step']))
+#     d = {'step': step, 'avg': avg, 'median': med}
+#     df = pd.DataFrame(data=d)
+#     return df
 
 
 def calculate_centrality(net: list) -> pd.DataFrame:
@@ -274,7 +300,7 @@ def het_rand(net: nx.Graph):
     migration4 = normalize_list(migration3)
     het = make_het_list(migration_list=migration4)
     het_dens = make_het_dist(het)
-    het_stat = make_het_stat(het_dens)
+    het_stat = make_het_stat(het_dens,ignore_isolated=True)
     return het_stat, het_dens, migration2
 
 
@@ -290,7 +316,7 @@ def het_cor(net: nx.Graph):
     migration4 = normalize_list(migration3)
     het = make_het_list(migration_list=migration4)
     het_dens = make_het_dist(het)
-    het_stat = make_het_stat(het_dens)
+    het_stat = make_het_stat(het_dens,ignore_isolated=True)
 
     return het_stat, het_dens, migration2
 
@@ -307,7 +333,7 @@ def het_dist(net: nx.Graph):
     migration4 = normalize_list(migration3)
     het = make_het_list(migration_list=migration4)
     het_dens = make_het_dist(het)
-    het_stat = make_het_stat(het_dens)
+    het_stat = make_het_stat(het_dens,ignore_isolated=True)
 
     return het_stat, het_dens, migration2
 
@@ -353,7 +379,7 @@ def frag_rand(net):
     migration4 = normalize_list(migration3)
     fst = make_fst_list(migration_list=migration4)
     fst_dens = make_fst_dist(fst)
-    fst_stat = make_fst_stat(fst_dens, ignore_ones=False)
+    fst_stat = make_fst_stat(fst_dens, ignore_ones=True)
 
     return fst_stat, fst_dens, migration1, nets_number
 
@@ -372,7 +398,7 @@ def frag_cor(net):
     migration4 = normalize_list(migration3)
     fst = make_fst_list(migration_list=migration4)
     fst_dens = make_fst_dist(fst)
-    fst_stat = make_fst_stat(fst_dens, ignore_ones=False)
+    fst_stat = make_fst_stat(fst_dens, ignore_ones=True)
 
     return fst_stat, fst_dens, migration1, nets_number
 
@@ -391,7 +417,7 @@ def frag_dist(net):
     migration4 = normalize_list(migration3)
     fst = make_fst_list(migration_list=migration4)
     fst_dens = make_fst_dist(fst)
-    fst_stat = make_fst_stat(fst_dens, ignore_ones=False)
+    fst_stat = make_fst_stat(fst_dens, ignore_ones=True)
 
     return fst_stat, fst_dens, migration1, nets_number
 
@@ -425,7 +451,7 @@ def apply_selected_frag(args):
     return selected_frag(net=net)
 
 
-def make_iterations_new(nets: list, fragmentation: str) -> pd.DataFrame:
+def make_iterations_new(nets: list, fragmentation: str) -> tuple:
     """
     run multiple iterations of the fragmentation process
     :param nets: list of networks
@@ -448,7 +474,7 @@ def make_iterations_new(nets: list, fragmentation: str) -> pd.DataFrame:
     return combined_stat, combined_dens, all_nets, nets_mean
 
 
-def make_iterations_fst(nets: list, fragmentation: str) -> pd.DataFrame:
+def make_iterations_fst(nets: list, fragmentation: str) -> tuple:
     """
     run multiple iterations of the fragmentation process
     :param nets: list of networks
@@ -547,27 +573,3 @@ def make_iterations_het_new(nets: list, fragmentation: str) -> pd.DataFrame:
     return combined_stat
 
 
-
-# def measure_giant_component(network):
-#     largest_component = max(nx.connected_components(network), key=len)
-#     return len(largest_component)
-#
-# # Create an original network with 50 nodes and desired edges
-# original_network = nx.random_geometric_graph(100, 0.2)
-#
-#
-# networks_list = remove_edge_random(original_network)
-# print(networks_list)
-# num_nodes_connected = []
-# for network in networks_list:
-#     num_nodes_connected.append(measure_giant_component(network))
-#
-# # Plotting the relationship
-# x = range(1, len(networks_list) + 1)
-# y = num_nodes_connected
-#
-# plt.plot(x, y, marker='o')
-# plt.xlabel('Network Index')
-# plt.ylabel('Number of Nodes in Giant Component')
-# plt.title('Number of Nodes in Giant Component vs. Network Index')
-# plt.show()
