@@ -20,7 +20,7 @@ from funcs3 import make_replicates, make_replicates_new
 #     loaded_tuple = pickle.load(file)
 
 
-
+base_directory = '/run/user/1000/gvfs/sftp:host=132.64.61.5,user=lab-heavy/home/lab-heavy/PycharmProjects/fragmentation/files/'
 n = 20  # no. of nodes
 p = 0.4  # probability to connect nodes
 n_rep = 5
@@ -115,7 +115,7 @@ plt.title('RGG(50,0.4), 100 reps, ignoring ones ')
 plt.legend()
 
 # Display the plot
-# plt.savefig("het_ignore.png", format="png")
+plt.savefig("het_ignore.png", format="png")
 plt.show()
 running_time = time.time() - start_time
 print("Running time:", running_time, "seconds")
