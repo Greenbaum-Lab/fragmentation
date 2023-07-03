@@ -35,24 +35,27 @@ def parallelize_list_comprehension(nets, function):
 
 breaking_point_rand = parallelize_list_comprehension(nets, remove_edge_random)
 breaking_point_rand = find_breakink_point_list(breaking_point_rand)
+print("finish rand")
 
-file_name= "/home/lab2/PycharmProjects/fragmentation/figs/breaking_point_rand.txt"
+file_name= "breaking_point_rand.txt"
 with open(file_name, 'w') as file:
     for item in breaking_point_rand:
         file.write(str(item) + '\n')
 
 breaking_point_cor = parallelize_list_comprehension(nets, remove_edge_correlated)
 breaking_point_cor = find_breakink_point_list(breaking_point_cor)
+print("finish cor")
 
-file_name= "/home/lab2/PycharmProjects/fragmentation/figs/breaking_point_cor.txt"
+file_name= "breaking_point_cor.txt"
 with open(file_name, 'w') as file:
     for item in breaking_point_cor:
         file.write(str(item) + '\n')
 
 breaking_point_dist = parallelize_list_comprehension(nets, remove_edge_distance)
 breaking_point_dist = find_breakink_point_list(breaking_point_dist)
+print("finish dist")
 
-file_name= "/home/lab2/PycharmProjects/fragmentation/figs/breaking_point_dist.txt"
+file_name= "breaking_point_dist.txt"
 with open(file_name, 'w') as file:
     for item in breaking_point_dist:
         file.write(str(item) + '\n')
@@ -67,7 +70,7 @@ plt.xlabel('Value')
 plt.ylabel('Count')
 plt.title('Histogram')
 plt.legend()
-plt.savefig("/home/lab2/PycharmProjects/fragmentation/figs/breaking.png", format="png")
+plt.savefig("breaking.png", format="png")
 
 plt.show()
 
