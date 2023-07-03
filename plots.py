@@ -21,9 +21,9 @@ from funcs3 import make_replicates, make_replicates_new
 
 
 
-n = 20  # no. of nodes
+n = 30  # no. of nodes
 p = 0.4  # probability to connect nodes
-n_rep = 5
+n_rep = 10
 # seed = 98
 
 color_palette = plt.get_cmap('tab10')  # You can change 'tab10' to any other available palette
@@ -35,11 +35,11 @@ start_time = time.time()
 nets = make_networks(n_nets=n_rep, n_nodes=n, connectivity=p, net_type='RGG')
 
 # run the pipeline for all fragmentation types
-rand = make_replicates_new(nets=nets, frag_type='rand', ignore_isolated=True)
+rand = make_replicates_new(nets=nets, frag_type='rand', ignore=True)
 print("1")
-cor = make_replicates_new(nets=nets, frag_type='cor', ignore_isolated=True)
+cor = make_replicates_new(nets=nets, frag_type='cor', ignore=True)
 print("2")
-dist = make_replicates_new(nets=nets, frag_type='dist', ignore_isolated=True)
+dist = make_replicates_new(nets=nets, frag_type='dist', ignore=True)
 print("3")
 
 breaking_point_rand = mean(find_breakink_point_list(rand[1]))
@@ -137,10 +137,49 @@ with open(pickle_filename, 'wb') as file:
 
 
 
+
+
+###############plot distributions
+
+# distribution fst
+plt.figure()
+joyplot(
+    data=rand[4][['fst', 'step']],
+    by='step', ylim=0, overlap=1,
+    colormap=plt.cm.viridis_r, fade=True,range_style='all',
+    figsize=(12, 8),  linecolor = "white", linewidth=0.1
+)
+plt.title('pairwise Fst along distance fragmentation',
+          fontsize=16, pad=-20, y=1.02, verticalalignment='bottom')
+plt.show()
+plt.figure()
+
+
+#distribution heterozygosity
+plt.figure()
+joyplot(
+    data=rand[2][['het', 'step']],
+    by='step', ylim=0, overlap=1,
+    colormap=plt.cm.viridis_r, fade=True,range_style='all',
+    figsize=(12, 8),  linecolor = "white", linewidth=0.1
+)
+plt.title('pairwise Fst along distance fragmentation',
+          fontsize=16, pad=-20, y=1.02, verticalalignment='bottom')
+plt.show()
+plt.figure()
+
+
+
+
+
+
 # run the pipeline for all fragmentation types
-rand = make_replicates_new(nets=nets, frag_type='rand', ignore_isolated=False)
-cor = make_replicates_new(nets=nets, frag_type='cor', ignore_isolated=False)
-dist = make_replicates_new(nets=nets, frag_type='dist', ignore_isolated=False)
+rand = make_replicates_new(nets=nets, frag_type='rand', ignore=False)
+print("1")
+cor = make_replicates_new(nets=nets, frag_type='cor', ignore=False)
+print("2")
+dist = make_replicates_new(nets=nets, frag_type='dist', ignore=False)
+print("3")
 
 breaking_point_rand = mean(find_breakink_point_list(rand[1]))
 breaking_point_cor = mean(find_breakink_point_list(cor[1]))
@@ -240,30 +279,30 @@ with open(pickle_filename, 'wb') as file:
 
 ###############plot distributions
 
-#distribution fst
-# plt.figure()
-# joyplot(
-#     data=rand[4][['fst', 'step']],
-#     by='step', ylim=0, overlap=1,
-#     colormap=plt.cm.viridis_r, fade=True,range_style='all',
-#     figsize=(12, 8),  linecolor = "white", linewidth=0.1
-# )
-# plt.title('pairwise Fst along distance fragmentation',
-#           fontsize=16, pad=-20, y=1.02, verticalalignment='bottom')
-# plt.show()
-# plt.figure()
-#
-#
-# #distribution heterozygosity
-# plt.figure()
-# joyplot(
-#     data=rand[2][['het', 'step']],
-#     by='step', ylim=0, overlap=1,
-#     colormap=plt.cm.viridis_r, fade=True,range_style='all',
-#     figsize=(12, 8),  linecolor = "white", linewidth=0.1
-# )
-# plt.title('pairwise Fst along distance fragmentation',
-#           fontsize=16, pad=-20, y=1.02, verticalalignment='bottom')
-# plt.show()
-# plt.figure()
+# distribution fst
+plt.figure()
+joyplot(
+    data=rand[4][['fst', 'step']],
+    by='step', ylim=0, overlap=1,
+    colormap=plt.cm.viridis_r, fade=True,range_style='all',
+    figsize=(12, 8),  linecolor = "white", linewidth=0.1
+)
+plt.title('pairwise Fst along distance fragmentation',
+          fontsize=16, pad=-20, y=1.02, verticalalignment='bottom')
+plt.show()
+plt.figure()
+
+
+#distribution heterozygosity
+plt.figure()
+joyplot(
+    data=rand[2][['het', 'step']],
+    by='step', ylim=0, overlap=1,
+    colormap=plt.cm.viridis_r, fade=True,range_style='all',
+    figsize=(12, 8),  linecolor = "white", linewidth=0.1
+)
+plt.title('pairwise Fst along distance fragmentation',
+          fontsize=16, pad=-20, y=1.02, verticalalignment='bottom')
+plt.show()
+plt.figure()
 
