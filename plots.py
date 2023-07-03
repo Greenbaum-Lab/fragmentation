@@ -20,7 +20,7 @@ from funcs3 import make_replicates, make_replicates_new
 #     loaded_tuple = pickle.load(file)
 
 
-test
+
 n = 50  # no. of nodes
 p = 0.4  # probability to connect nodes
 n_rep = 100
