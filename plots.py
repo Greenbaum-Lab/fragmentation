@@ -21,9 +21,9 @@ from funcs3 import make_replicates, make_replicates_new
 
 
 
-n = 50  # no. of nodes
+n = 20  # no. of nodes
 p = 0.4  # probability to connect nodes
-n_rep = 100
+n_rep = 5
 # seed = 98
 
 color_palette = plt.get_cmap('tab10')  # You can change 'tab10' to any other available palette
@@ -40,6 +40,7 @@ print("1")
 cor = make_replicates_new(nets=nets, frag_type='cor', ignore_isolated=True)
 print("2")
 dist = make_replicates_new(nets=nets, frag_type='dist', ignore_isolated=True)
+print("3")
 
 breaking_point_rand = mean(find_breakink_point_list(rand[1]))
 breaking_point_cor = mean(find_breakink_point_list(cor[1]))
@@ -122,15 +123,15 @@ print("Running time:", running_time, "seconds")
 
 
 # Path and filename for the saved file using tuple
-pickle_filename = 'rand_include.pickle'
+pickle_filename = 'rand_ignore.pickle'
 with open(pickle_filename, 'wb') as file:
     pickle.dump(rand, file)
 
-pickle_filename = 'cor_include.pickle'
+pickle_filename = 'cor_ignore.pickle'
 with open(pickle_filename, 'wb') as file:
     pickle.dump(cor, file)
 
-pickle_filename = 'dist_include.pickle'
+pickle_filename = 'dist_ignore.pickle'
 with open(pickle_filename, 'wb') as file:
     pickle.dump(dist, file)
 
@@ -174,7 +175,7 @@ plt.axvline(x=breaking_point_dist, color=color_palette(2), ymax=0.1)
 # Add labels and legend
 plt.xlabel('Fragmentation step')
 plt.ylabel('Pairwise Fst')
-plt.title('RGG(50,0.4), 100 reps, not ignoring ones ')
+plt.title('RGG(50,0.4), 100 reps, include ones ')
 plt.legend()
 
 # Display the plot
@@ -211,7 +212,7 @@ plt.axvline(x=breaking_point_dist, color=color_palette(2), ymax=0.1)
 # Add labels and legend
 plt.xlabel('Fragmentation step')
 plt.ylabel('Unscaled heterozygosity')
-plt.title('RGG(50,0.4), 100 reps, not ignoring ones ')
+plt.title('RGG(50,0.4), 100 reps, include ones ')
 plt.legend()
 
 # Display the plot
@@ -224,15 +225,15 @@ print("Running time:", running_time, "seconds")
 
 
 # Path and filename for the saved file using tuple
-pickle_filename = 'rand_ignore.pickle'
+pickle_filename = 'rand_include.pickle'
 with open(pickle_filename, 'wb') as file:
     pickle.dump(rand, file)
 
-pickle_filename = 'cor_ignore.pickle'
+pickle_filename = 'cor_include.pickle'
 with open(pickle_filename, 'wb') as file:
     pickle.dump(cor, file)
 
-pickle_filename = 'dist_ignore.pickle'
+pickle_filename = 'dist_include.pickle'
 with open(pickle_filename, 'wb') as file:
     pickle.dump(dist, file)
 
