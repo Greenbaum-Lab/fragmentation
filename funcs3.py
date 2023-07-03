@@ -54,27 +54,6 @@ def calculate_genetics(migration_list: list) -> tuple:
     return het_list, fst_list
 
 
-# def make_fst_dist(f: list) -> pd.DataFrame:
-#     """
-#     take a list of F metrics and return a dataframe without diagonal values (zero)
-#     :param f: list of fst metrics
-#     :return: dataframe with a column of all the pairwise fst values
-#      and the corresponding fragmentation step
-#     """
-#     fst_dens = []
-#     for i in range(len(f)):
-#         F_no_diag = f[i][~np.eye(len(f[i]), dtype=bool)]  # remove diagonals of zero and concatenate array
-#         F_no_diag = np.ndarray.tolist(F_no_diag)  # transform to list
-#         fst_dens.append(F_no_diag)  # add another item (fragmentation step) to the list
-#     df = pd.DataFrame(fst_dens)
-#     df = df.transpose()
-#     df = df.stack().rename_axis(('delete', 'step')).reset_index(name='fst')
-#     df = df.drop(columns=['delete'])
-#     df = df.sort_values(by='step')
-#     return df
-#
-
-
 def make_fst_dist(f: list, ignore: bool = False) -> pd.DataFrame:
     """
     Takes a list of F metrics and returns a DataFrame without diagonal values (zero).
@@ -110,18 +89,6 @@ def make_fst_dist(f: list, ignore: bool = False) -> pd.DataFrame:
 
     return df
 
-# def make_het_dist(het_list: list) -> pd.DataFrame:
-#     """
-#     take a list of heterozygosity values and return a dataframe
-#     :param het_list: list of heterozygosity vectors
-#     :return: dataframe with a column of all the heterozygosity values
-#     and their corresponding fragmentation step
-#     """
-#     df = pd.DataFrame(het_list)
-#     df = df.stack().rename_axis(('step', 'delete')).reset_index(name='het')
-#     df = df.drop(columns=['delete'])
-#     return df
-
 
 
 def make_het_dist(het_list: list, ignore: bool=False) -> pd.DataFrame:
@@ -156,10 +123,6 @@ def make_fst_stat(f: pd.DataFrame) -> pd.DataFrame:
      :return: dataframe of average and median for each step
     """
 
-    # if ignore_isolated:
-    #     # Ignore rows where 'fst' equals 1
-    #     f = f[f['fst'] != 1]
-
     # Get unique steps
     unique_steps = f['step'].unique()
 
@@ -179,10 +142,6 @@ def make_het_stat(f: pd.DataFrame) -> pd.DataFrame:
     :param ignore_isolated: if True, ignores rows where 'het' value is 1
     :return: dataframe of average and median for each step
     """
-    #
-    # if ignore:
-    #     # Ignore rows where 'het' equals 1
-    #     f = f[f['het'] != 1]
 
     # Get unique steps
     unique_steps = f['step'].unique()

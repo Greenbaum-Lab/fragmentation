@@ -24,7 +24,7 @@ n_rep = 5000
 start_time = time.time()
 
 # create list off nets
-nets = make_networks(n_nets=n_rep, n_nodes=n, connectivity=p, net_type='RGG')
+nets = make_networks(n_nets=n_rep, n_nodes=n, connectivity=p, net_type='ER')
 print("finish nets")
 
 
@@ -37,7 +37,7 @@ breaking_point_rand = parallelize_list_comprehension(nets, remove_edge_random)
 breaking_point_rand = find_breakink_point_list(breaking_point_rand)
 print("finish rand")
 
-file_name= "breaking_point_rand.txt"
+file_name= "breaking_point_rand_ER.txt"
 with open(file_name, 'w') as file:
     for item in breaking_point_rand:
         file.write(str(item) + '\n')
@@ -46,7 +46,7 @@ breaking_point_cor = parallelize_list_comprehension(nets, remove_edge_correlated
 breaking_point_cor = find_breakink_point_list(breaking_point_cor)
 print("finish cor")
 
-file_name= "breaking_point_cor.txt"
+file_name= "breaking_point_cor_ER.txt"
 with open(file_name, 'w') as file:
     for item in breaking_point_cor:
         file.write(str(item) + '\n')
@@ -55,11 +55,34 @@ breaking_point_dist = parallelize_list_comprehension(nets, remove_edge_distance)
 breaking_point_dist = find_breakink_point_list(breaking_point_dist)
 print("finish dist")
 
-file_name= "breaking_point_dist.txt"
+file_name= "breaking_point_dist_ER.txt"
 with open(file_name, 'w') as file:
     for item in breaking_point_dist:
         file.write(str(item) + '\n')
 
+#### upload files
+# breaking_point_rand = []
+# with open('/run/user/1000/gvfs/sftp:host=132.64.61.5,user=lab-heavy/home/lab-heavy/PycharmProjects/fragmentation/breaking_point_rand.txt', 'r') as file:
+#     for line in file:
+#         item = line.strip()
+#         breaking_point_rand.append(item)
+#
+# breaking_point_cor = []
+# with open('/run/user/1000/gvfs/sftp:host=132.64.61.5,user=lab-heavy/home/lab-heavy/PycharmProjects/fragmentation/breaking_point_cor.txt', 'r') as file:
+#     for line in file:
+#         item = line.strip()
+#         breaking_point_cor.append(item)
+#
+#
+# breaking_point_dist = []
+# with open('/run/user/1000/gvfs/sftp:host=132.64.61.5,user=lab-heavy/home/lab-heavy/PycharmProjects/fragmentation/breaking_point_dist.txt', 'r') as file:
+#     for line in file:
+#         item = line.strip()
+#         breaking_point_dist.append(item)
+#
+# breaking_point_rand = [int(element) for element in breaking_point_rand]
+# breaking_point_cor = [int(element) for element in breaking_point_cor]
+# breaking_point_dist = [int(element) for element in breaking_point_dist]
 
 bins = 100
 sns.histplot(data=breaking_point_rand, bins=bins, kde=True, color='yellow', label='rand')
@@ -74,14 +97,9 @@ plt.savefig("breaking.png", format="png")
 
 plt.show()
 
-# loaded_list = []
-# with open(file_name, 'r') as file:
-#     for line in file:
-#         item = line.strip()
-#         loaded_list.append(item)
-#
 running_time = time.time() - start_time
 print("Running time:", running_time, "seconds")
+
 
 #######add parameters of percolation
 def calculate_centrality_single(net: list) -> pd.DataFrame:
