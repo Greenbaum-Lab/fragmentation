@@ -306,6 +306,30 @@ plt.figure()
 # plt.show()
 # plt.figure()
 
-from processes import intervals
-x= intervals(list(rand[2]['step']))
-print(x)
+
+### plot distributions interval
+def plot_snapshot(df):
+
+    # Find the total number of rows
+    num_rows = df.shape[0]
+    # Calculate the 5% interval
+    interval = round(num_rows * 0.1)
+    # Create an auxiliary 'group' column
+    df = df.sort_values('step').reset_index(drop=True)  # ensure 'step' is sorted
+    df['group'] = df.index // interval
+
+    return df
+
+df = plot_snapshot(rand[4])
+#distribution heterozygosity
+plt.figure()
+joyplot(
+    data=df[['fst', 'group']],
+    by='group', ylim=0, overlap=1,
+    colormap=plt.cm.viridis_r, fade=True,range_style='all',
+    figsize=(12, 8),  linecolor = "white", linewidth=0.1
+)
+plt.title('Heterozygosity in distance fragmentation',
+          fontsize=16, pad=-20, y=1.02, verticalalignment='bottom')
+plt.show()
+plt.figure()
