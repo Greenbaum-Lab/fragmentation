@@ -18,47 +18,47 @@ from funcs2 import frag_rand, frag_cor, frag_dist, het_rand, het_cor, het_dist, 
 
 n = 50  # no. of nodes
 p = 0.4  # probability to connect nodes
-n_rep = 4000
+n_rep = 10
 
 # Record the starting time
 start_time = time.time()
+#
+# # create list off nets
+# nets = make_networks(n_nets=n_rep, n_nodes=n, connectivity=p, net_type='ER')
+# print("finish nets")
 
-# create list off nets
-nets = make_networks(n_nets=n_rep, n_nodes=n, connectivity=p, net_type='ER')
-print("finish nets")
-
-
-def parallelize_list_comprehension(nets, function):
-    with Pool() as pool:
-        return pool.map(function, nets)
-
-
-breaking_point_rand = parallelize_list_comprehension(nets, remove_edge_random)
-breaking_point_rand = find_breakink_point_list(breaking_point_rand)
-print("finish rand")
-
-file_name= "breaking_point_rand_ER.txt"
-with open(file_name, 'w') as file:
-    for item in breaking_point_rand:
-        file.write(str(item) + '\n')
-
-breaking_point_cor = parallelize_list_comprehension(nets, remove_edge_correlated)
-breaking_point_cor = find_breakink_point_list(breaking_point_cor)
-print("finish cor")
-
-file_name= "breaking_point_cor_ER.txt"
-with open(file_name, 'w') as file:
-    for item in breaking_point_cor:
-        file.write(str(item) + '\n')
-
-breaking_point_dist = parallelize_list_comprehension(nets, remove_edge_distance)
-breaking_point_dist = find_breakink_point_list(breaking_point_dist)
-print("finish dist")
-
-file_name= "breaking_point_dist_ER.txt"
-with open(file_name, 'w') as file:
-    for item in breaking_point_dist:
-        file.write(str(item) + '\n')
+#
+# def parallelize_list_comprehension(nets, function):
+#     with Pool() as pool:
+#         return pool.map(function, nets)
+#
+#
+# breaking_point_rand = parallelize_list_comprehension(nets, remove_edge_random)
+# breaking_point_rand = find_breakink_point_list(breaking_point_rand)
+# print("finish rand")
+#
+# file_name= "breaking_point_rand_ER.txt"
+# with open(file_name, 'w') as file:
+#     for item in breaking_point_rand:
+#         file.write(str(item) + '\n')
+#
+# breaking_point_cor = parallelize_list_comprehension(nets, remove_edge_correlated)
+# breaking_point_cor = find_breakink_point_list(breaking_point_cor)
+# print("finish cor")
+#
+# file_name= "breaking_point_cor_ER.txt"
+# with open(file_name, 'w') as file:
+#     for item in breaking_point_cor:
+#         file.write(str(item) + '\n')
+#
+# breaking_point_dist = parallelize_list_comprehension(nets, remove_edge_distance)
+# breaking_point_dist = find_breakink_point_list(breaking_point_dist)
+# print("finish dist")
+#
+# file_name= "breaking_point_dist_ER.txt"
+# with open(file_name, 'w') as file:
+#     for item in breaking_point_dist:
+#         file.write(str(item) + '\n')
 
 #### upload files
 # breaking_point_rand = []
@@ -84,21 +84,21 @@ with open(file_name, 'w') as file:
 # breaking_point_cor = [int(element) for element in breaking_point_cor]
 # breaking_point_dist = [int(element) for element in breaking_point_dist]
 
-bins = 100
-sns.histplot(data=breaking_point_rand, bins=bins, kde=True, color='yellow', label='rand')
-sns.histplot(data=breaking_point_cor, bins=bins, kde=True, color='orange', label='cor')
-sns.histplot(data=breaking_point_dist, bins=bins, kde=True, color='grey', label='dist')
-
-plt.xlabel('Value')
-plt.ylabel('Count')
-plt.title('Histogram')
-plt.legend()
-plt.savefig("breaking.png", format="png")
-
-plt.show()
-
-running_time = time.time() - start_time
-print("Running time:", running_time, "seconds")
+# bins = 100
+# sns.histplot(data=breaking_point_rand, bins=bins, kde=True, color='yellow', label='rand')
+# sns.histplot(data=breaking_point_cor, bins=bins, kde=True, color='orange', label='cor')
+# sns.histplot(data=breaking_point_dist, bins=bins, kde=True, color='grey', label='dist')
+#
+# plt.xlabel('Value')
+# plt.ylabel('Count')
+# plt.title('Histogram')
+# plt.legend()
+# plt.savefig("breaking.png", format="png")
+#
+# plt.show()
+#
+# running_time = time.time() - start_time
+# print("Running time:", running_time, "seconds")
 
 
 #######add parameters of percolation
