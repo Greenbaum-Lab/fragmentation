@@ -16,9 +16,9 @@ from processes import find_breaking_point, find_breakink_point_list, remove_edge
     remove_edge_distance
 from funcs2 import frag_rand, frag_cor, frag_dist, het_rand, het_cor, het_dist, make_networks
 
-n = 20  # no. of nodes
+n = 50  # no. of nodes
 p = 0.4  # probability to connect nodes
-n_rep = 30
+n_rep = 1000
 
 # Record the starting time
 start_time = time.time()
