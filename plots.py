@@ -21,9 +21,9 @@ from funcs3 import make_replicates, make_replicates_new
 
 
 
-n = 20  # no. of nodes
+n = 50  # no. of nodes
 p = 0.3  # probability to connect nodes
-n_rep = 5
+n_rep = 100
 # seed = 98
 
 color_palette = plt.get_cmap('tab10')  # You can change 'tab10' to any other available palette
