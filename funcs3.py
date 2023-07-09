@@ -255,3 +255,4 @@ def make_replicates_new(nets: list, frag_type: str, ignore: bool) -> tuple:
     fst_stat = pd.concat(fst_stat)
 
     return nets_number, all_nets, het_dens, het_stat, fst_dens, fst_stat
+
