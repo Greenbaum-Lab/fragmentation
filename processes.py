@@ -28,6 +28,54 @@ def remove_edge_random(net: nx.Graph) -> list:
     return migration_list
 
 
+
+def remove_edge_intrusive(net: nx.Graph) -> list:
+    """
+    Remove edges from specific nodes until there are no more
+    edges conneted to it.
+    Keep track of all generated graphs in a list until only two nodes remain.
+
+    :param net: initial networkx object
+    :return: list of networkx objects
+    """
+    migration = net.copy()
+    migration_list = []  # initialize list with the original network
+    nodes = list(migration.nodes)
+
+    while nx.number_of_edges(migration) > 2:  # stop when the network includes only two connected nodes
+
+        # choose a random node
+        node = random.choice(nodes)
+
+        # get all the edges of the corresponding node
+        edges = list(migration.edges(node))
+
+        #update nodes list
+        nodes.remove(node)
+
+        for edge in range(len(edges)):
+
+            edge = random.choice(edges)
+
+            # update network and edges list
+            migration.remove_edge(*edge)
+            edges.remove(edge)
+
+            # add the resulting graph to the list
+            migration_list.append(migration.copy())
+
+    return migration_list
+
+net=nx.random_geometric_graph(500,0.3)
+pos=nx.spring_layout(net)
+nx.draw_networkx(net,pos)
+plt.show()
+
+x=remove_edge_intrusive(net)
+
+nx.draw_networkx(x[2000],pos)
+plt.show()
+
 def remove_edge_correlated(net: nx.Graph) -> list:
     """
     Remove a correlated edge from migration network of type networkx
@@ -178,9 +226,6 @@ def remove_edge_regressive(net: nx.Graph) -> list:
     return migration_list
 
 
-
-
-
 def find_edges_crossed_by_line(net):
     """
     create a path that crosses the network and get all the edges
@@ -253,15 +298,7 @@ def remove_edge_divisive(net: nx.Graph) -> list:
     return migration_list
 
 
-net=nx.random_geometric_graph(500,0.3)
-pos = nx.get_node_attributes(net, 'pos')
 
-
-x=remove_edge_divisive(net)
-nx.draw_networkx(net,pos, with_labels=True)
-plt.show()
-nx.draw_networkx(x[100],pos, with_labels=True)
-plt.show()
 
 #
 #
