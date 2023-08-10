@@ -2,6 +2,7 @@ import random
 import networkx as nx
 import numpy as np
 from matplotlib import pyplot as plt
+from collections import OrderedDict
 
 
 def remove_edge_random(net: nx.Graph) -> list:
@@ -110,6 +111,137 @@ def remove_edge_distance(net: nx.Graph) -> list:
         migration_list.append(migration.copy())
 
     return migration_list
+
+
+
+
+def get_edges_connected_to_nodes(G, nodes_list):
+    """
+    extract the edges connected to a list of nodes and returen an ordered list.
+    used in remove edge regressive.
+    :param G: network
+    :param nodes_list: list of nodes ordered by distance from the side
+    :return:
+    """
+
+    # Use an OrderedDict to store the edges without duplicates
+    edges_ordered_dict = OrderedDict()
+
+    # Iterate through the nodes and add the edges to the OrderedDict
+    for node in nodes_list:
+        for edge in G.edges(node):
+            # The order of the nodes in the edge might not be consistent, so we use a tuple with sorted nodes
+            edges_ordered_dict[tuple(sorted(edge))] = None
+
+    # Convert the keys of the OrderedDict to a list
+    edges_list = list(edges_ordered_dict.keys())
+
+    return edges_list
+
+
+
+
+def remove_edge_regressive(net: nx.Graph) -> list:
+    """
+    Remove edge from the side\edge of the migration network
+    :param net:  initial migration networkx network
+    :return: list of networks with edges removed
+    """
+
+    pos = nx.spring_layout(net.copy(), seed=55)
+
+    migration = net.copy()
+    migration_list = []  # initialize list of networks
+
+    # Get the positions of the nodes
+    positions = nx.get_node_attributes(migration, 'pos')
+
+    # Calculate the distance to the left side (x = 1) for each node
+    distances = {node: 1 - pos[0] for node, pos in positions.items()}
+
+    # create a list of nodes ordered by distance
+    nodes = sorted(distances, key=distances.get, reverse=True)
+
+    edges = get_edges_connected_to_nodes(migration,nodes)
+
+    while nx.number_of_edges(migration) > 2:  # stop when the network includes only two connected nodes
+
+        # Remove the longest edge from network
+        migration.remove_edge(*edges[0])
+
+        # Remove the longest edge from the edges list
+        edges.pop(0)
+
+        # add the resulting graph to the list
+        migration_list.append(migration.copy())
+
+    return migration_list
+
+
+#
+# # Create a random geometric graph with 100 nodes and radius 0.1
+# G = nx.random_geometric_graph(500, 0.1)
+#
+# # Get the positions of the nodes
+# positions = nx.get_node_attributes(G, 'pos')
+#
+#
+# nx.draw(G,pos= positions, node_size=50, with_labels=True)
+# plt.axvline(x=1, color='r')  # Draw a line representing the right side of the bounding box
+# plt.show()
+#
+# x=remove_edge_regressive(G)
+# print(x)
+#
+# nx.draw(x[1000],pos= positions, node_size=50, with_labels=True)
+# plt.axvline(x=1, color='r')  # Draw a line representing the right side of the bounding box
+# plt.show()
+
+
+
+
+
+
+import networkx as nx
+import numpy as np
+import matplotlib.pyplot as plt
+
+def draw_random_line_path(nodes, radius, threshold_distance):
+    # Step 1: Create the random geometric graph (RGG)
+    rgg = nx.random_geometric_graph(nodes, radius)
+
+    # Step 2: Define random endpoints of the straight line path
+    start_point = np.random.rand(2)
+    end_point = np.random.rand(2)
+
+    # Step 3: Calculate equation of the line
+    delta = end_point - start_point
+    slope = delta[1] / delta[0]
+    intercept = start_point[1] - slope * start_point[0]
+    print(intercept)
+    # Step 4: Get node positions and calculate distances to the line
+    node_positions = np.array([rgg.nodes[node]['pos'] for node in rgg.nodes()])
+    print(node_positions)
+    x_positions = node_positions[:, 0]
+    y_positions = node_positions[:, 1]
+    print(y_positions)
+    distances_to_line = abs(y_positions - slope * x_positions - intercept) / np.sqrt(1 + slope ** 2)
+    print(distances_to_line)
+    # Find nodes near the line
+    path_nodes = np.where(distances_to_line <= threshold_distance)[0].tolist()
+    print(path_nodes)
+    # Visualize the result
+    pos = nx.get_node_attributes(rgg, 'pos')
+    nx.draw(rgg, pos, node_size=50, node_color='b', alpha=0.7)
+    nx.draw_networkx_nodes(rgg, pos, nodelist=path_nodes, node_color='r', node_size=100)
+    plt.plot([start_point[0], end_point[0]], [start_point[1], end_point[1]], color='g')
+    plt.show()
+
+# Example usage
+draw_random_line_path(50, 0.2, 0.1)
+
+
+
 
 
 def remove_edge_random_giant_comp(net: nx.Graph) -> list:
@@ -278,6 +410,11 @@ def get_connected_edges(net: nx.Graph, connected_nodes: set) -> list:
 
 
 def intervals(lst):
+    """
+    take snapshots of the process
+    :param lst:
+    :return:
+    """
     if len(lst) <= 50:
         return lst
     n = 19 # number of bins (-1)
