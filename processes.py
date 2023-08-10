@@ -178,37 +178,16 @@ def remove_edge_regressive(net: nx.Graph) -> list:
     return migration_list
 
 
-#
-# # Create a random geometric graph with 100 nodes and radius 0.1
-# G = nx.random_geometric_graph(500, 0.1)
-#
-# # Get the positions of the nodes
-# positions = nx.get_node_attributes(G, 'pos')
-#
-#
-# nx.draw(G,pos= positions, node_size=50, with_labels=True)
-# plt.axvline(x=1, color='r')  # Draw a line representing the right side of the bounding box
-# plt.show()
-#
-# x=remove_edge_regressive(G)
-# print(x)
-#
-# nx.draw(x[1000],pos= positions, node_size=50, with_labels=True)
-# plt.axvline(x=1, color='r')  # Draw a line representing the right side of the bounding box
-# plt.show()
 
 
 
-
-
-
-import networkx as nx
-import numpy as np
-import matplotlib.pyplot as plt
-
-def draw_random_line_path(nodes, radius, threshold_distance):
-    # Step 1: Create the random geometric graph (RGG)
-    rgg = nx.random_geometric_graph(nodes, radius)
+def find_edges_crossed_by_line(net):
+    """
+    create a path that crosses the network and get all the edges
+    that will be fragmented.
+    :param net: network
+    :return: ordered list of the edges to remove
+    """
 
     # Step 2: Define random endpoints of the straight line path
     start_point = np.random.rand(2)
@@ -218,160 +197,202 @@ def draw_random_line_path(nodes, radius, threshold_distance):
     delta = end_point - start_point
     slope = delta[1] / delta[0]
     intercept = start_point[1] - slope * start_point[0]
-    print(intercept)
-    # Step 4: Get node positions and calculate distances to the line
-    node_positions = np.array([rgg.nodes[node]['pos'] for node in rgg.nodes()])
-    print(node_positions)
-    x_positions = node_positions[:, 0]
-    y_positions = node_positions[:, 1]
-    print(y_positions)
-    distances_to_line = abs(y_positions - slope * x_positions - intercept) / np.sqrt(1 + slope ** 2)
-    print(distances_to_line)
-    # Find nodes near the line
-    path_nodes = np.where(distances_to_line <= threshold_distance)[0].tolist()
-    print(path_nodes)
-    # Visualize the result
-    pos = nx.get_node_attributes(rgg, 'pos')
-    nx.draw(rgg, pos, node_size=50, node_color='b', alpha=0.7)
-    nx.draw_networkx_nodes(rgg, pos, nodelist=path_nodes, node_color='r', node_size=100)
-    plt.plot([start_point[0], end_point[0]], [start_point[1], end_point[1]], color='g')
-    plt.show()
 
-# Example usage
-draw_random_line_path(50, 0.2, 0.1)
+    # Step 4: Check intersection with edges
+    edges_on_line = []
+    edge_positions = []
+    for edge in net.edges():
+        p1 = np.array(net.nodes[edge[0]]['pos'])
+        p2 = np.array(net.nodes[edge[1]]['pos'])
+
+        # Determine the sides of the line for both points
+        side_p1 = slope * p1[0] - p1[1] + intercept
+        side_p2 = slope * p2[0] - p2[1] + intercept
+
+        # Check if points are on opposite sides of the line to know the order (left-right; up-down)
+        if side_p1 * side_p2 < 0:
+            edges_on_line.append(edge)
+            # Store average position for ordering
+            if -1 < slope < 1:
+                edge_positions.append((p1[0] + p2[0]) / 2)
+            else:
+                edge_positions.append((p1[1] + p2[1]) / 2)
+
+    # Order the edges along the line based on average x or y positions
+    ordered_edges_on_line = [edges_on_line[i] for i in np.argsort(edge_positions)]
+
+    return ordered_edges_on_line
 
 
-
-
-
-def remove_edge_random_giant_comp(net: nx.Graph) -> list:
+def remove_edge_divisive(net: nx.Graph) -> list:
     """
-    Remove a random edge from the input network in each iteration.
-    If the resulting graph is disconnected, it only keeps the giant component.
-    Keep track of all generated graphs in a list until only two nodes remain.
-
-    :param net: initial networkx object
-    :return: list of networkx objects
+    Remove edges from a network based on a path of fragmentation
+    :param net:  initial migration networkx network
+    :return: list of networks with edges removed
     """
-    migration = net.copy()
-    migration_list = []  # initialize list with the original network
-    while len(migration) > 2:  # stop when the network includes only two connected nodes
-        # choose a random edge and remove it
-        edges = list(migration.edges())
-        edge = random.choice(edges)
-        migration.remove_edge(*edge)
-
-        # check if the resulting graph is connected
-        if not nx.is_connected(migration):
-            # if not, keep only the giant component
-            largest_cc = max(nx.connected_components(migration), key=len)
-            migration = migration.subgraph(largest_cc).copy()
-
-        # add the resulting graph to the list
-        migration_list.append(migration.copy())
-
-    return migration_list
-
-
-def remove_edge_correlated_giant_comp(net: nx.Graph) -> list:
-    """
-    Remove a correlated edge from migration network of type networkx
-    each iteration we choose an edge to remove from the list of edges connected to it
-    if the node is no longer part of the network we choose a random node
-    :param net: initial migration network
-    :param n: no. of fragmentation steps
-    :return: list of networks after n edge removal
-    """
-
-    migration = net.copy()
-    migration_list = [net.copy()]  # initialize list with the original network
-
-    # choose a random edge for start
-    edge = random.choice(list(migration.edges))
-
-    # take the initial nodes to remove edges from
-    edge_a = edge[0]
-    edge_b = edge[1]
-
-    while len(migration) > 2:  # stop when the network includes only two connected nodes
-        # print(nx.attr_matrix(migration))
-        # takes the edges of the nodes of the removed edge
-        edges_a = list(migration.edges(edge_a))
-        edges_b = list(migration.edges(edge_b))
-
-        # make a list of the edges of the two nodes
-        edges = edges_a + edges_b
-
-        # sample an edge from the edges
-        edge = random.choice(list(edges))
-
-        # remove the chosen edge from the network
-        migration.remove_edge(*edge)
-
-        # check if the resulting graph is connected
-        if not nx.is_connected(migration):
-            # if not, keep only the giant component
-            largest_cc = max(nx.connected_components(migration), key=len)
-            migration = migration.subgraph(largest_cc).copy()
-
-        # choose the nodes to remove edges from
-        # if node doesn't exist in new network choose a random node
-        if edge[0] in migration.nodes:
-            edge_a = edge[0]
-        else:
-            edge_a = random.choice(list(migration.nodes))
-
-        if edge[1] in migration.nodes:
-            edge_b = edge[1]
-        else:
-            edge_b = random.choice(list(migration.nodes))
-
-        # add the resulting graph to the list
-        migration_list.append(migration.copy())
-
-    return migration_list
-
-
-def remove_edge_distance_giant_comp(net: nx.Graph) -> list:
-    """
-    Remove edge based on distance from migration network of type networkx
-    :param net:  initial migration network
-    :return: list of networks after n edge removal
-    """
-
-    pos = nx.spring_layout(net.copy(), seed=55)
 
     migration = net.copy()
     migration_list = []  # initialize list of networks
 
-    while len(migration) > 2:  # stop when the network includes only two connected nodes
+    while nx.number_of_edges(migration) > 2:  # stop when the network includes only two connected nodes
 
-        edges = migration.edges()
+        # get a list of edges that lie on the fragmented path
+        edges = find_edges_crossed_by_line(migration)
 
-        # Calculate the euclidean distance between all nodes and create a dict
-        distances = {edge: round(
-            ((pos[edge[1]][1] - pos[edge[0]][1]) ** 2 + (pos[edge[1]][0] - pos[edge[0]][0]) ** 2) ** 0.5, 2)
-            for edge in edges}
+        for edge in range(len(edges)): # for each edge from the current fragmented path
 
-        edges = sorted(edges, key=distances.get, reverse=True)
+            # Remove edge from network
+            migration.remove_edge(*edges[0])
 
-        # Remove the longest edge from network
-        migration.remove_edge(*edges[0])
+            # Remove the longest edge from the edges list
+            edges.pop(0)
 
-        # Remove the longest edge from the edges list
-        edges.pop(0)
-
-        # check if the resulting graph is connected
-        if not nx.is_connected(migration):
-            # if not, keep only the giant component
-            largest_cc = max(nx.connected_components(migration), key=len)
-            migration = migration.subgraph(largest_cc).copy()
-
-        # add the resulting graph to the list
-        migration_list.append(migration.copy())
+            # add the resulting graph to the list
+            migration_list.append(migration.copy())
 
     return migration_list
 
+
+net=nx.random_geometric_graph(500,0.3)
+pos = nx.get_node_attributes(net, 'pos')
+
+
+x=remove_edge_divisive(net)
+nx.draw_networkx(net,pos, with_labels=True)
+plt.show()
+nx.draw_networkx(x[100],pos, with_labels=True)
+plt.show()
+
+#
+#
+# def remove_edge_random_giant_comp(net: nx.Graph) -> list:
+#     """
+#     Remove a random edge from the input network in each iteration.
+#     If the resulting graph is disconnected, it only keeps the giant component.
+#     Keep track of all generated graphs in a list until only two nodes remain.
+#
+#     :param net: initial networkx object
+#     :return: list of networkx objects
+#     """
+#     migration = net.copy()
+#     migration_list = []  # initialize list with the original network
+#     while len(migration) > 2:  # stop when the network includes only two connected nodes
+#         # choose a random edge and remove it
+#         edges = list(migration.edges())
+#         edge = random.choice(edges)
+#         migration.remove_edge(*edge)
+#
+#         # check if the resulting graph is connected
+#         if not nx.is_connected(migration):
+#             # if not, keep only the giant component
+#             largest_cc = max(nx.connected_components(migration), key=len)
+#             migration = migration.subgraph(largest_cc).copy()
+#
+#         # add the resulting graph to the list
+#         migration_list.append(migration.copy())
+#
+#     return migration_list
+#
+#
+# def remove_edge_correlated_giant_comp(net: nx.Graph) -> list:
+#     """
+#     Remove a correlated edge from migration network of type networkx
+#     each iteration we choose an edge to remove from the list of edges connected to it
+#     if the node is no longer part of the network we choose a random node
+#     :param net: initial migration network
+#     :param n: no. of fragmentation steps
+#     :return: list of networks after n edge removal
+#     """
+#
+#     migration = net.copy()
+#     migration_list = [net.copy()]  # initialize list with the original network
+#
+#     # choose a random edge for start
+#     edge = random.choice(list(migration.edges))
+#
+#     # take the initial nodes to remove edges from
+#     edge_a = edge[0]
+#     edge_b = edge[1]
+#
+#     while len(migration) > 2:  # stop when the network includes only two connected nodes
+#         # print(nx.attr_matrix(migration))
+#         # takes the edges of the nodes of the removed edge
+#         edges_a = list(migration.edges(edge_a))
+#         edges_b = list(migration.edges(edge_b))
+#
+#         # make a list of the edges of the two nodes
+#         edges = edges_a + edges_b
+#
+#         # sample an edge from the edges
+#         edge = random.choice(list(edges))
+#
+#         # remove the chosen edge from the network
+#         migration.remove_edge(*edge)
+#
+#         # check if the resulting graph is connected
+#         if not nx.is_connected(migration):
+#             # if not, keep only the giant component
+#             largest_cc = max(nx.connected_components(migration), key=len)
+#             migration = migration.subgraph(largest_cc).copy()
+#
+#         # choose the nodes to remove edges from
+#         # if node doesn't exist in new network choose a random node
+#         if edge[0] in migration.nodes:
+#             edge_a = edge[0]
+#         else:
+#             edge_a = random.choice(list(migration.nodes))
+#
+#         if edge[1] in migration.nodes:
+#             edge_b = edge[1]
+#         else:
+#             edge_b = random.choice(list(migration.nodes))
+#
+#         # add the resulting graph to the list
+#         migration_list.append(migration.copy())
+#
+#     return migration_list
+#
+#
+# def remove_edge_distance_giant_comp(net: nx.Graph) -> list:
+#     """
+#     Remove edge based on distance from migration network of type networkx
+#     :param net:  initial migration network
+#     :return: list of networks after n edge removal
+#     """
+#
+#     pos = nx.spring_layout(net.copy(), seed=55)
+#
+#     migration = net.copy()
+#     migration_list = []  # initialize list of networks
+#
+#     while len(migration) > 2:  # stop when the network includes only two connected nodes
+#
+#         edges = migration.edges()
+#
+#         # Calculate the euclidean distance between all nodes and create a dict
+#         distances = {edge: round(
+#             ((pos[edge[1]][1] - pos[edge[0]][1]) ** 2 + (pos[edge[1]][0] - pos[edge[0]][0]) ** 2) ** 0.5, 2)
+#             for edge in edges}
+#
+#         edges = sorted(edges, key=distances.get, reverse=True)
+#
+#         # Remove the longest edge from network
+#         migration.remove_edge(*edges[0])
+#
+#         # Remove the longest edge from the edges list
+#         edges.pop(0)
+#
+#         # check if the resulting graph is connected
+#         if not nx.is_connected(migration):
+#             # if not, keep only the giant component
+#             largest_cc = max(nx.connected_components(migration), key=len)
+#             migration = migration.subgraph(largest_cc).copy()
+#
+#         # add the resulting graph to the list
+#         migration_list.append(migration.copy())
+#
+#     return migration_list
+#
 
 def get_connected_nodes(net: nx.Graph) -> set:
     """
