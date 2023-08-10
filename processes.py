@@ -66,15 +66,6 @@ def remove_edge_intrusive(net: nx.Graph) -> list:
 
     return migration_list
 
-net=nx.random_geometric_graph(500,0.3)
-pos=nx.spring_layout(net)
-nx.draw_networkx(net,pos)
-plt.show()
-
-x=remove_edge_intrusive(net)
-
-nx.draw_networkx(x[2000],pos)
-plt.show()
 
 def remove_edge_correlated(net: nx.Graph) -> list:
     """
