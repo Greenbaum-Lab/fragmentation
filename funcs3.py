@@ -154,12 +154,17 @@ def make_het_stat(f: pd.DataFrame) -> pd.DataFrame:
     df = pd.DataFrame(data=d)
     return df
 
-
+from processes import remove_edge_intrusive
+from processes import remove_edge_divisive
+from processes import remove_edge_regressive
 # create short name to call the desired function
 function_mapping = {
     'rand': remove_edge_random,
     'cor': remove_edge_correlated,
-    'dist': remove_edge_distance
+    'int': remove_edge_intrusive,
+    'reg': remove_edge_regressive,
+    'div': remove_edge_divisive,
+    'dist': remove_edge_distance,
 }
 
 
@@ -256,3 +261,29 @@ def make_replicates_new(nets: list, frag_type: str, ignore: bool) -> tuple:
 
     return nets_number, all_nets, het_dens, het_stat, fst_dens, fst_stat
 
+def make_networks(n_nets: int, n_nodes: int, net_type) -> list:
+    """
+    create a list of networks
+    :param n_nets: number of networks
+    :param n_nodes: number of nodes
+    :param connectivity: degree of connectivity
+    :param net_type: type of network: ER, RGG, or SF
+    :return: list of networks
+    """
+    nets = []
+    for net in range(n_nets):
+
+        if net_type == 'ER':
+            net = nx.erdos_renyi_graph(n=n_nodes, p=0.2)
+            nets.append(net)
+        if net_type == 'RGG':
+            net = nx.random_geometric_graph(n=n_nodes, radius=0.3)
+            nets.append(net)
+        if net_type == 'AB-':
+            net = nx.barabasi_albert_graph(n=n_nodes, m=5)
+            nets.append(net)
+        if net_type == 'SW-':
+            net = nx.watts_strogatz_graph(n=n_nodes,k=9, p=0.1)
+            nets.append(net)
+
+    return nets

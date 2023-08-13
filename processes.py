@@ -32,7 +32,7 @@ def remove_edge_random(net: nx.Graph) -> list:
 def remove_edge_intrusive(net: nx.Graph) -> list:
     """
     Remove edges from specific nodes until there are no more
-    edges conneted to it.
+    edges conneted to it. then choose anothe rrandom node ans islote him ...
     Keep track of all generated graphs in a list until only two nodes remain.
 
     :param net: initial networkx object
@@ -65,6 +65,8 @@ def remove_edge_intrusive(net: nx.Graph) -> list:
             migration_list.append(migration.copy())
 
     return migration_list
+
+
 
 
 def remove_edge_correlated(net: nx.Graph) -> list:
@@ -487,4 +489,78 @@ def find_breakink_point_list(networks: list):
         breaking_point.append(x)
     return breaking_point
 
+def create_networks(n, p_or_k, replicates=200):
+    er_edges = []
+    rgg_edges = []
+    ab_edges = []
+    sw_edges = []
 
+    er_density = []
+    rgg_density = []
+    ab_density = []
+    sw_density = []
+    connect = []
+    for _ in range(replicates):
+        # Erdos-Renyi (ER) Graph
+        er_graph = nx.erdos_renyi_graph(n, 0.2)
+        er_edges.append(er_graph.number_of_edges())
+        er_density.append(nx.density(er_graph))
+
+        # Random Geometric Graph (RGG)
+        rgg_graph = nx.random_geometric_graph(n, 0.3)
+
+        rgg_edges.append(rgg_graph.number_of_edges())
+        rgg_density.append(nx.density(rgg_graph))
+        connect.append(nx.is_connected(rgg_graph))
+        # Albert-Barabasi Graph
+        ab_graph = nx.barabasi_albert_graph(n, m=5)
+        ab_edges.append(ab_graph.number_of_edges())
+        ab_density.append(nx.density(ab_graph))
+
+        # Small-World Graph
+        sw_graph = nx.watts_strogatz_graph(n,k=9, p=0.1)
+        sw_edges.append(sw_graph.number_of_edges())
+        sw_density.append(nx.density(sw_graph))
+
+    print(sum(connect))
+    return er_edges, rgg_edges, ab_edges, sw_edges, er_density, rgg_density, ab_density, sw_density
+name="sdsdsds"
+def plot_distribution(edges, title):
+    plt.hist(edges, bins=20, alpha=0.5)
+    plt.title(title)
+    plt.xlabel('Number of Edges')
+    plt.ylabel('Frequency')
+    plt.legend(['ER;p=0.2', 'RGG;d=0.3', 'Albert-Barabasi;m=5', 'Small World;-k=9, p=0.1'])
+    plt.savefig(f'edg {name} es.png',format="png")
+    plt.show()
+
+# def plot_density(density, title):
+#     plt.hist(density, bins=20, alpha=0.5)
+#     plt.title(title)
+#     plt.xlabel('Density')
+#     plt.ylabel('Frequency')
+#     plt.legend(['ER', 'RGG', 'Albert-Barabasi', 'Small World'])
+#     plt.show()
+
+# Parameters
+n = 50  # Number of nodes
+p_or_k = 0.1  # Probability for ER and RGG, and k (nearest neighbors) for Albert-Barabasi and Small World
+
+# Create networks
+er_edges, rgg_edges, ab_edges, sw_edges, er_density, rgg_density, ab_density, sw_density = create_networks(n, p_or_k)
+
+# Plot distribution of edges
+plot_distribution([er_edges, rgg_edges, ab_edges, sw_edges], 'Distribution of Edges')
+
+# Plot density
+# plot_density([er_density, rgg_density, ab_density, sw_density], 'Density Distribution')
+#
+# net = nx.newman_watts_strogatz_graph(50,10,0.1)
+# nx.draw_networkx(net)
+# plt.show()
+# net = nx.random_geometric_graph(50,0.25)
+# nx.draw_networkx(net)
+# plt.show()
+# net = nx.erdos_renyi_graph(50,0.15)
+# nx.draw_networkx(net)
+# plt.show()
