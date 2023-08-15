@@ -17,11 +17,9 @@ from funcs3 import make_replicates, make_replicates_new, make_networks
 plt.ion()
 
 n = 50  # no. of nodes
-
 n_rep = 100
-# seed = 98
 net = "ER"
-ignore=True
+ignore = False
 
 color_palette = plt.get_cmap('tab10')  # You can change 'tab10' to any other available palette
 
@@ -38,6 +36,19 @@ cor = make_replicates_new(nets=nets, frag_type='cor', ignore=ignore)
 print("2")
 int = make_replicates_new(nets=nets, frag_type='int', ignore=ignore)
 print("3")
+
+# Path and filename for the saved file using tuple
+pickle_filename = f'rand_ignore_{ignore}.pickle'
+with open(pickle_filename, 'wb') as file:
+    pickle.dump(rand, file)
+
+pickle_filename = f'cor_ignore_{ignore}.pickle'
+with open(pickle_filename, 'wb') as file:
+    pickle.dump(cor, file)
+
+pickle_filename = f'int_ignore_{ignore}.pickle'
+with open(pickle_filename, 'wb') as file:
+    pickle.dump(int, file)
 
 # 
 # # # Load the tuple using pickle
@@ -137,26 +148,15 @@ running_time = time.time() - start_time
 print("Running time:", running_time, "seconds")
 
 
-# Path and filename for the saved file using tuple
-pickle_filename = f'rand_ignore.pickle'
-with open(pickle_filename, 'wb') as file:
-    pickle.dump(rand, file)
-
-pickle_filename = 'cor_ignore.pickle'
-with open(pickle_filename, 'wb') as file:
-    pickle.dump(cor, file)
-
-pickle_filename = 'int_ignore.pickle'
-with open(pickle_filename, 'wb') as file:
-    pickle.dump(int, file)
 
 
 
 
 
-# ###############plot intributions
+
+# ###############plot distributions
 #
-# # intribution fst
+# # distribution fst
 # plt.figure()
 # joyplot(
 #     data=rand[4][['fst', 'step']],
@@ -166,12 +166,12 @@ with open(pickle_filename, 'wb') as file:
 # )
 # plt.title('pairwise Fst in intance fragmentation',
 #           fontsize=16, pad=-20, y=1.02, verticalalignment='bottom')
-# plt.savefig("fst_intribution_ignore.png", format="png")
+# plt.savefig("fst_distribution_ignore.png", format="png")
 # plt.show()
 # plt.figure()
 #
 #
-# #intribution heterozygosity
+# #distribution heterozygosity
 # plt.figure()
 # joyplot(
 #     data=rand[2][['het', 'step']],
@@ -181,56 +181,56 @@ with open(pickle_filename, 'wb') as file:
 # )
 # plt.title('Heterozygosity in intance fragmentation',
 #           fontsize=16, pad=-20, y=1.02, verticalalignment='bottom')
-# plt.savefig("het_intribution_ignore.png", format="png")
+# plt.savefig("het_distribution_ignore.png", format="png")
 # plt.show()
 # plt.figure()
 #
 
-print("woohoo")
-## plot intributions interval
-def plot_snapshot(df):
+## plot distributions interval
+# def plot_snapshot(df):
+#
+#     # Find the total number of rows
+#     num_rows = df.shape[0]
+#     # Calculate the 5% interval
+#     interval = round(num_rows * 0.1)
+#     # Create an auxiliary 'group' column
+#     df = df.sort_values('step').reset_index(drop=True)  # ensure 'step' is sorted
+#     df['group'] = df.index // interval
+#
+#     return df
+#
+# df = plot_snapshot(int[4])
+#
+# #distribution heterozygosity
+# plt.figure()
+# joyplot(
+#     data=df[['fst', 'group']],
+#     by='group', ylim=0, overlap=1,
+#     colormap=plt.cm.viridis_r, fade=True,range_style='all',
+#     figsize=(12, 8),  linecolor = "white", linewidth=0.1
+# )
+# plt.title('fst in intance fragmentation',
+#           fontsize=16, pad=-20, y=1.02, verticalalignment='bottom')
+# plt.savefig("fst_distribution_include_int.svg", format="svg")
+#
+# plt.show()
+# plt.figure()
+#
+# df = plot_snapshot(int[2])
+# #distribution heterozygosity
+# plt.figure()
+# joyplot(
+#     data=df[['het', 'group']],
+#     by='group', ylim=0, overlap=1,
+#     colormap=plt.cm.viridis_r, fade=True,range_style='all',
+#     figsize=(12, 8),  linecolor = "white", linewidth=0.1
+# )
+# plt.title('Heterozygosity in intance fragmentation',
+#           fontsize=16, pad=-20, y=1.02, verticalalignment='bottom')
+# plt.savefig("het_distribution_include_int.svg", format="svg")
+# plt.show()
+# plt.figure()
 
-    # Find the total number of rows
-    num_rows = df.shape[0]
-    # Calculate the 5% interval
-    interval = round(num_rows * 0.1)
-    # Create an auxiliary 'group' column
-    df = df.sort_values('step').reset_index(drop=True)  # ensure 'step' is sorted
-    df['group'] = df.index // interval
-
-    return df
-
-df = plot_snapshot(int[4])
-print("snap")
-#intribution heterozygosity
-plt.figure()
-joyplot(
-    data=df[['fst', 'group']],
-    by='group', ylim=0, overlap=1,
-    colormap=plt.cm.viridis_r, fade=True,range_style='all',
-    figsize=(12, 8),  linecolor = "white", linewidth=0.1
-)
-plt.title('fst in intance fragmentation',
-          fontsize=16, pad=-20, y=1.02, verticalalignment='bottom')
-plt.savefig("fst_intribution_include_int.svg", format="svg")
-
-plt.show()
-plt.figure()
-
-df = plot_snapshot(int[2])
-#intribution heterozygosity
-plt.figure()
-joyplot(
-    data=df[['het', 'group']],
-    by='group', ylim=0, overlap=1,
-    colormap=plt.cm.viridis_r, fade=True,range_style='all',
-    figsize=(12, 8),  linecolor = "white", linewidth=0.1
-)
-plt.title('Heterozygosity in intance fragmentation',
-          fontsize=16, pad=-20, y=1.02, verticalalignment='bottom')
-plt.savefig("het_intribution_include_int.svg", format="svg")
-plt.show()
-plt.figure()
 
 #
 #
@@ -339,9 +339,9 @@ plt.figure()
 #     pickle.dump(int, file)
 #
 #
-# ###############plot intributions
+# ###############plot distributions
 #
-# # intribution fst
+# # distribution fst
 # plt.figure()
 # joyplot(
 #     data=rand[4][['fst', 'step']],
@@ -355,7 +355,7 @@ plt.figure()
 # plt.figure()
 #
 #
-# #intribution heterozygosity
+# #distribution heterozygosity
 # plt.figure()
 # joyplot(
 #     data=rand[2][['het', 'step']],
@@ -369,7 +369,7 @@ plt.figure()
 # plt.figure()
 #
 
-### plot intributions interval
+### plot distributions interval
 # def plot_snapshot(df):
 #
 #     # Find the total number of rows
@@ -383,7 +383,7 @@ plt.figure()
 #     return df
 #
 # df = plot_snapshot(rand[4])
-# #intribution heterozygosity
+# #distribution heterozygosity
 # plt.figure()
 # joyplot(
 #     data=df[['fst', 'group']],
