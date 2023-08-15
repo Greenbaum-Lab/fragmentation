@@ -181,7 +181,7 @@ with open('dist_include.pickle', 'rb') as file:
     dist = pickle.load(file)
 
 color_palette = plt.get_cmap('tab10')  # You can change 'tab10' to any other available palette
-print("finsh load whhoppu!!!")
+print("finish load !!!")
 
 all_nets_rand = rand[1]
 all_nets_cor = cor[1]

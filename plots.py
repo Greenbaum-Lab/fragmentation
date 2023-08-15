@@ -4,8 +4,7 @@ from statistics import mean
 import time
 import pickle
 
-import networkx as nx
-from joypy import joyplot
+
 from matplotlib import pyplot as plt
 import pandas as pd
 
