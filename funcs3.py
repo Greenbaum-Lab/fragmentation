@@ -280,10 +280,10 @@ def make_networks(n_nets: int, n_nodes: int, net_type) -> list:
         if net_type == 'RGG':
             net = nx.random_geometric_graph(n=n_nodes, radius=0.3)
             nets.append(net)
-        if net_type == 'AB-':
+        if net_type == 'AB':
             net = nx.barabasi_albert_graph(n=n_nodes, m=5)
             nets.append(net)
-        if net_type == 'SW-':
+        if net_type == 'SW':
             net = nx.watts_strogatz_graph(n=n_nodes,k=9, p=0.1)
             nets.append(net)
 

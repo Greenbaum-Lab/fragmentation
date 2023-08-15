@@ -16,7 +16,7 @@ from funcs3 import make_replicates, make_replicates_new, make_networks
 print("here i start!")
 n = 50  # no. of nodes
 n_rep = 100
-net = "ER"
+net = "AB"
 ignore = False
 
 color_palette = plt.get_cmap('tab10')  # You can change 'tab10' to any other available palette
@@ -36,15 +36,15 @@ int = make_replicates_new(nets=nets, frag_type='int', ignore=ignore)
 print("3")
 
 # Path and filename for the saved file using tuple
-pickle_filename = f'rand_ignore_{ignore}.pickle'
+pickle_filename = f'{net}, rand_ignore_{ignore}.pickle'
 with open(pickle_filename, 'wb') as file:
     pickle.dump(rand, file)
 
-pickle_filename = f'cor_ignore_{ignore}.pickle'
+pickle_filename = f'{net}, cor_ignore_{ignore}.pickle'
 with open(pickle_filename, 'wb') as file:
     pickle.dump(cor, file)
 
-pickle_filename = f'int_ignore_{ignore}.pickle'
+pickle_filename = f'{net}, int_ignore_{ignore}.pickle'
 with open(pickle_filename, 'wb') as file:
     pickle.dump(int, file)
 
@@ -57,6 +57,143 @@ with open(pickle_filename, 'wb') as file:
 # with open('cor_include.pickle', 'rb') as file:
 #     cor = pickle.load(file)
 # 
+# # # Load the tuple using pickle
+# with open('int_include.pickle', 'rb') as file:
+#     int = pickle.load(file)
+
+
+
+breaking_point_rand = mean(find_breakink_point_list(rand[1]))
+breaking_point_cor = mean(find_breakink_point_list(cor[1]))
+breaking_point_int = mean(find_breakink_point_list(int[1]))
+
+#########plot fst
+# Calculate the mean and median values over the 'step' column
+mean_rand = rand[5].groupby('step')['avg'].mean()
+mean_cor = cor[5].groupby('step')['avg'].mean()
+mean_int = int[5].groupby('step')['avg'].mean()
+
+
+# Calculate the confidence interval
+confidence_rand = rand[5].groupby('step')['avg'].std()
+confidence_cor = cor[5].groupby('step')['avg'].std()
+confidence_int = int[5].groupby('step')['avg'].std()
+
+plt.figure()
+# Plotting the line graph with mean and median values
+plt.plot(mean_rand, label='Random')
+plt.plot(mean_cor, label='Correlated')
+plt.plot(mean_int, label='Intrusive')
+
+# Adding the confidence interval
+plt.fill_between(mean_rand.index, mean_rand - confidence_rand, mean_rand + confidence_rand, alpha=0.2)
+plt.fill_between(mean_cor.index, mean_cor - confidence_cor, mean_cor + confidence_cor, alpha=0.2)
+plt.fill_between(mean_int.index, mean_int - confidence_int, mean_int + confidence_int, alpha=0.2)
+
+# add breaking points
+plt.axvline(x=breaking_point_rand, color=color_palette(0), ymax=0.1)
+plt.axvline(x=breaking_point_cor, color=color_palette(1), ymax=0.1)
+plt.axvline(x=breaking_point_int, color=color_palette(2), ymax=0.1)
+
+# Add labels and legend
+plt.xlabel('Fragmentation step')
+plt.ylabel('Pairwise Fst')
+plt.title(f'{net}, ignoring isolated={ignore} ')
+plt.legend()
+
+# Display the plot
+plt.savefig(f"fst {net} ignore={ignore}.png", format="png")
+plt.close()
+####heterozygosity
+
+# Calculate the mean and median values over the 'step' column
+mean_rand = rand[3].groupby('step')['avg'].mean()
+mean_cor = cor[3].groupby('step')['avg'].mean()
+mean_int = int[3].groupby('step')['avg'].mean()
+
+# Calculate the confidence interval
+confidence_rand = rand[3].groupby('step')['avg'].std()
+confidence_cor = cor[3].groupby('step')['avg'].std()
+confidence_int = int[3].groupby('step')['avg'].std()
+
+plt.figure()
+# Plotting the line graph with mean and median values
+plt.plot(mean_rand, label='Random')
+plt.plot(mean_cor, label='Correlated')
+plt.plot(mean_int, label='Intrusive')
+
+# Adding the confidence interval
+plt.fill_between(mean_rand.index, mean_rand - confidence_rand, mean_rand + confidence_rand, alpha=0.2)
+plt.fill_between(mean_cor.index, mean_cor - confidence_cor, mean_cor + confidence_cor, alpha=0.2)
+plt.fill_between(mean_int.index, mean_int - confidence_int, mean_int + confidence_int, alpha=0.2)
+
+# add breaking points
+plt.axvline(x=breaking_point_rand, color=color_palette(0), ymax=0.1)
+plt.axvline(x=breaking_point_cor, color=color_palette(1), ymax=0.1)
+plt.axvline(x=breaking_point_int, color=color_palette(2), ymax=0.1)
+
+# Add labels and legend
+plt.xlabel('Fragmentation step')
+plt.ylabel('Unscaled heterozygosity')
+plt.title(f'{net}, ignoring isolated={ignore}')
+plt.legend()
+
+# Display the plot
+plt.savefig(f"het {net} ignore={ignore}.png", format="png")
+plt.close()
+
+running_time = time.time() - start_time
+print("Running time:", running_time, "seconds")
+
+
+
+
+
+
+print("here i start!")
+n = 50  # no. of nodes
+n_rep = 100
+net = "SW"
+ignore = False
+
+color_palette = plt.get_cmap('tab10')  # You can change 'tab10' to any other available palette
+
+# Record the starting time
+start_time = time.time()
+
+# # create list off nets
+nets = make_networks(n_nets=n_rep, n_nodes=n, net_type=net)
+
+# run the pipeline for all fragmentation types
+rand = make_replicates_new(nets=nets, frag_type='rand', ignore=ignore)
+print("1")
+cor = make_replicates_new(nets=nets, frag_type='cor', ignore=ignore)
+print("2")
+int = make_replicates_new(nets=nets, frag_type='int', ignore=ignore)
+print("3")
+
+# Path and filename for the saved file using tuple
+pickle_filename = f'{net}, rand_ignore_{ignore}.pickle'
+with open(pickle_filename, 'wb') as file:
+    pickle.dump(rand, file)
+
+pickle_filename = f'{net}, cor_ignore_{ignore}.pickle'
+with open(pickle_filename, 'wb') as file:
+    pickle.dump(cor, file)
+
+pickle_filename = f'{net}, int_ignore_{ignore}.pickle'
+with open(pickle_filename, 'wb') as file:
+    pickle.dump(int, file)
+
+#
+# # # Load the tuple using pickle
+# with open('rand_include.pickle', 'rb') as file:
+#     rand = pickle.load(file)
+#
+# # # Load the tuple using pickle
+# with open('cor_include.pickle', 'rb') as file:
+#     cor = pickle.load(file)
+#
 # # # Load the tuple using pickle
 # with open('int_include.pickle', 'rb') as file:
 #     int = pickle.load(file)
