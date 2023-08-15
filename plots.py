@@ -14,8 +14,8 @@ from funcs3 import make_replicates, make_replicates_new, make_networks
 
 
 print("here i start!")
-n = 50  # no. of nodes
-n_rep = 100
+n = 20  # no. of nodes
+n_rep = 5
 net = "ER"
 ignore = False
 
