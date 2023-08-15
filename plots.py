@@ -14,8 +14,7 @@ from processes import find_breaking_point, find_breakink_point_list
 from funcs3 import make_replicates, make_replicates_new, make_networks
 
 
-plt.ion()
-
+print("here i start!")
 n = 50  # no. of nodes
 n_rep = 100
 net = "ER"
@@ -104,7 +103,6 @@ plt.legend()
 
 # Display the plot
 plt.savefig(f"fst {net} ignore={ignore}.png", format="png")
-plt.show()
 
 ####heterozygosity
 
@@ -143,7 +141,6 @@ plt.legend()
 # Display the plot
 plt.savefig(f"het {net} ignore={ignore}.png", format="png")
 
-plt.show(block=True)
 running_time = time.time() - start_time
 print("Running time:", running_time, "seconds")
 
