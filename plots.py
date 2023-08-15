@@ -102,7 +102,7 @@ plt.legend()
 
 # Display the plot
 plt.savefig(f"fst {net} ignore={ignore}.png", format="png")
-plt.show(block=False)
+plt.show()
 ####heterozygosity
 
 # Calculate the mean and median values over the 'step' column
