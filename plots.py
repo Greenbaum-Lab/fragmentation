@@ -102,7 +102,7 @@ plt.legend()
 
 # Display the plot
 plt.savefig(f"fst {net} ignore={ignore}.png", format="png")
-
+plt.show(block=False)
 ####heterozygosity
 
 # Calculate the mean and median values over the 'step' column
@@ -133,8 +133,7 @@ plt.axvline(x=breaking_point_int, color=color_palette(2), ymax=0.1)
 # Add labels and legend
 plt.xlabel('Fragmentation step')
 plt.ylabel('Unscaled heterozygosity')
-plt.title(f'{net}, ignoring isolated={ignore} ')
-
+plt.title(f'{net}, ignoring isolated={ignore}')
 plt.legend()
 
 # Display the plot

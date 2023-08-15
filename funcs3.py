@@ -45,6 +45,7 @@ def calculate_genetics(migration_list: list) -> tuple:
         M = nx.attr_matrix(M)[0]
         T = transform_matrix(M)[0]  # migration to coalescence
         het = np.diag(T)  # take diagonal values (within pop coalesence time=heterozygosity)
+        het = het/len(het)
         het = np.ndarray.tolist(het)
         het_list.append(het.copy())  # add another network step to the list
 
