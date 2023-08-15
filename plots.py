@@ -79,6 +79,7 @@ confidence_rand = rand[5].groupby('step')['avg'].std()
 confidence_cor = cor[5].groupby('step')['avg'].std()
 confidence_int = int[5].groupby('step')['avg'].std()
 
+plt.figure()
 # Plotting the line graph with mean and median values
 plt.plot(mean_rand, label='Random')
 plt.plot(mean_cor, label='Correlated')
@@ -102,7 +103,7 @@ plt.legend()
 
 # Display the plot
 plt.savefig(f"fst {net} ignore={ignore}.png", format="png")
-plt.show()
+plt.close()
 ####heterozygosity
 
 # Calculate the mean and median values over the 'step' column
@@ -115,6 +116,7 @@ confidence_rand = rand[3].groupby('step')['avg'].std()
 confidence_cor = cor[3].groupby('step')['avg'].std()
 confidence_int = int[3].groupby('step')['avg'].std()
 
+plt.figure()
 # Plotting the line graph with mean and median values
 plt.plot(mean_rand, label='Random')
 plt.plot(mean_cor, label='Correlated')
@@ -138,6 +140,7 @@ plt.legend()
 
 # Display the plot
 plt.savefig(f"het {net} ignore={ignore}.png", format="png")
+plt.close()
 
 running_time = time.time() - start_time
 print("Running time:", running_time, "seconds")
