@@ -151,8 +151,8 @@ from funcs3 import make_replicates, make_replicates_new, make_networks
 
 
 print("here i start!")
-n = 20  # no. of nodes
-n_rep = 20
+n = 50  # no. of nodes
+n_rep = 100
 net = "RGG"
 ignore = False
 
