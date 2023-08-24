@@ -7,6 +7,7 @@ import seaborn as sns
 from multiprocessing import Pool
 
 import networkx as nx
+from community import community_louvain
 from joypy import joyplot
 from matplotlib import pyplot as plt
 import pandas as pd
@@ -111,7 +112,7 @@ def calculate_centrality_single(net: list) -> pd.DataFrame:
     """
     m = net.copy()
     clustering = list(map(lambda x: nx.average_clustering(x), m))
-    betweenness = list(map(lambda x: sum(nx.betweenness_centrality(x).values()) / len(x), m))
+    betweenness = list(map(lambda x: sum(nx.edge_betweenness_centrality(x).values()) / len(x), m))
     step = range(len(m))
     d = {'step': step, 'clustering': clustering, 'betweenness': betweenness}
     df = pd.DataFrame(data=d)
@@ -140,45 +141,83 @@ def giant_component_replicates(all_nets: list) -> pd.DataFrame:
 
 
 
-def calculate_centrality(all_nets: list) -> (pd.DataFrame, pd.DataFrame):
+# def calculate_centrality(all_nets: list) -> (pd.DataFrame, pd.DataFrame):
+#     """
+#     Calculate centrality meausres of networks over multiple replicates.
+#     :param all_nets: list of lists of migration networks
+#     :return: three dataframes - one with the average values for clustering, path and degree centrality at each step
+#              and the other with the standard deviations of these values.
+#     """
+#     data = []
+#     for i, nets in enumerate(all_nets):
+#         for step, net in enumerate(nets):
+#             clustering = nx.average_clustering(net)
+#             degree = nx.average_degree_connectivity(net)
+#             data.append({'replicate': i, 'step': step, 'clustering': clustering})
+#
+#     df = pd.DataFrame(data)
+#     mean_centrality = df.groupby('step').mean().drop(columns='replicate')
+#     std_centrality = df.groupby('step').std().drop(columns='replicate')
+#     mean_centrality.columns = ['clustering', 'path', 'degree']
+#
+#     return mean_centrality, std_centrality
+#
+
+def calculate_centrality(all_nets: list, measures: list = ['clustering', 'modularity']) -> (
+pd.DataFrame, pd.DataFrame):
     """
-    Calculate the average clustering and betweenness centrality of networks over multiple replicates.
+    Calculate specified centrality measures of networks over multiple replicates.
+
     :param all_nets: list of lists of migration networks
-    :return: two dataframes - one with the average values for clustering and betweenness centrality at each step
+    :param measures: list of centrality measures to compute ('clustering', 'path', 'degree' or any combination)
+
+    :return: two dataframes - one with the average values for the specified centrality measures at each step
              and the other with the standard deviations of these values.
     """
     data = []
     for i, nets in enumerate(all_nets):
         for step, net in enumerate(nets):
-            clustering = nx.transitivity(net)
-            betweenness = sum(nx.edge_betweenness_centrality(net).values()) / len(net)
-            data.append({'replicate': i, 'step': step, 'clustering': clustering, 'betweenness': betweenness})
+            record = {'replicate': i, 'step': step}
+
+            if 'clustering' in measures:
+                record['clustering'] = nx.transitivity(net)
+
+            if 'modularity' in measures:
+                partition = community_louvain.best_partition(net)
+                record['modularity'] = community_louvain.modularity(partition, net)
+
+            if 'algebric' in measures:
+                record['clustering'] = nx.algebraic_connectivity(net)
+            data.append(record)
 
     df = pd.DataFrame(data)
+
+    # Calculate the means and standard deviations for the specified centrality measures
     mean_centrality = df.groupby('step').mean().drop(columns='replicate')
     std_centrality = df.groupby('step').std().drop(columns='replicate')
-    mean_centrality.columns = ['clustering', 'betweenness']
 
     return mean_centrality, std_centrality
 
 
-
-
 # # # Load the tuple using pickle
-# with open('rand_include.pickle', 'rb') as file:
-#     rand = pickle.load(file)
-#
-# with open('dist_include.pickle', 'rb') as file:
-#     rand = pickle.load(file)
-#
-with open('rand_include.pickle', 'rb') as file:
+
+with open('RGG, rand_ignore_False.pickle', 'rb') as file:
     rand = pickle.load(file)
 
-with open('cor_include.pickle', 'rb') as file:
+with open('RGG, cor_ignore_False.pickle', 'rb') as file:
     cor = pickle.load(file)
 
-with open('dist_include.pickle', 'rb') as file:
+with open('RGG, dist_ignore_False.pickle', 'rb') as file:
     dist = pickle.load(file)
+
+with open('RGG, int_ignore_False.pickle', 'rb') as file:
+    int = pickle.load(file)
+
+with open('RGG, reg_ignore_False.pickle', 'rb') as file:
+    reg = pickle.load(file)
+
+with open('RGG, div_ignore_False.pickle', 'rb') as file:
+    div = pickle.load(file)
 
 color_palette = plt.get_cmap('tab10')  # You can change 'tab10' to any other available palette
 print("finish load !!!")
@@ -186,6 +225,11 @@ print("finish load !!!")
 all_nets_rand = rand[1]
 all_nets_cor = cor[1]
 all_nets_dist = dist[1]
+all_nets_reg = reg[1]
+all_nets_int = int[1]
+all_nets_div = div[1]
+
+
 
 # #calculate giant component measures
 # giant_component = giant_component_replicates(all_nets)
@@ -212,121 +256,153 @@ all_nets_dist = dist[1]
 # plt.legend()
 # plt.show()
 
+#
+# # #calculate giant component measures for all processes
+# giant_component_rand = giant_component_replicates(all_nets_rand)
+# giant_component_cor = giant_component_replicates(all_nets_cor)
+# giant_component_dist = giant_component_replicates(all_nets_dist)
+# print("giant comp")
+# # Calculate mean and std deviation of GC
+# mean_giant_component_rand = giant_component_rand.groupby('step')['avg'].mean()
+# confidence_giant_component_rand = giant_component_rand.groupby('step')['avg'].std()
+# print("mean of stuff")
+#
+# mean_giant_component_cor = giant_component_cor.groupby('step')['avg'].mean()
+# confidence_giant_component_cor = giant_component_cor.groupby('step')['avg'].std()
+#
+# mean_giant_component_dist = giant_component_dist.groupby('step')['avg'].mean()
+# confidence_giant_component_dist = giant_component_dist.groupby('step')['avg'].std()
+
+# # Calculate mean and std deviation of Het
+# mean_rand = rand[3].groupby('step')['avg'].mean()
+# confidence_rand = rand[3].groupby('step')['avg'].std()
+# mean_cor = cor[3].groupby('step')['avg'].mean()
+# confidence_cor = cor[3].groupby('step')['avg'].std()
+# mean_dist = dist[3].groupby('step')['avg'].mean()
+# confidence_dist = dist[3].groupby('step')['avg'].std()
+# mean_int = int[3].groupby('step')['avg'].mean()
+# confidence_int = int[3].groupby('step')['avg'].std()
+# mean_reg = reg[3].groupby('step')['avg'].mean()
+# confidence_reg = reg[3].groupby('step')['avg'].std()
+# mean_div = div[3].groupby('step')['avg'].mean()
+# confidence_div = div[3].groupby('step')['avg'].std()
+# print("mean of het")
+#
+# mean_centrality_rand, std_centrality_rand = calculate_centrality(all_nets_rand,measures='clustering')
+# mean_centrality_cor, std_centrality_cor = calculate_centrality(all_nets_cor,measures='clustering')
+# mean_centrality_dist, std_centrality_dist = calculate_centrality(all_nets_dist,measures='clustering')
+# mean_centrality_int, std_centrality_int = calculate_centrality(all_nets_int,measures='clustering')
+# mean_centrality_reg, std_centrality_reg = calculate_centrality(all_nets_reg,measures='clustering')
+# mean_centrality_div, std_centrality_div = calculate_centrality(all_nets_div,measures='clustering')
+#
+# # plot Clustering
+# plt.plot(mean_centrality_rand['clustering'], label='Random')
+# plt.plot(mean_centrality_cor['clustering'], label='Correlated')
+# plt.plot(mean_centrality_int['clustering'], label='Patchy')
+# plt.plot(mean_centrality_reg['clustering'], label='Regressive')
+# plt.plot(mean_centrality_div['clustering'], label='Divisive')
+# plt.plot(mean_centrality_dist['clustering'], label='Distance-dependent')
+# print("centrality!")
+#
+# plt.fill_between(mean_centrality_rand.index, mean_centrality_rand['clustering'] - std_centrality_rand['clustering'],
+#                  mean_centrality_rand['clustering'] + std_centrality_rand['clustering'], alpha=0.2)
+# plt.fill_between(mean_centrality_cor.index, mean_centrality_cor['clustering'] - std_centrality_cor['clustering'],
+#                  mean_centrality_cor['clustering'] + std_centrality_cor['clustering'], alpha=0.2)
+# plt.fill_between(mean_centrality_dist.index, mean_centrality_dist['clustering'] - std_centrality_dist['clustering'],
+#                  mean_centrality_dist['clustering'] + std_centrality_dist['clustering'], alpha=0.2)
+# plt.fill_between(mean_centrality_int.index, mean_centrality_int['clustering'] - std_centrality_int['clustering'],
+#                  mean_centrality_int['clustering'] + std_centrality_int['clustering'], alpha=0.2)
+# plt.fill_between(mean_centrality_reg.index, mean_centrality_reg['clustering'] - std_centrality_reg['clustering'],
+#                  mean_centrality_reg['clustering'] + std_centrality_reg['clustering'], alpha=0.2)
+# plt.fill_between(mean_centrality_div.index, mean_centrality_div['clustering'] - std_centrality_div['clustering'],
+#                  mean_centrality_div['clustering'] + std_centrality_div['clustering'], alpha=0.2)
+#
+# plt.xlabel('Step')
+# plt.ylabel('Clustering')
+# plt.legend()
+# plt.savefig("clust rgg.png", format="png")
+# plt.show()
 
 
-nx.betweenness_centrality
-# #calculate giant component measures for all processes
-giant_component_rand = giant_component_replicates(all_nets_rand)
-giant_component_cor = giant_component_replicates(all_nets_cor)
-giant_component_dist = giant_component_replicates(all_nets_dist)
-print("giant comp")
-# Calculate mean and std deviation of GC
-mean_giant_component_rand = giant_component_rand.groupby('step')['avg'].mean()
-confidence_giant_component_rand = giant_component_rand.groupby('step')['avg'].std()
-print("mean of stuff")
 
-mean_giant_component_cor = giant_component_cor.groupby('step')['avg'].mean()
-confidence_giant_component_cor = giant_component_cor.groupby('step')['avg'].std()
 
-mean_giant_component_dist = giant_component_dist.groupby('step')['avg'].mean()
-confidence_giant_component_dist = giant_component_dist.groupby('step')['avg'].std()
 
-# Calculate mean and std deviation of Het
-mean_rand = rand[3].groupby('step')['avg'].mean()
-confidence_rand = rand[3].groupby('step')['avg'].std()
-mean_cor = cor[3].groupby('step')['avg'].mean()
-confidence_cor = cor[3].groupby('step')['avg'].std()
-mean_dist = dist[3].groupby('step')['avg'].mean()
-confidence_dist = dist[3].groupby('step')['avg'].std()
-print("mean of het")
+names = ['rand', 'cor', 'dist', 'int', 'reg', 'div']
+labels = ['Random', 'Correlated', 'Distance', 'Patchy', 'Regressive', 'Divisive']
 
-mean_centrality_rand, std_centrality_rand = calculate_centrality(all_nets_rand)
-mean_centrality_cor, std_centrality_cor = calculate_centrality(all_nets_cor)
-mean_centrality_dist, std_centrality_dist = calculate_centrality(all_nets_dist)
+# Dictionary to store mean and confidence values
+mean_values = {}
+confidence_values = {}
 
-# plot Clustering
-plt.plot(mean_centrality_rand['clustering'], label='random')
-plt.plot(mean_centrality_cor['clustering'], label='correlated')
-plt.plot(mean_centrality_dist['clustering'], label='distance')
-print("centrality!")
+# Calculate mean and std deviation for each name
+for name in names:
+    data = locals()[name][3].groupby('step')['avg']
+    mean_values[name] = data.mean()
+    confidence_values[name] = data.std()
 
-plt.fill_between(mean_centrality_rand.index, mean_centrality_rand['clustering'] - std_centrality_rand['clustering'],
-                 mean_centrality_rand['clustering'] + std_centrality_rand['clustering'], alpha=0.2)
-plt.fill_between(mean_centrality_cor.index, mean_centrality_cor['clustering'] - std_centrality_cor['clustering'],
-                 mean_centrality_cor['clustering'] + std_centrality_cor['clustering'], alpha=0.2)
-plt.fill_between(mean_centrality_dist.index, mean_centrality_dist['clustering'] - std_centrality_dist['clustering'],
-                 mean_centrality_dist['clustering'] + std_centrality_dist['clustering'], alpha=0.2)
+# Dictionary to store centrality values
+mean_centrality = {}
+std_centrality = {}
 
+# Calculate centrality for each name
+for name, label in zip(names, labels):
+    mean_centrality[name], std_centrality[name] = calculate_centrality(locals()['all_nets_' + name], measures='clustering')
+
+# Plot the centralities and fill between the confidence intervals
+for name, label in zip(names, labels):
+    plt.plot(mean_centrality[name]['clustering'], label=label)
+    plt.fill_between(mean_centrality[name].index,
+                     mean_centrality[name]['clustering'] - std_centrality[name]['clustering'],
+                     mean_centrality[name]['clustering'] + std_centrality[name]['clustering'],
+                     alpha=0.2)
+
+# Setting labels and legend
 plt.xlabel('Step')
-plt.ylabel('Transitivity')
+plt.ylabel('Clustering')
 plt.legend()
-plt.savefig("trans rgg.png", format="png")
-plt.show()
-
-# plot Betweenness
-plt.plot(mean_centrality_rand['betweenness'], label='random')
-plt.plot(mean_centrality_cor['betweenness'], label='correlated')
-plt.plot(mean_centrality_dist['betweenness'], label='distance')
-
-plt.fill_between(mean_centrality_rand.index, mean_centrality_rand['betweenness'] - std_centrality_rand['betweenness'],
-                 mean_centrality_rand['betweenness'] + std_centrality_rand['betweenness'], alpha=0.2)
-plt.fill_between(mean_centrality_cor.index, mean_centrality_cor['betweenness'] - std_centrality_cor['betweenness'],
-                 mean_centrality_cor['betweenness'] + std_centrality_cor['betweenness'], alpha=0.2)
-plt.fill_between(mean_centrality_dist.index, mean_centrality_dist['betweenness'] - std_centrality_dist['betweenness'],
-                 mean_centrality_dist['betweenness'] + std_centrality_dist['betweenness'], alpha=0.2)
-
-plt.xlabel('Step')
-plt.ylabel('Betweenness')
-plt.legend()
-plt.savefig("betweenness rgg.png", format="png")
+plt.savefig("clust rgg.png", format="png")
 plt.show()
 
 
 ####relationship  centrality vs genetics
 
-clust_rand = list(mean_centrality_rand['clustering'])
-clust_cor = list(mean_centrality_cor['clustering'])
-clust_dist = list(mean_centrality_dist['clustering'])
+clust = {}
+for name, label in zip(names, labels):
+    clust[name] = list(mean_centrality[name]['clustering'])
 
-# Plotting the relationship
-plt.plot(clust_rand, mean_rand, label='random')
-plt.plot(clust_cor, mean_cor, label='correlated')
-plt.plot(clust_dist, mean_dist, label='distance')
-
-plt.fill_between(clust_rand, mean_rand - confidence_rand, mean_rand + confidence_rand, alpha=0.2)
-plt.fill_between(clust_cor, mean_cor - confidence_cor, mean_cor + confidence_cor, alpha=0.2)
-plt.fill_between(clust_dist, mean_dist - confidence_dist, mean_dist + confidence_dist, alpha=0.2)
-
+    plt.plot(clust[name], mean_values[name], label=label)
+    plt.fill_between(clust[name], mean_values[name] - confidence_values[name],
+                     mean_values[name] + confidence_values[name], alpha=0.2)
 
 plt.gca().invert_xaxis()
-plt.xlabel('Transitivity')
+plt.xlabel('Clustering')
 plt.ylabel('Heterozygosity')
 plt.title('Heterozygosity vs. clustering')
 plt.legend()
-plt.savefig("trans het.png", format="png")
+plt.savefig("clust het.png", format="png")
 plt.show()
 
 
-
-clust_rand = list(mean_centrality_rand['betweenness'])
-clust_cor = list(mean_centrality_cor['betweenness'])
-clust_dist = list(mean_centrality_dist['betweenness'])
-
-# Plotting the relationship
-plt.plot(clust_rand, mean_rand, label='random')
-plt.plot(clust_cor, mean_cor, label='correlated')
-plt.plot(clust_dist, mean_dist, label='distance')
-
-plt.fill_between(clust_rand, mean_rand - confidence_rand, mean_rand + confidence_rand, alpha=0.2)
-plt.fill_between(clust_cor, mean_cor - confidence_cor, mean_cor + confidence_cor, alpha=0.2)
-plt.fill_between(clust_dist, mean_dist - confidence_dist, mean_dist + confidence_dist, alpha=0.2)
-
-
-plt.gca().invert_xaxis()
-plt.xlabel('Betweenness')
-plt.ylabel('Heterozygosity')
-plt.title('Heterozygosity vs. betweenness')
-plt.legend()
-plt.savefig("betweenness het.png", format="png")
-plt.show()
+#
+# clust_rand = list(mean_centrality_rand['betweenness'])
+# clust_cor = list(mean_centrality_cor['betweenness'])
+# clust_dist = list(mean_centrality_dist['betweenness'])
+#
+# # Plotting the relationship
+# plt.plot(clust_rand, mean_rand, label='random')
+# plt.plot(clust_cor, mean_cor, label='correlated')
+# plt.plot(clust_dist, mean_dist, label='distance')
+#
+# plt.fill_between(clust_rand, mean_rand - confidence_rand, mean_rand + confidence_rand, alpha=0.2)
+# plt.fill_between(clust_cor, mean_cor - confidence_cor, mean_cor + confidence_cor, alpha=0.2)
+# plt.fill_between(clust_dist, mean_dist - confidence_dist, mean_dist + confidence_dist, alpha=0.2)
+#
+#
+# plt.gca().invert_xaxis()
+# plt.xlabel('Betweenness')
+# plt.ylabel('Heterozygosity')
+# plt.title('Heterozygosity vs. betweenness')
+# plt.legend()
+# plt.savefig("betweenness het.png", format="png")
+# plt.show()
 

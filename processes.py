@@ -1,8 +1,12 @@
 import random
+import statistics
+
 import networkx as nx
 import numpy as np
 from matplotlib import pyplot as plt
 from collections import OrderedDict
+
+from networkx.algorithms.community import girvan_newman
 
 
 def remove_edge_random(net: nx.Graph) -> list:
@@ -524,7 +528,7 @@ def find_breakink_point_list(networks: list):
 #
 #     print(sum(connect))
 #     return er_edges, rgg_edges, ab_edges, sw_edges, er_density, rgg_density, ab_density, sw_density
-# name="sdsdsds"
+
 # def plot_distribution(edges, title):
 #     plt.hist(edges, bins=20, alpha=0.5)
 #     plt.title(title)
@@ -558,9 +562,46 @@ def find_breakink_point_list(networks: list):
 # net = nx.newman_watts_strogatz_graph(50,10,0.1)
 # nx.draw_networkx(net)
 # plt.show()
-# net = nx.random_geometric_graph(50,0.25)
+
+# net = nx.random_geometric_graph(50,0.4,seed=5)
 # nx.draw_networkx(net)
 # plt.show()
-# net = nx.erdos_renyi_graph(50,0.15)
-# nx.draw_networkx(net)
+#
+# print(nx.all_pairs_shortest_path_length(net))
+# # net = nx.erdos_renyi_graph(50,0.15)
+# # nx.draw_networkx(net)
+# # plt.show()
+#
+# 3
+#
+# # basic usage
+# import community as community_louvain
+# import networkx as nx
+# G = nx.erdos_renyi_graph(100, 0.01)
+# partion = community_louvain.best_partition(G)
+# # display a graph with its communities:
+# # as Erdos-Renyi graphs don't have true community structure,
+# # instead load the karate club graph
+# import community as community_louvain
+# import matplotlib.cm as cm
+# import matplotlib.pyplot as plt
+# import networkx as nx
+# G = nx.random_geometric_graph(50,0.01)
+# # compute the best partition
+# partition = community_louvain.best_partition(G)
+# modularity_value = community_louvain.modularity(partition, G)
+# print(modularity_value)
+# # draw the graph
+# pos = nx.spring_layout(G)
+# # color the nodes according to their partition
+# cmap = cm.get_cmap('viridis', max(partition.values()) + 1)
+# nx.draw_networkx_nodes(G, pos, partition.keys(), node_size=40,
+#                     cmap=cmap, node_color=list(partition.values()))
+# nx.draw_networkx_edges(G, pos, alpha=0.5)
 # plt.show()
+
+net=nx.random_geometric_graph(15,0.3)
+nx.draw_networkx(net)
+plt.show()
+print(nx.average_clustering(net))
+print(nx.algebraic_connectivity(net))

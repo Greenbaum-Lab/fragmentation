@@ -4,7 +4,7 @@ from statistics import mean
 import time
 import pickle
 
-
+import networkx as nx
 from matplotlib import pyplot as plt
 import pandas as pd
 

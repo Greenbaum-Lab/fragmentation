@@ -23,14 +23,14 @@ def add_replica(df, step_column='step'):
 
 def extract_nodes(df):
     """
-    tracking each node sepreatly and extract its heterozygosity
-    :param df: df of heyterozygosity of all nodes for all replicates (het dens)
+    tracking each node separately and extract its heterozygosity
+    :param df: df of heterozygous of all nodes for all replicates (het dens)
     :return: df for each node along the fragmentation for each replica
     """
     # count how many nodes are in a network
     nodes = np.argmax(df['step'] != 0)
-    print(nodes)
-    nodes=2450
+
+
     # Randomly select a number between 0 and 49
     random_index = np.random.randint(0, nodes)
 
@@ -40,11 +40,10 @@ def extract_nodes(df):
     return selected_rows
 
 
-with open('dist_include.pickle', 'rb') as file:
+with open('RGG, rand_ignore_False.pickle', 'rb') as file:
     rand = pickle.load(file)
 
-het = rand[4]
-het = het.iloc[:650000]
+het = rand[2]
 het.reset_index(drop=True, inplace=True)
 print(het)
 het_values = extract_nodes(het)
@@ -53,7 +52,7 @@ print(het_values)
 
 # plot all lines\populations together
 # Creating a pivot DataFrame to organize the data by replica
-pivot_df = het_values.pivot(columns='replica',index='step', values='fst')
+pivot_df = het_values.pivot(columns='replica',index='step', values='het')
 print(pivot_df)
 plt.plot(het_values['step'].unique(), pivot_df, color='lightgrey',alpha=0.5)
 
