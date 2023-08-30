@@ -11,12 +11,15 @@ from community import community_louvain
 from joypy import joyplot
 from matplotlib import pyplot as plt
 import pandas as pd
+from scipy import stats
 
 from processes import find_breaking_point, find_breakink_point_list, remove_edge_random, remove_edge_correlated, \
     remove_edge_distance
 
+import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy import stats
 import pickle
-
 
 n = 50  # no. of nodes
 p = 0.4  # probability to connect nodes
@@ -24,6 +27,8 @@ n_rep = 10
 
 # Record the starting time
 start_time = time.time()
+
+
 #
 # # create list off nets
 # nets = make_networks(n_nets=n_rep, n_nodes=n, connectivity=p, net_type='ER')
@@ -118,17 +123,23 @@ def calculate_centrality_single(net: list) -> pd.DataFrame:
     df = pd.DataFrame(data=d)
     return df
 
+
 def measure_giant_component(network: nx.Graph):
     """
     measure the no. of nodes in the giant component
     :param network:
-    :return:
+    :return: length of giant components
     """
     largest_component = max(nx.connected_components(network), key=len)
-    return len(largest_component)
+    return len(largest_component)/len(network)
 
 
 def giant_component_replicates(all_nets: list) -> pd.DataFrame:
+    """
+    measure the no. of nodes in the giant component for a list of networks
+    :param all_nets: list of networks
+    :return: dataframe
+    """
     data = []
     for i, networks_list in enumerate(all_nets):
         for step, network in enumerate(networks_list):
@@ -139,32 +150,8 @@ def giant_component_replicates(all_nets: list) -> pd.DataFrame:
     return df
 
 
-
-
-# def calculate_centrality(all_nets: list) -> (pd.DataFrame, pd.DataFrame):
-#     """
-#     Calculate centrality meausres of networks over multiple replicates.
-#     :param all_nets: list of lists of migration networks
-#     :return: three dataframes - one with the average values for clustering, path and degree centrality at each step
-#              and the other with the standard deviations of these values.
-#     """
-#     data = []
-#     for i, nets in enumerate(all_nets):
-#         for step, net in enumerate(nets):
-#             clustering = nx.average_clustering(net)
-#             degree = nx.average_degree_connectivity(net)
-#             data.append({'replicate': i, 'step': step, 'clustering': clustering})
-#
-#     df = pd.DataFrame(data)
-#     mean_centrality = df.groupby('step').mean().drop(columns='replicate')
-#     std_centrality = df.groupby('step').std().drop(columns='replicate')
-#     mean_centrality.columns = ['clustering', 'path', 'degree']
-#
-#     return mean_centrality, std_centrality
-#
-
 def calculate_centrality(all_nets: list, measures: list = ['clustering', 'modularity']) -> (
-pd.DataFrame, pd.DataFrame):
+        pd.DataFrame, pd.DataFrame):
     """
     Calculate specified centrality measures of networks over multiple replicates.
 
@@ -186,9 +173,9 @@ pd.DataFrame, pd.DataFrame):
                 partition = community_louvain.best_partition(net)
                 record['modularity'] = community_louvain.modularity(partition, net)
 
-            if 'algebric' in measures:
-                record['clustering'] = nx.algebraic_connectivity(net)
-            data.append(record)
+            # if 'algebric' in measures:
+            #     record['clustering'] = nx.algebraic_connectivity(net)
+            # data.append(record)
 
     df = pd.DataFrame(data)
 
@@ -198,6 +185,136 @@ pd.DataFrame, pd.DataFrame):
 
     return mean_centrality, std_centrality
 
+def compute_mean_std(data):
+    """
+    Helper function to compute mean and standard deviation for given data.
+    """
+    mean = data.groupby('step')['avg'].mean()
+    confidence = data.groupby('step')['avg'].std()
+    return mean, confidence
+
+
+
+
+
+def plot_network_realization(data: tuple, step: int, save: bool = False):
+    """
+    Visualize a network based on betweenness centrality and heterozygosity for a specified step.
+
+    Parameters:
+    - data (tuple): A tuple containing relevant data.
+                    data[1] is a list of replicates, with each replica being a list of networks.
+                    data[2] is a DataFrame with columns 'step' and 'het' (heterozygosity).
+    - step (int): The step at which to visualize the network.
+    - save (bool, optional): Whether to save the figure. Default is False.
+
+    Returns:
+    None
+    """
+
+    # Extract relevant network for the specified step
+    nets = data[1]
+    x = random.choice(range(len(nets)))  # Choose a random replicate from the list
+    net = nets[x][step]
+
+    # Calculate betweenness centrality for the selected network
+    bet = nx.betweenness_centrality(net)
+
+    # Extract corresponding heterozygosity data
+    het_df = data[2]
+    het_df = het_df.loc[het_df['step'] == step]
+    het_df = het_df.iloc[x*50: (x*50)+50]
+    het = {index: value for index, value in enumerate(het_df['het'])}
+
+    # Normalize betweenness centrality values for color mapping
+    max_betweenness = max(bet.values())
+    normalized_betweenness = {node: value / max_betweenness for node, value in bet.items()}
+    colors = plt.cm.Reds([normalized_betweenness[node] for node in net.nodes()])
+
+    # Layout configuration for network visualization
+    pos = nx.spring_layout(net, k=0.4, iterations=50)
+
+    # Visualize the network
+    nx.draw_networkx_nodes(net, node_color=colors, pos=pos, edgecolors='black',
+                           linewidths=1.5, node_size=[v * 300 for v in het.values()])
+    nx.draw_networkx_edges(net, pos=pos, edge_color='gray')
+    plt.title("Color: Betweenness Centrality | Size: Heterozygosity")
+
+    # Save the figure if specified
+    if save:
+        plt.savefig("net_betweenness.svg", format='svg')
+
+    # Display the plot
+    plt.show()
+
+
+def centrality_correlation(data: tuple, step: int) -> None:
+    """
+    Compute and visualize the correlation between betweenness centrality
+    and a heterozygosity for nodes in a network at a specified step.
+
+    Parameters:
+    - data (tuple): A tuple containing relevant data.
+                    data[1] is a list of replicates with each replica is a list of networks
+                    data[2] is a DataFrame with columns 'step' and 'het' (heterozygosity)
+    - step (int): The step at which to compute the correlation.
+
+    Returns:
+    None
+    """
+
+    # Extract relevant network step
+    nets = data[1]
+    nets_step = [net[step - 1] for net in nets]
+
+    # Calculate betweenness centrality for each network in 'result'
+    bet = [nx.betweenness_centrality(net) for net in nets_step]
+
+    # Extract relevant heterozygosity values based on the given step
+    het_df = data[2]
+    het_filtered = het_df.loc[het_df['step'] == step]
+    het = het_filtered['het'].tolist()
+
+    # Flatten the 'bet' list of dictionaries into a single list
+    flattened_bet = [value for d in bet for value in d.values()]
+
+    # Create a dataframe for correlation analysis
+    df = pd.DataFrame({'het': het, 'bet': flattened_bet})
+
+    # Plot regression line
+    plot_regression(df)
+
+def plot_regression(df: pd.DataFrame, save=bool) -> None:
+    """
+    Plot a regression between heterozygosity and betweenness attributes.
+
+    Parameters:
+    - df (pd.DataFrame): DataFrame containing 'het' and 'bet' columns.
+
+    Returns:
+    None
+    """
+
+    plt.figure(figsize=(8, 6))
+    sns.regplot(x='bet', y='het', data=df)
+
+    # Compute correlation coefficient and p-value
+    r, p = stats.pearsonr(df['bet'], df['het'])
+    r_squared = r**2
+
+    # Annotate the plot with r^2 and p-value
+    plt.annotate(f'$R^2$ = {r_squared:.3f}', xy=(0.1, 0.9), xycoords='axes fraction', fontsize=14)
+    plt.annotate(f'p-value = {p:.5f}', xy=(0.1, 0.85), xycoords='axes fraction', fontsize=14)
+
+    plt.xlabel('Beteeness', fontsize=14)
+    plt.ylabel('Heterozygosity', fontsize=14)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+
+    if save:
+        plt.savefig("cor.svg", format='svg')
+
+    plt.show()
 
 # # # Load the tuple using pickle
 
@@ -210,199 +327,95 @@ with open('RGG, cor_ignore_False.pickle', 'rb') as file:
 with open('RGG, dist_ignore_False.pickle', 'rb') as file:
     dist = pickle.load(file)
 
-with open('RGG, int_ignore_False.pickle', 'rb') as file:
-    int = pickle.load(file)
+# with open('RGG, int_ignore_False.pickle', 'rb') as file:
+#     int = pickle.load(file)
+#
+# with open('RGG, reg_ignore_False.pickle', 'rb') as file:
+#     reg = pickle.load(file)
+#
+# with open('RGG, div_ignore_False.pickle', 'rb') as file:
+#     div = pickle.load(file)
 
-with open('RGG, reg_ignore_False.pickle', 'rb') as file:
-    reg = pickle.load(file)
-
-with open('RGG, div_ignore_False.pickle', 'rb') as file:
-    div = pickle.load(file)
-
-color_palette = plt.get_cmap('tab10')  # You can change 'tab10' to any other available palette
 print("finish load !!!")
 
-all_nets_rand = rand[1]
-all_nets_cor = cor[1]
-all_nets_dist = dist[1]
-all_nets_reg = reg[1]
-all_nets_int = int[1]
-all_nets_div = div[1]
+
+################# plot giant component vs heterozygosity
+#choose data
+frag = rand
+# Get giant component measures for all processes
+giant_component_rand = giant_component_replicates(frag[1])
+
+# Calculate mean and std deviation for all processes
+mean_gc_rand, conf_gc_rand = compute_mean_std(giant_component_rand)
+mean_het_rand, conf_het_rand = compute_mean_std(frag[3])
+
+# Het - Assuming you want to plot heterozygosity only for rand as shown in your provided code
+plt.plot(mean_het_rand, label='Heterozygosity')
+plt.plot(mean_gc_rand, label='Giant component')
+
+plt.fill_between(mean_het_rand.index, mean_het_rand - conf_het_rand, mean_het_rand + conf_het_rand, alpha=0.2)
+plt.fill_between(mean_gc_rand.index, mean_gc_rand - conf_gc_rand, mean_gc_rand + conf_gc_rand, alpha=0.2)
+
+plt.xlabel('Fragmentation')
+plt.ylabel('Fraction of Nodes')
+plt.legend()
+plt.show()
 
 
-
-# #calculate giant component measures
-# giant_component = giant_component_replicates(all_nets)
+########################### plot network centrality vs fragmentaion steps
+# need to load and store list of networks
+# names = ['rand', 'cor', 'dist', 'int', 'reg', 'div']
+# labels = ['Random', 'Correlated', 'Distance', 'Patchy', 'Regressive', 'Divisive']
 #
-# #######heterozygosity
-# # Calculate mean and std deviation of GC
-# mean_giant_component = giant_component.groupby('step')['avg'].mean()
-# confidence_giant_component = giant_component.groupby('step')['avg'].std()
+# # Dictionary to store mean and confidence values
+# mean_values = {}
+# confidence_values = {}
 #
-# # Calculate mean and std deviation of Het
-# mean_rand = rand[3].groupby('step')['avg'].mean()
-# confidence_rand = rand[3].groupby('step')['avg'].std()
+# # Calculate mean and std deviation for each fragmentation
+# for name in names:
+#     data = locals()[name][3].groupby('step')['avg']
+#     mean_values[name] = data.mean()
+#     confidence_values[name] = data.std()
 #
-# # Plotting the relationship
-# plt.plot(mean_giant_component, label='Mean')
-# plt.plot(mean_rand, label='Het')
+# # Dictionary to store centrality values
+# mean_centrality = {}
+# std_centrality = {}
 #
-# plt.fill_between(mean_giant_component.index, mean_giant_component - confidence_giant_component, mean_giant_component + confidence_giant_component, alpha=0.2)
-# plt.fill_between(mean_rand.index, mean_rand - confidence_rand, mean_rand + confidence_rand, alpha=0.2)
+# # Calculate centrality for each name
+# for name, label in zip(names, labels):
+#     mean_centrality[name], std_centrality[name] = calculate_centrality(locals()['all_nets_' + name], measures='clustering')
 #
-# plt.xlabel('Fragmentation')
-# plt.ylabel('Mean Number of Nodes in Giant Component')
-# plt.title('Mean Number of Nodes in Giant Component vs. Step')
-# plt.legend()
-# plt.show()
-
+# # Plot centrality and fill between the confidence intervals
+# for name, label in zip(names, labels):
+#     plt.plot(mean_centrality[name]['clustering'], label=label)
+#     plt.fill_between(mean_centrality[name].index,
+#                      mean_centrality[name]['clustering'] - std_centrality[name]['clustering'],
+#                      mean_centrality[name]['clustering'] + std_centrality[name]['clustering'],
+#                      alpha=0.2)
 #
-# # #calculate giant component measures for all processes
-# giant_component_rand = giant_component_replicates(all_nets_rand)
-# giant_component_cor = giant_component_replicates(all_nets_cor)
-# giant_component_dist = giant_component_replicates(all_nets_dist)
-# print("giant comp")
-# # Calculate mean and std deviation of GC
-# mean_giant_component_rand = giant_component_rand.groupby('step')['avg'].mean()
-# confidence_giant_component_rand = giant_component_rand.groupby('step')['avg'].std()
-# print("mean of stuff")
-#
-# mean_giant_component_cor = giant_component_cor.groupby('step')['avg'].mean()
-# confidence_giant_component_cor = giant_component_cor.groupby('step')['avg'].std()
-#
-# mean_giant_component_dist = giant_component_dist.groupby('step')['avg'].mean()
-# confidence_giant_component_dist = giant_component_dist.groupby('step')['avg'].std()
-
-# # Calculate mean and std deviation of Het
-# mean_rand = rand[3].groupby('step')['avg'].mean()
-# confidence_rand = rand[3].groupby('step')['avg'].std()
-# mean_cor = cor[3].groupby('step')['avg'].mean()
-# confidence_cor = cor[3].groupby('step')['avg'].std()
-# mean_dist = dist[3].groupby('step')['avg'].mean()
-# confidence_dist = dist[3].groupby('step')['avg'].std()
-# mean_int = int[3].groupby('step')['avg'].mean()
-# confidence_int = int[3].groupby('step')['avg'].std()
-# mean_reg = reg[3].groupby('step')['avg'].mean()
-# confidence_reg = reg[3].groupby('step')['avg'].std()
-# mean_div = div[3].groupby('step')['avg'].mean()
-# confidence_div = div[3].groupby('step')['avg'].std()
-# print("mean of het")
-#
-# mean_centrality_rand, std_centrality_rand = calculate_centrality(all_nets_rand,measures='clustering')
-# mean_centrality_cor, std_centrality_cor = calculate_centrality(all_nets_cor,measures='clustering')
-# mean_centrality_dist, std_centrality_dist = calculate_centrality(all_nets_dist,measures='clustering')
-# mean_centrality_int, std_centrality_int = calculate_centrality(all_nets_int,measures='clustering')
-# mean_centrality_reg, std_centrality_reg = calculate_centrality(all_nets_reg,measures='clustering')
-# mean_centrality_div, std_centrality_div = calculate_centrality(all_nets_div,measures='clustering')
-#
-# # plot Clustering
-# plt.plot(mean_centrality_rand['clustering'], label='Random')
-# plt.plot(mean_centrality_cor['clustering'], label='Correlated')
-# plt.plot(mean_centrality_int['clustering'], label='Patchy')
-# plt.plot(mean_centrality_reg['clustering'], label='Regressive')
-# plt.plot(mean_centrality_div['clustering'], label='Divisive')
-# plt.plot(mean_centrality_dist['clustering'], label='Distance-dependent')
-# print("centrality!")
-#
-# plt.fill_between(mean_centrality_rand.index, mean_centrality_rand['clustering'] - std_centrality_rand['clustering'],
-#                  mean_centrality_rand['clustering'] + std_centrality_rand['clustering'], alpha=0.2)
-# plt.fill_between(mean_centrality_cor.index, mean_centrality_cor['clustering'] - std_centrality_cor['clustering'],
-#                  mean_centrality_cor['clustering'] + std_centrality_cor['clustering'], alpha=0.2)
-# plt.fill_between(mean_centrality_dist.index, mean_centrality_dist['clustering'] - std_centrality_dist['clustering'],
-#                  mean_centrality_dist['clustering'] + std_centrality_dist['clustering'], alpha=0.2)
-# plt.fill_between(mean_centrality_int.index, mean_centrality_int['clustering'] - std_centrality_int['clustering'],
-#                  mean_centrality_int['clustering'] + std_centrality_int['clustering'], alpha=0.2)
-# plt.fill_between(mean_centrality_reg.index, mean_centrality_reg['clustering'] - std_centrality_reg['clustering'],
-#                  mean_centrality_reg['clustering'] + std_centrality_reg['clustering'], alpha=0.2)
-# plt.fill_between(mean_centrality_div.index, mean_centrality_div['clustering'] - std_centrality_div['clustering'],
-#                  mean_centrality_div['clustering'] + std_centrality_div['clustering'], alpha=0.2)
-#
+# # Setting labels and legend
 # plt.xlabel('Step')
 # plt.ylabel('Clustering')
 # plt.legend()
 # plt.savefig("clust rgg.png", format="png")
 # plt.show()
-
-
-
-
-
-names = ['rand', 'cor', 'dist', 'int', 'reg', 'div']
-labels = ['Random', 'Correlated', 'Distance', 'Patchy', 'Regressive', 'Divisive']
-
-# Dictionary to store mean and confidence values
-mean_values = {}
-confidence_values = {}
-
-# Calculate mean and std deviation for each name
-for name in names:
-    data = locals()[name][3].groupby('step')['avg']
-    mean_values[name] = data.mean()
-    confidence_values[name] = data.std()
-
-# Dictionary to store centrality values
-mean_centrality = {}
-std_centrality = {}
-
-# Calculate centrality for each name
-for name, label in zip(names, labels):
-    mean_centrality[name], std_centrality[name] = calculate_centrality(locals()['all_nets_' + name], measures='clustering')
-
-# Plot the centralities and fill between the confidence intervals
-for name, label in zip(names, labels):
-    plt.plot(mean_centrality[name]['clustering'], label=label)
-    plt.fill_between(mean_centrality[name].index,
-                     mean_centrality[name]['clustering'] - std_centrality[name]['clustering'],
-                     mean_centrality[name]['clustering'] + std_centrality[name]['clustering'],
-                     alpha=0.2)
-
-# Setting labels and legend
-plt.xlabel('Step')
-plt.ylabel('Clustering')
-plt.legend()
-plt.savefig("clust rgg.png", format="png")
-plt.show()
-
-
-####relationship  centrality vs genetics
-
-clust = {}
-for name, label in zip(names, labels):
-    clust[name] = list(mean_centrality[name]['clustering'])
-
-    plt.plot(clust[name], mean_values[name], label=label)
-    plt.fill_between(clust[name], mean_values[name] - confidence_values[name],
-                     mean_values[name] + confidence_values[name], alpha=0.2)
-
-plt.gca().invert_xaxis()
-plt.xlabel('Clustering')
-plt.ylabel('Heterozygosity')
-plt.title('Heterozygosity vs. clustering')
-plt.legend()
-plt.savefig("clust het.png", format="png")
-plt.show()
-
-
 #
-# clust_rand = list(mean_centrality_rand['betweenness'])
-# clust_cor = list(mean_centrality_cor['betweenness'])
-# clust_dist = list(mean_centrality_dist['betweenness'])
 #
-# # Plotting the relationship
-# plt.plot(clust_rand, mean_rand, label='random')
-# plt.plot(clust_cor, mean_cor, label='correlated')
-# plt.plot(clust_dist, mean_dist, label='distance')
+# ########################### plot  centrality vs genetics
+# clust = {}
+# for name, label in zip(names, labels):
+#     clust[name] = list(mean_centrality[name]['clustering'])
 #
-# plt.fill_between(clust_rand, mean_rand - confidence_rand, mean_rand + confidence_rand, alpha=0.2)
-# plt.fill_between(clust_cor, mean_cor - confidence_cor, mean_cor + confidence_cor, alpha=0.2)
-# plt.fill_between(clust_dist, mean_dist - confidence_dist, mean_dist + confidence_dist, alpha=0.2)
-#
+#     plt.plot(clust[name], mean_values[name], label=label)
+#     plt.fill_between(clust[name], mean_values[name] - confidence_values[name],
+#                      mean_values[name] + confidence_values[name], alpha=0.2)
 #
 # plt.gca().invert_xaxis()
-# plt.xlabel('Betweenness')
+# plt.xlabel('Clustering')
 # plt.ylabel('Heterozygosity')
-# plt.title('Heterozygosity vs. betweenness')
+# plt.title('Heterozygosity vs. clustering')
 # plt.legend()
-# plt.savefig("betweenness het.png", format="png")
+# plt.savefig("clust het.png", format="png")
 # plt.show()
+
 

@@ -599,9 +599,3 @@ def find_breakink_point_list(networks: list):
 #                     cmap=cmap, node_color=list(partition.values()))
 # nx.draw_networkx_edges(G, pos, alpha=0.5)
 # plt.show()
-
-net=nx.random_geometric_graph(15,0.3)
-nx.draw_networkx(net)
-plt.show()
-print(nx.average_clustering(net))
-print(nx.algebraic_connectivity(net))
