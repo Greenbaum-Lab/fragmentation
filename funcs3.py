@@ -3,15 +3,17 @@ from typing import Tuple, List, Any
 from Transformation import transform_matrix
 from processes import remove_edge_random, remove_edge_correlated, remove_edge_distance
 import numpy as np
-import networkx as nx
 import pandas as pd
 from statistics import mean, median
 from multiprocessing import Pool
+import networkx as nx
+
 
 
 def normalize(matrix: np.array) -> np.array:
-    # Convert to numpy array in case it's a list
-    matrix = np.array(matrix)
+
+    # # Convert to numpy array fron networkx graph
+    matrix = nx.attr_matrix(matrix)[0]
 
     # Calculate row sums
     row_sums = matrix.sum(axis=1)
@@ -42,7 +44,7 @@ def calculate_genetics(migration_list: list) -> tuple:
 
     for i in range(len(migration_list)):
         M = migration_list[i]
-        M = nx.attr_matrix(M)[0]
+        M = normalize(M)
         T = transform_matrix(M)[0]  # migration to coalescence
         het = np.diag(T)  # take diagonal values (within pop coalesence time=heterozygosity)
         het = het/len(het)
@@ -171,7 +173,7 @@ function_mapping = {
 
 def make_fragmentation(net: nx.Graph, frag_type: str, ignore: bool) -> tuple:
     """
-    run the radom fragmentation pipeline to get heterozygosity data
+    run the radom fragmentation pipeline to get genetic data
     :param net: network
     :return: df with heterozygosity statistics
     """
