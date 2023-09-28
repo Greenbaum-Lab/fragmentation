@@ -58,7 +58,8 @@ def remove_edge_intrusive(net: nx.Graph) -> list:
         nodes.remove(node)
 
         for edge in range(len(edges)):
-
+            if nx.number_of_edges(migration) <= 1:
+                break
             edge = random.choice(edges)
 
             # update network and edges list
@@ -70,8 +71,8 @@ def remove_edge_intrusive(net: nx.Graph) -> list:
 
     return migration_list
 
-
-
+# mat=nx.barabasi_albert_graph(8,1)
+# print(remove_edge_intrusive(mat))
 
 def remove_edge_correlated(net: nx.Graph) -> list:
     """

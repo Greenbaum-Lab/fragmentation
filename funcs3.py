@@ -33,6 +33,9 @@ def normalize(matrix: np.array) -> np.array:
     return normalized_matrix
 
 
+
+
+
 def normalize_list(migration_list: list):
     new_list = list(map(lambda x: normalize(x), migration_list))
     return new_list

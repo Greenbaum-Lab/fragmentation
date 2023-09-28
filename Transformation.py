@@ -367,3 +367,66 @@ def transform_matrix(m: np.ndarray) -> tuple:
         T = Coalescence(t_matrix)
         f_matrices.append(T.produce_fst())
     return reassemble_matrix(t_matrices, components, "coalescence"), reassemble_matrix(f_matrices, components, "fst")
+
+
+
+#
+# def normalize(matrix: np.array) -> np.array:
+#
+#     # # Convert to numpy array in case it's a list
+#     matrix = nx.attr_matrix(matrix)[0]
+#
+#     # Calculate row sums
+#     row_sums = matrix.sum(axis=1)
+#
+#     # Find the minimum non-zero row sum
+#     min_row_sum = np.min(row_sums[row_sums > 0])
+#
+#     # Initialize normalized matrix as a copy of the original
+#     normalized_matrix = matrix.copy()
+#
+#     # Get indices of non-zero rows
+#     non_zero_rows = row_sums > 0
+#
+#     # Normalize only non-zero rows
+#     normalized_matrix[non_zero_rows] = matrix[non_zero_rows] / row_sums[non_zero_rows, None] * min_row_sum
+#
+#     return normalized_matrix
+#
+#
+# def normalize_list(migration_list: list):
+#     new_list = list(map(lambda x: normalize(x), migration_list))
+#     return new_list
+#
+#
+# def calculate_genetics(migration_list: list) -> tuple:
+#     fst_list = []
+#     het_list = []
+#
+#     for i in range(len(migration_list)):
+#         M = migration_list[i]
+#         # M = nx.attr_matrix(M)[0]
+#         M = normalize(M)
+#         # print(M)
+#         T = transform_matrix(M)[0]  # migration to coalescence
+#         het = np.diag(T)  # take diagonal values (within pop coalesence time=heterozygosity)
+#         het = het/len(het)
+#         het = np.ndarray.tolist(het)
+#         het_list.append(het.copy())  # add another network step to the list
+#
+#         F = transform_matrix(M)[1]  # migration to fst function
+#         fst_list.append(F.copy())  # add another network step to the list
+#
+#     return het_list, fst_list
+
+# import matplotlib as plt
+# import networkx as nx
+# matrix1=nx.erdos_renyi_graph(5,0.8,seed=5)
+# matrix2=nx.erdos_renyi_graph(5,0.8,seed=6)
+#
+#
+# matrices = [matrix1,matrix2]
+# # matrices = normalize_list(matrices)
+# print(nx.attr_matrix(matrices[0]))
+# new=calculate_genetics(matrices)
+# print((new[0]))
