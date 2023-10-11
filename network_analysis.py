@@ -67,29 +67,9 @@ start_time = time.time()
 #     for item in breaking_point_dist:
 #         file.write(str(item) + '\n')
 
-#### upload files
-# breaking_point_rand = []
-# with open('/run/user/1000/gvfs/sftp:host=132.64.61.5,user=lab-heavy/home/lab-heavy/PycharmProjects/fragmentation/breaking_point_rand.txt', 'r') as file:
-#     for line in file:
-#         item = line.strip()
-#         breaking_point_rand.append(item)
-#
-# breaking_point_cor = []
-# with open('/run/user/1000/gvfs/sftp:host=132.64.61.5,user=lab-heavy/home/lab-heavy/PycharmProjects/fragmentation/breaking_point_cor.txt', 'r') as file:
-#     for line in file:
-#         item = line.strip()
-#         breaking_point_cor.append(item)
-#
-#
-# breaking_point_dist = []
-# with open('/run/user/1000/gvfs/sftp:host=132.64.61.5,user=lab-heavy/home/lab-heavy/PycharmProjects/fragmentation/breaking_point_dist.txt', 'r') as file:
-#     for line in file:
-#         item = line.strip()
-#         breaking_point_dist.append(item)
-#
-# breaking_point_rand = [int(element) for element in breaking_point_rand]
-# breaking_point_cor = [int(element) for element in breaking_point_cor]
-# breaking_point_dist = [int(element) for element in breaking_point_dist]
+
+
+
 
 # bins = 100
 # sns.histplot(data=breaking_point_rand, bins=bins, kde=True, color='yellow', label='rand')
@@ -106,6 +86,50 @@ start_time = time.time()
 #
 # running_time = time.time() - start_time
 # print("Running time:", running_time, "seconds")
+
+
+# # Load the tuple using pickle
+
+with open('RGG, rand_ignore_False.pickle', 'rb') as file:
+    rand = pickle.load(file)
+
+# with open('RGG, cor_ignore_False.pickle', 'rb') as file:
+#     cor = pickle.load(file)
+#
+# with open('RGG, dist_ignore_False.pickle', 'rb') as file:
+#     dist = pickle.load(file)
+#
+# with open('RGG, int_ignore_False.pickle', 'rb') as file:
+#     int = pickle.load(file)
+#
+# with open('RGG, reg_ignore_False.pickle', 'rb') as file:
+#     reg = pickle.load(file)
+#
+# with open('RGG, div_ignore_False.pickle', 'rb') as file:
+#     div = pickle.load(file)
+
+print("finish load !!!")
+
+x=rand[1]
+x = [sublist[0] for sublist in x if sublist]
+
+densities = [nx.density(G) for G in x]
+plt.hist(densities, bins=50, edgecolor='black')
+plt.xlabel('Density')
+plt.ylabel('Frequency')
+plt.title('Density Distribution of NetworkX Graphs')
+plt.show()
+
+
+
+
+
+
+
+
+
+
+
 
 
 #######add parameters of percolation
@@ -317,15 +341,15 @@ def plot_regression(df: pd.DataFrame, save=bool) -> None:
     plt.show()
 
 # # # Load the tuple using pickle
-
-with open('RGG, rand_ignore_False.pickle', 'rb') as file:
-    rand = pickle.load(file)
-
-with open('RGG, cor_ignore_False.pickle', 'rb') as file:
-    cor = pickle.load(file)
-
-with open('RGG, dist_ignore_False.pickle', 'rb') as file:
-    dist = pickle.load(file)
+#
+# with open('RGG, rand_ignore_False.pickle', 'rb') as file:
+#     rand = pickle.load(file)
+#
+# with open('RGG, cor_ignore_False.pickle', 'rb') as file:
+#     cor = pickle.load(file)
+#
+# with open('RGG, dist_ignore_False.pickle', 'rb') as file:
+#     dist = pickle.load(file)
 
 # with open('RGG, int_ignore_False.pickle', 'rb') as file:
 #     int = pickle.load(file)
@@ -336,30 +360,30 @@ with open('RGG, dist_ignore_False.pickle', 'rb') as file:
 # with open('RGG, div_ignore_False.pickle', 'rb') as file:
 #     div = pickle.load(file)
 
-print("finish load !!!")
+# print("finish load !!!")
 
-
-################# plot giant component vs heterozygosity
-#choose data
-frag = rand
-# Get giant component measures for all processes
-giant_component_rand = giant_component_replicates(frag[1])
-
-# Calculate mean and std deviation for all processes
-mean_gc_rand, conf_gc_rand = compute_mean_std(giant_component_rand)
-mean_het_rand, conf_het_rand = compute_mean_std(frag[3])
-
-# Het - Assuming you want to plot heterozygosity only for rand as shown in your provided code
-plt.plot(mean_het_rand, label='Heterozygosity')
-plt.plot(mean_gc_rand, label='Giant component')
-
-plt.fill_between(mean_het_rand.index, mean_het_rand - conf_het_rand, mean_het_rand + conf_het_rand, alpha=0.2)
-plt.fill_between(mean_gc_rand.index, mean_gc_rand - conf_gc_rand, mean_gc_rand + conf_gc_rand, alpha=0.2)
-
-plt.xlabel('Fragmentation')
-plt.ylabel('Fraction of Nodes')
-plt.legend()
-plt.show()
+#
+# ################# plot giant component vs heterozygosity
+# #choose data
+# frag = rand
+# # Get giant component measures for all processes
+# giant_component_rand = giant_component_replicates(frag[1])
+#
+# # Calculate mean and std deviation for all processes
+# mean_gc_rand, conf_gc_rand = compute_mean_std(giant_component_rand)
+# mean_het_rand, conf_het_rand = compute_mean_std(frag[3])
+#
+# # Het - Assuming you want to plot heterozygosity only for rand as shown in your provided code
+# plt.plot(mean_het_rand, label='Heterozygosity')
+# plt.plot(mean_gc_rand, label='Giant component')
+#
+# plt.fill_between(mean_het_rand.index, mean_het_rand - conf_het_rand, mean_het_rand + conf_het_rand, alpha=0.2)
+# plt.fill_between(mean_gc_rand.index, mean_gc_rand - conf_gc_rand, mean_gc_rand + conf_gc_rand, alpha=0.2)
+#
+# plt.xlabel('Fragmentation')
+# plt.ylabel('Fraction of Nodes')
+# plt.legend()
+# plt.show()
 
 
 ########################### plot network centrality vs fragmentaion steps
