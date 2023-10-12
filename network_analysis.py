@@ -21,20 +21,14 @@ import seaborn as sns
 from scipy import stats
 import pickle
 
-n = 50  # no. of nodes
-p = 0.4  # probability to connect nodes
-n_rep = 10
-
-# Record the starting time
-start_time = time.time()
 
 
-#
+
 # # create list off nets
 # nets = make_networks(n_nets=n_rep, n_nodes=n, connectivity=p, net_type='ER')
 # print("finish nets")
 
-#
+
 # def parallelize_list_comprehension(nets, function):
 #     with Pool() as pool:
 #         return pool.map(function, nets)
@@ -68,9 +62,6 @@ start_time = time.time()
 #         file.write(str(item) + '\n')
 
 
-
-
-
 # bins = 100
 # sns.histplot(data=breaking_point_rand, bins=bins, kde=True, color='yellow', label='rand')
 # sns.histplot(data=breaking_point_cor, bins=bins, kde=True, color='orange', label='cor')
@@ -83,56 +74,11 @@ start_time = time.time()
 # plt.savefig("breaking.png", format="png")
 #
 # plt.show()
-#
-# running_time = time.time() - start_time
-# print("Running time:", running_time, "seconds")
-
-
-# # Load the tuple using pickle
-
-with open('RGG, rand_ignore_False.pickle', 'rb') as file:
-    rand = pickle.load(file)
-
-# with open('RGG, cor_ignore_False.pickle', 'rb') as file:
-#     cor = pickle.load(file)
-#
-# with open('RGG, dist_ignore_False.pickle', 'rb') as file:
-#     dist = pickle.load(file)
-#
-# with open('RGG, int_ignore_False.pickle', 'rb') as file:
-#     int = pickle.load(file)
-#
-# with open('RGG, reg_ignore_False.pickle', 'rb') as file:
-#     reg = pickle.load(file)
-#
-# with open('RGG, div_ignore_False.pickle', 'rb') as file:
-#     div = pickle.load(file)
-
-print("finish load !!!")
-
-x=rand[1]
-x = [sublist[0] for sublist in x if sublist]
-
-densities = [nx.density(G) for G in x]
-plt.hist(densities, bins=50, edgecolor='black')
-plt.xlabel('Density')
-plt.ylabel('Frequency')
-plt.title('Density Distribution of NetworkX Graphs')
-plt.show()
 
 
 
 
-
-
-
-
-
-
-
-
-
-#######add parameters of percolation
+#######FUNCTIONS
 def calculate_centrality_single(net: list) -> pd.DataFrame:
     """
     Calculate the degree of network
@@ -174,7 +120,7 @@ def giant_component_replicates(all_nets: list) -> pd.DataFrame:
     return df
 
 
-def calculate_centrality(all_nets: list, measures: list = ['clustering', 'modularity']) -> (
+def calculate_centrality(all_nets: list, measures: list = ['clustering','degree', 'modularity']) -> (
         pd.DataFrame, pd.DataFrame):
     """
     Calculate specified centrality measures of networks over multiple replicates.
@@ -193,13 +139,17 @@ def calculate_centrality(all_nets: list, measures: list = ['clustering', 'modula
             if 'clustering' in measures:
                 record['clustering'] = nx.transitivity(net)
 
+            if 'degree' in measures:
+                degree = sum(nx.degree_centrality(net).values()) / len(net.nodes)
+                record['degree'] = degree
+
             if 'modularity' in measures:
                 partition = community_louvain.best_partition(net)
                 record['modularity'] = community_louvain.modularity(partition, net)
 
             # if 'algebric' in measures:
             #     record['clustering'] = nx.algebraic_connectivity(net)
-            # data.append(record)
+            data.append(record)
 
     df = pd.DataFrame(data)
 
@@ -216,9 +166,6 @@ def compute_mean_std(data):
     mean = data.groupby('step')['avg'].mean()
     confidence = data.groupby('step')['avg'].std()
     return mean, confidence
-
-
-
 
 
 def plot_network_realization(data: tuple, step: int, save: bool = False):
@@ -340,36 +287,41 @@ def plot_regression(df: pd.DataFrame, save=bool) -> None:
 
     plt.show()
 
-# # # Load the tuple using pickle
-#
-# with open('RGG, rand_ignore_False.pickle', 'rb') as file:
-#     rand = pickle.load(file)
-#
-# with open('RGG, cor_ignore_False.pickle', 'rb') as file:
-#     cor = pickle.load(file)
-#
-# with open('RGG, dist_ignore_False.pickle', 'rb') as file:
-#     dist = pickle.load(file)
 
-# with open('RGG, int_ignore_False.pickle', 'rb') as file:
-#     int = pickle.load(file)
-#
-# with open('RGG, reg_ignore_False.pickle', 'rb') as file:
-#     reg = pickle.load(file)
-#
-# with open('RGG, div_ignore_False.pickle', 'rb') as file:
-#     div = pickle.load(file)
 
-# print("finish load !!!")
 
-#
+# # Load the tuple using pickle
+
+with open('RGG, rand_ignore_False.pickle', 'rb') as file:
+    rand = pickle.load(file)
+
+with open('RGG, cor_ignore_False.pickle', 'rb') as file:
+    cor = pickle.load(file)
+
+with open('RGG, dist_ignore_False.pickle', 'rb') as file:
+    dist = pickle.load(file)
+
+with open('RGG, int_ignore_False.pickle', 'rb') as file:
+    int = pickle.load(file)
+
+with open('RGG, reg_ignore_False.pickle', 'rb') as file:
+    reg = pickle.load(file)
+
+with open('RGG, div_ignore_False.pickle', 'rb') as file:
+    div = pickle.load(file)
+
+print("finish load !!!")
+
+
+
+
 # ################# plot giant component vs heterozygosity
 # #choose data
 # frag = rand
-# # Get giant component measures for all processes
+# # Get giant component measures for all replicates
 # giant_component_rand = giant_component_replicates(frag[1])
 #
-# # Calculate mean and std deviation for all processes
+# # Calculate mean and std deviation for all replicates
 # mean_gc_rand, conf_gc_rand = compute_mean_std(giant_component_rand)
 # mean_het_rand, conf_het_rand = compute_mean_std(frag[3])
 #
@@ -386,45 +338,53 @@ def plot_regression(df: pd.DataFrame, save=bool) -> None:
 # plt.show()
 
 
-########################### plot network centrality vs fragmentaion steps
-# need to load and store list of networks
-# names = ['rand', 'cor', 'dist', 'int', 'reg', 'div']
-# labels = ['Random', 'Correlated', 'Distance', 'Patchy', 'Regressive', 'Divisive']
-#
-# # Dictionary to store mean and confidence values
-# mean_values = {}
-# confidence_values = {}
-#
-# # Calculate mean and std deviation for each fragmentation
-# for name in names:
-#     data = locals()[name][3].groupby('step')['avg']
-#     mean_values[name] = data.mean()
-#     confidence_values[name] = data.std()
-#
-# # Dictionary to store centrality values
-# mean_centrality = {}
-# std_centrality = {}
-#
-# # Calculate centrality for each name
-# for name, label in zip(names, labels):
-#     mean_centrality[name], std_centrality[name] = calculate_centrality(locals()['all_nets_' + name], measures='clustering')
-#
-# # Plot centrality and fill between the confidence intervals
-# for name, label in zip(names, labels):
-#     plt.plot(mean_centrality[name]['clustering'], label=label)
-#     plt.fill_between(mean_centrality[name].index,
-#                      mean_centrality[name]['clustering'] - std_centrality[name]['clustering'],
-#                      mean_centrality[name]['clustering'] + std_centrality[name]['clustering'],
-#                      alpha=0.2)
-#
-# # Setting labels and legend
-# plt.xlabel('Step')
-# plt.ylabel('Clustering')
-# plt.legend()
-# plt.savefig("clust rgg.png", format="png")
-# plt.show()
-#
-#
+########################## plot network centrality vs fragmentaion steps
+# load and store list of networks
+names = ['rand', 'cor', 'dist', 'int', 'reg', 'div']
+labels = ['Random', 'Correlated', 'Distance', 'Patchy', 'Regressive', 'Divisive']
+
+all_nets = {
+    'rand': rand[1],  # Extracting the network data, which is the second element of the tuple
+    'cor': cor[1],
+    'dist': dist[1],
+    'int': int[1],
+    'reg': reg[1],
+    'div': div[1],
+}
+
+# Dictionary to store mean and confidence values
+mean_values = {}
+confidence_values = {}
+
+# Calculate mean and std deviation for each fragmentation
+for name in names:
+    data = locals()[name][3].groupby('step')['avg']
+    mean_values[name] = data.mean()
+    confidence_values[name] = data.std()
+
+# Dictionary to store centrality values
+mean_centrality = {}
+std_centrality = {}
+
+# Calculate centrality for each name
+for name, label in zip(names, labels):
+    mean_centrality[name], std_centrality[name] = calculate_centrality(all_nets[name], measures=['degree'])
+
+# Plot centrality and fill between the confidence intervals
+for name, label in zip(names, labels):
+    plt.plot(mean_centrality[name]['degree'], label=label)
+    plt.fill_between(mean_centrality[name].index,
+                     mean_centrality[name]['degree'] - std_centrality[name]['degree'],
+                     mean_centrality[name]['degree'] + std_centrality[name]['degree'],
+                     alpha=0.2)
+
+# Setting labels and legend
+plt.xlabel('Step')
+plt.ylabel('Clustering')
+plt.legend()
+plt.show()
+
+
 # ########################### plot  centrality vs genetics
 # clust = {}
 # for name, label in zip(names, labels):
