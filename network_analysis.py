@@ -22,8 +22,6 @@ from scipy import stats
 import pickle
 
 
-
-
 # # create list off nets
 # nets = make_networks(n_nets=n_rep, n_nodes=n, connectivity=p, net_type='ER')
 # print("finish nets")
@@ -76,8 +74,6 @@ import pickle
 # plt.show()
 
 
-
-
 #######FUNCTIONS
 def calculate_centrality_single(net: list) -> pd.DataFrame:
     """
@@ -101,7 +97,7 @@ def measure_giant_component(network: nx.Graph):
     :return: length of giant components
     """
     largest_component = max(nx.connected_components(network), key=len)
-    return len(largest_component)/len(network)
+    return len(largest_component) / len(network)
 
 
 def giant_component_replicates(all_nets: list) -> pd.DataFrame:
@@ -120,7 +116,7 @@ def giant_component_replicates(all_nets: list) -> pd.DataFrame:
     return df
 
 
-def calculate_centrality(all_nets: list, measures: list = ['clustering','degree', 'modularity']) -> (
+def calculate_centrality(all_nets: list, measures: list = ['clustering', 'degree', 'modularity','connect']) -> (
         pd.DataFrame, pd.DataFrame):
     """
     Calculate specified centrality measures of networks over multiple replicates.
@@ -138,10 +134,14 @@ def calculate_centrality(all_nets: list, measures: list = ['clustering','degree'
 
             if 'clustering' in measures:
                 record['clustering'] = nx.transitivity(net)
+                # record['clustering'] = nx.average_clustering(net)
 
             if 'degree' in measures:
                 degree = sum(nx.degree_centrality(net).values()) / len(net.nodes)
                 record['degree'] = degree
+
+            if 'connect' in measures:
+                record['connect'] = nx.average_node_connectivity(net)
 
             if 'modularity' in measures:
                 partition = community_louvain.best_partition(net)
@@ -158,6 +158,7 @@ def calculate_centrality(all_nets: list, measures: list = ['clustering','degree'
     std_centrality = df.groupby('step').std().drop(columns='replicate')
 
     return mean_centrality, std_centrality
+
 
 def compute_mean_std(data):
     """
@@ -194,7 +195,7 @@ def plot_network_realization(data: tuple, step: int, save: bool = False):
     # Extract corresponding heterozygosity data
     het_df = data[2]
     het_df = het_df.loc[het_df['step'] == step]
-    het_df = het_df.iloc[x*50: (x*50)+50]
+    het_df = het_df.iloc[x * 50: (x * 50) + 50]
     het = {index: value for index, value in enumerate(het_df['het'])}
 
     # Normalize betweenness centrality values for color mapping
@@ -255,6 +256,7 @@ def centrality_correlation(data: tuple, step: int) -> None:
     # Plot regression line
     plot_regression(df)
 
+
 def plot_regression(df: pd.DataFrame, save=bool) -> None:
     """
     Plot a regression between heterozygosity and betweenness attributes.
@@ -271,7 +273,7 @@ def plot_regression(df: pd.DataFrame, save=bool) -> None:
 
     # Compute correlation coefficient and p-value
     r, p = stats.pearsonr(df['bet'], df['het'])
-    r_squared = r**2
+    r_squared = r ** 2
 
     # Annotate the plot with r^2 and p-value
     plt.annotate(f'$R^2$ = {r_squared:.3f}', xy=(0.1, 0.9), xycoords='axes fraction', fontsize=14)
@@ -286,8 +288,6 @@ def plot_regression(df: pd.DataFrame, save=bool) -> None:
         plt.savefig("cor.svg", format='svg')
 
     plt.show()
-
-
 
 
 # # Load the tuple using pickle
@@ -311,9 +311,6 @@ with open('RGG, div_ignore_False.pickle', 'rb') as file:
     div = pickle.load(file)
 
 print("finish load !!!")
-
-
-
 
 # ################# plot giant component vs heterozygosity
 # #choose data
@@ -343,6 +340,8 @@ print("finish load !!!")
 names = ['rand', 'cor', 'dist', 'int', 'reg', 'div']
 labels = ['Random', 'Correlated', 'Distance', 'Patchy', 'Regressive', 'Divisive']
 
+centrality = 'modularity'
+
 all_nets = {
     'rand': rand[1],  # Extracting the network data, which is the second element of the tuple
     'cor': cor[1],
@@ -368,38 +367,35 @@ std_centrality = {}
 
 # Calculate centrality for each name
 for name, label in zip(names, labels):
-    mean_centrality[name], std_centrality[name] = calculate_centrality(all_nets[name], measures=['degree'])
+    mean_centrality[name], std_centrality[name] = calculate_centrality(all_nets[name], measures=[centrality])
 
 # Plot centrality and fill between the confidence intervals
 for name, label in zip(names, labels):
-    plt.plot(mean_centrality[name]['degree'], label=label)
+    plt.plot(mean_centrality[name][centrality], label=label)
     plt.fill_between(mean_centrality[name].index,
-                     mean_centrality[name]['degree'] - std_centrality[name]['degree'],
-                     mean_centrality[name]['degree'] + std_centrality[name]['degree'],
+                     mean_centrality[name][centrality] - std_centrality[name][centrality],
+                     mean_centrality[name][centrality] + std_centrality[name][centrality],
                      alpha=0.2)
 
 # Setting labels and legend
 plt.xlabel('Step')
-plt.ylabel('Clustering')
+plt.ylabel('modularity')
 plt.legend()
 plt.show()
 
+########################### plot  centrality vs genetics
+central = {}
+for name, label in zip(names, labels):
+    central[name] = list(mean_centrality[name]['modularity'])
 
-# ########################### plot  centrality vs genetics
-# clust = {}
-# for name, label in zip(names, labels):
-#     clust[name] = list(mean_centrality[name]['clustering'])
-#
-#     plt.plot(clust[name], mean_values[name], label=label)
-#     plt.fill_between(clust[name], mean_values[name] - confidence_values[name],
-#                      mean_values[name] + confidence_values[name], alpha=0.2)
-#
-# plt.gca().invert_xaxis()
-# plt.xlabel('Clustering')
-# plt.ylabel('Heterozygosity')
-# plt.title('Heterozygosity vs. clustering')
-# plt.legend()
-# plt.savefig("clust het.png", format="png")
-# plt.show()
+    plt.plot(central[name], mean_values[name], label=label)
+    plt.fill_between(central[name], mean_values[name] - confidence_values[name],
+                     mean_values[name] + confidence_values[name], alpha=0.2)
 
-
+plt.gca().invert_xaxis()
+plt.xlabel('modularity')
+plt.ylabel('Heterozygosity')
+plt.title('Heterozygosity vs. modularity')
+plt.legend()
+plt.savefig("clust het.png", format="png")
+plt.show()
