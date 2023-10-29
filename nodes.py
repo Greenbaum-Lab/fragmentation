@@ -32,20 +32,17 @@ def extract_nodes(df):
     # count how many nodes are in a network
     nodes = np.argmax(df['step'] != 0)
 
-
-    # Randomly select a number between 0 and 49
+    # Randomly select a node from the network - a number between 0-49
     random_index = np.random.randint(0, nodes)
 
-    # Select the rows corresponding to the randomly selected index for each step
-    selected_rows = df.iloc[100::nodes].copy()
+    # Select the rows corresponding to the node (randomly selected index)
+    selected_rows = df.iloc[random_index::nodes].copy()
 
     return selected_rows
 
 
-
-with open('RGG, dist_ignore_False.pickle', 'rb') as file:
+with open('RGG, rand_ignore_False.pickle', 'rb') as file:
     rand = pickle.load(file)
-
 
 het = rand[2]
 het.reset_index(drop=True, inplace=True)
@@ -57,12 +54,11 @@ pivot_df = het_values.pivot(columns='replica', index='step', values='het')
 
 # Plot using the pivot DataFrame
 plt.figure(figsize=(10, 6))
-plt.plot(pivot_df.index, pivot_df, color='grey', alpha=0.5)
+plt.plot(pivot_df.index, pivot_df, color='grey', alpha=0.1)
 
 plt.xlabel('Step')
 plt.ylabel('Heterozygosity')
 plt.title('Plot of Het against Step-distance')
-plt.grid(True)
 plt.show()
 
 
