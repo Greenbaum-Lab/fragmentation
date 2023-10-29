@@ -10,10 +10,11 @@ import networkx as nx
 
 
 
-def normalize(matrix: np.array) -> np.array:
+def normalize(matrix) -> np.array:
 
-    # # Convert to numpy array fron networkx graph
-    matrix = nx.attr_matrix(matrix)[0]
+    # Check if matrix is a networkx graph and convert if needed
+    if isinstance(matrix, (nx.Graph)):
+        matrix = nx.attr_matrix(matrix)[0]
 
     # Calculate row sums
     row_sums = matrix.sum(axis=1)
@@ -33,21 +34,13 @@ def normalize(matrix: np.array) -> np.array:
     return normalized_matrix
 
 
-
-
-
-def normalize_list(migration_list: list):
-    new_list = list(map(lambda x: normalize(x), migration_list))
-    return new_list
-
-
 def calculate_genetics(migration_list: list) -> tuple:
     """Calculate genetics from migration list."""
     het_list = []
     fst_list = []
 
     for M in migration_list:
-        M = normalize(nx.attr_matrix(M)[0])
+        M = normalize(M)
 
         # Transform matrix to coalescence and fst function
         T, F = transform_matrix(M)
