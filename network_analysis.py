@@ -169,128 +169,8 @@ def compute_mean_std(data):
     return mean, confidence
 
 
-def plot_network_realization(data: tuple, step: int, save: bool = False):
-    """
-    Visualize a network based on betweenness centrality and heterozygosity for a specified step.
 
-    Parameters:
-    - data (tuple): A tuple containing relevant data.
-                    data[1] is a list of replicates, with each replica being a list of networks.
-                    data[2] is a DataFrame with columns 'step' and 'het' (heterozygosity).
-    - step (int): The step at which to visualize the network.
-    - save (bool, optional): Whether to save the figure. Default is False.
-
-    Returns:
-    None
-    """
-
-    # Extract relevant network for the specified step
-    nets = data[1]
-    x = random.choice(range(len(nets)))  # Choose a random replicate from the list
-    net = nets[x][step]
-
-    # Calculate betweenness centrality for the selected network
-    bet = nx.betweenness_centrality(net)
-
-    # Extract corresponding heterozygosity data
-    het_df = data[2]
-    het_df = het_df.loc[het_df['step'] == step]
-    het_df = het_df.iloc[x * 50: (x * 50) + 50]
-    het = {index: value for index, value in enumerate(het_df['het'])}
-
-    # Normalize betweenness centrality values for color mapping
-    max_betweenness = max(bet.values())
-    normalized_betweenness = {node: value / max_betweenness for node, value in bet.items()}
-    colors = plt.cm.Reds([normalized_betweenness[node] for node in net.nodes()])
-
-    # Layout configuration for network visualization
-    pos = nx.spring_layout(net, k=0.4, iterations=50)
-
-    # Visualize the network
-    nx.draw_networkx_nodes(net, node_color=colors, pos=pos, edgecolors='black',
-                           linewidths=1.5, node_size=[v * 300 for v in het.values()])
-    nx.draw_networkx_edges(net, pos=pos, edge_color='gray')
-    plt.title("Color: Betweenness Centrality | Size: Heterozygosity")
-
-    # Save the figure if specified
-    if save:
-        plt.savefig("net_betweenness.svg", format='svg')
-
-    # Display the plot
-    plt.show()
-
-
-def centrality_correlation(data: tuple, step: int) -> None:
-    """
-    Compute and visualize the correlation between betweenness centrality
-    and a heterozygosity for nodes in a network at a specified step.
-
-    Parameters:
-    - data (tuple): A tuple containing relevant data.
-                    data[1] is a list of replicates with each replica is a list of networks
-                    data[2] is a DataFrame with columns 'step' and 'het' (heterozygosity)
-    - step (int): The step at which to compute the correlation.
-
-    Returns:
-    None
-    """
-
-    # Extract relevant network step
-    nets = data[1]
-    nets_step = [net[step - 1] for net in nets]
-
-    # Calculate betweenness centrality for each network in 'result'
-    bet = [nx.betweenness_centrality(net) for net in nets_step]
-
-    # Extract relevant heterozygosity values based on the given step
-    het_df = data[2]
-    het_filtered = het_df.loc[het_df['step'] == step]
-    het = het_filtered['het'].tolist()
-
-    # Flatten the 'bet' list of dictionaries into a single list
-    flattened_bet = [value for d in bet for value in d.values()]
-
-    # Create a dataframe for correlation analysis
-    df = pd.DataFrame({'het': het, 'bet': flattened_bet})
-
-    # Plot regression line
-    plot_regression(df)
-
-
-def plot_regression(df: pd.DataFrame, save=bool) -> None:
-    """
-    Plot a regression between heterozygosity and betweenness attributes.
-
-    Parameters:
-    - df (pd.DataFrame): DataFrame containing 'het' and 'bet' columns.
-
-    Returns:
-    None
-    """
-
-    plt.figure(figsize=(8, 6))
-    sns.regplot(x='bet', y='het', data=df)
-
-    # Compute correlation coefficient and p-value
-    r, p = stats.pearsonr(df['bet'], df['het'])
-    r_squared = r ** 2
-
-    # Annotate the plot with r^2 and p-value
-    plt.annotate(f'$R^2$ = {r_squared:.3f}', xy=(0.1, 0.9), xycoords='axes fraction', fontsize=14)
-    plt.annotate(f'p-value = {p:.5f}', xy=(0.1, 0.85), xycoords='axes fraction', fontsize=14)
-
-    plt.xlabel('Beteeness', fontsize=14)
-    plt.ylabel('Heterozygosity', fontsize=14)
-    plt.xticks(fontsize=14)
-    plt.yticks(fontsize=14)
-
-    if save:
-        plt.savefig("cor.svg", format='svg')
-
-    plt.show()
-
-
-# # Load the tuple using pickle
+# Load the tuple using pickle
 
 with open('RGG, rand_ignore_False.pickle', 'rb') as file:
     rand = pickle.load(file)
@@ -312,31 +192,31 @@ with open('RGG, div_ignore_False.pickle', 'rb') as file:
 
 print("finish load !!!")
 
-# ################# plot giant component vs heterozygosity
-# #choose data
-# frag = rand
-# # Get giant component measures for all replicates
-# giant_component_rand = giant_component_replicates(frag[1])
-#
-# # Calculate mean and std deviation for all replicates
-# mean_gc_rand, conf_gc_rand = compute_mean_std(giant_component_rand)
-# mean_het_rand, conf_het_rand = compute_mean_std(frag[3])
-#
-# # Het - Assuming you want to plot heterozygosity only for rand as shown in your provided code
-# plt.plot(mean_het_rand, label='Heterozygosity')
-# plt.plot(mean_gc_rand, label='Giant component')
-#
-# plt.fill_between(mean_het_rand.index, mean_het_rand - conf_het_rand, mean_het_rand + conf_het_rand, alpha=0.2)
-# plt.fill_between(mean_gc_rand.index, mean_gc_rand - conf_gc_rand, mean_gc_rand + conf_gc_rand, alpha=0.2)
-#
-# plt.xlabel('Fragmentation')
-# plt.ylabel('Fraction of Nodes')
-# plt.legend()
-# plt.show()
+################# plot giant component vs heterozygosity
+#choose data
+frag = rand
+# Get giant component measures for all replicates
+giant_component_rand = giant_component_replicates(frag[1])
+
+# Calculate mean and std deviation for all replicates
+mean_gc_rand, conf_gc_rand = compute_mean_std(giant_component_rand)
+mean_het_rand, conf_het_rand = compute_mean_std(frag[3])
+
+# Het - Assuming you want to plot heterozygosity only for rand as shown in your provided code
+plt.plot(mean_het_rand, label='Heterozygosity')
+plt.plot(mean_gc_rand, label='Giant component')
+
+plt.fill_between(mean_het_rand.index, mean_het_rand - conf_het_rand, mean_het_rand + conf_het_rand, alpha=0.2)
+plt.fill_between(mean_gc_rand.index, mean_gc_rand - conf_gc_rand, mean_gc_rand + conf_gc_rand, alpha=0.2)
+
+plt.xlabel('Fragmentation')
+plt.ylabel('Fraction of Nodes')
+plt.legend()
+plt.show()
 
 
-########################## plot network centrality vs fragmentaion steps
-# load and store list of networks
+######################### plot network centrality vs fragmentaion steps
+load and store list of networks
 names = ['rand', 'cor', 'dist', 'int', 'reg', 'div']
 labels = ['Random', 'Correlated', 'Distance', 'Patchy', 'Regressive', 'Divisive']
 
