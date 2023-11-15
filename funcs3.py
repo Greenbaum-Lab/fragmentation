@@ -10,10 +10,11 @@ import networkx as nx
 
 
 
-def normalize(matrix: np.array) -> np.array:
+def normalize(matrix) -> np.array:
 
-    # # Convert to numpy array fron networkx graph
-    matrix = nx.attr_matrix(matrix)[0]
+    # Check if matrix is a networkx graph and convert if needed
+    if isinstance(matrix, (nx.Graph)):
+        matrix = nx.attr_matrix(matrix)[0]
 
     # Calculate row sums
     row_sums = matrix.sum(axis=1)
@@ -33,31 +34,25 @@ def normalize(matrix: np.array) -> np.array:
     return normalized_matrix
 
 
-
-
-
-def normalize_list(migration_list: list):
-    new_list = list(map(lambda x: normalize(x), migration_list))
-    return new_list
-
-
 def calculate_genetics(migration_list: list) -> tuple:
-    fst_list = []
+    """Calculate genetics from migration list."""
     het_list = []
+    fst_list = []
 
-    for i in range(len(migration_list)):
-        M = migration_list[i]
+    for M in migration_list:
         M = normalize(M)
-        T = transform_matrix(M)[0]  # migration to coalescence
-        het = np.diag(T)  # take diagonal values (within pop coalesence time=heterozygosity)
-        het = het/len(het)
-        het = np.ndarray.tolist(het)
-        het_list.append(het.copy())  # add another network step to the list
 
-        F = transform_matrix(M)[1]  # migration to fst function
-        fst_list.append(F.copy())  # add another network step to the list
+        # Transform matrix to coalescence and fst function
+        T, F = transform_matrix(M)
+
+        # Calculate heterozygosity from diagonal values of T matrix
+        het = np.diag(T) / len(M)
+        het_list.append(het.tolist())
+
+        fst_list.append(F)
 
     return het_list, fst_list
+
 
 
 def make_fst_dist(f: list, ignore: bool = False) -> pd.DataFrame:
