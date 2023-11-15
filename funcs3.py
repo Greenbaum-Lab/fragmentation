@@ -10,11 +10,10 @@ import networkx as nx
 
 
 
-def normalize(matrix) -> np.array:
+def normalize(matrix: np.array) -> np.array:
 
-    # Check if matrix is a networkx graph and convert if needed
-    if isinstance(matrix, (nx.Graph)):
-        matrix = nx.attr_matrix(matrix)[0]
+    # # Convert to numpy array fron networkx graph
+    matrix = nx.attr_matrix(matrix)[0]
 
     # Calculate row sums
     row_sums = matrix.sum(axis=1)
@@ -32,6 +31,14 @@ def normalize(matrix) -> np.array:
     normalized_matrix[non_zero_rows] = matrix[non_zero_rows] / row_sums[non_zero_rows, None] * min_row_sum
 
     return normalized_matrix
+
+
+
+
+
+def normalize_list(migration_list: list):
+    new_list = list(map(lambda x: normalize(x), migration_list))
+    return new_list
 
 
 def calculate_genetics(migration_list: list) -> tuple:
@@ -52,8 +59,6 @@ def calculate_genetics(migration_list: list) -> tuple:
         fst_list.append(F)
 
     return het_list, fst_list
-
-
 
 def make_fst_dist(f: list, ignore: bool = False) -> pd.DataFrame:
     """
