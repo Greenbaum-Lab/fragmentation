@@ -1,15 +1,9 @@
 import random
-
 import networkx as nx
-import numpy as np
-import networkx
 import pickle
-import pandas as pd
-
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from community import community_louvain
 from scipy import stats
 import seaborn as sns
 
@@ -24,7 +18,6 @@ def add_replica(df, step_column='step'):
     df.loc[:, 'replica'] = df['replica'].cumsum()
 
     return df
-
 def extract_nodes(df):
     """
     tracking each node separately and extract its heterozygosity
@@ -34,40 +27,18 @@ def extract_nodes(df):
     # count how many nodes are in a network
     nodes = np.argmax(df['step'] != 0)
 
-    # Randomly select a node from the network - a number between 0-49
-    random_index = np.random.randint(0, nodes)
+    # Randomly select 5 unique nodes from the network
+    random_indices = np.random.choice(nodes, 5, replace=False)
 
-    # Select the rows corresponding to the node (randomly selected index)
-    selected_rows = df.iloc[random_index::nodes].copy()
+    # Initialize an empty DataFrame to store the selected rows
+    selected_rows = pd.DataFrame()
+
+    # Iterate over each randomly selected index and get the corresponding rows
+    for index in random_indices:
+        node_rows = df.iloc[index::nodes].copy()
+        selected_rows = pd.concat([selected_rows, node_rows])
 
     return selected_rows
-
-
-with open('RGG, dist_ignore_False.pickle', 'rb') as file:
-    rand = pickle.load(file)
-#
-# het = rand[2]
-# het.reset_index(drop=True, inplace=True)
-# het_values = extract_nodes(het)
-# het_values = add_replica(het_values)
-#
-# # Create a pivot DataFrame
-# pivot_df = het_values.pivot(columns='replica', index='step', values='het')
-#
-# # Plot using the pivot DataFrame
-# plt.figure(figsize=(10, 6))
-# plt.plot(pivot_df.index, pivot_df, color='grey', alpha=0.1)
-#
-# plt.xlabel('Step')
-# plt.ylabel('Heterozygosity')
-# plt.title('Plot of Het against Step-distance')
-# plt.show()
-
-x=add_replica(rand[2])
-
-
-
-# pd.set_option('display.max_rows', None)
 
 def plot_network_realization(data: tuple, step: int, save: bool = False):
     """
@@ -101,7 +72,7 @@ def plot_network_realization(data: tuple, step: int, save: bool = False):
     colors = plt.cm.Reds([normalized_betweenness[node] for node in net.nodes()])
 
     # Layout and visualization
-    pos = nx.spring_layout(net, k=0.4, iterations=50)
+    pos = nx.spring_layout(net, k=0.2, iterations=20)
     nx.draw_networkx_nodes(net, node_color=colors, pos=pos, edgecolors='black',
                            linewidths=1.5, node_size=[v * 300 for v in het.values()])
     nx.draw_networkx_edges(net, pos=pos, edge_color='gray')
@@ -118,7 +89,7 @@ def plot_network_realization(data: tuple, step: int, save: bool = False):
 
 
 
-def plot_regression(df: pd.DataFrame, save=bool) -> None:
+def plot_regression(df: pd.DataFrame, save=True) -> None:
     """
     Plot a regression between heterozygosity and betweenness attributes.
 
@@ -179,12 +150,44 @@ def centrality_correlation(data: tuple, step: int) -> None:
 
     # 3. Combine heterozygosity and betweenness centrality values for correlation analysis
     df = pd.DataFrame({'het': het_values, 'bet': bet})
-
+    df = df.sample(100)
     # 4. Visualize correlation
     plot_regression(df)
 
 
-plot_network_realization(rand,step=150)
 
 
-centrality_correlation(rand,step=150)
+with open('RGG, div_ignore_False.pickle', 'rb') as file:
+    rand = pickle.load(file)
+
+het = rand[2]
+het.reset_index(drop=True, inplace=True)
+het_values = extract_nodes(het)
+het_values = add_replica(het_values)
+
+# Create a pivot DataFrame
+pivot_df = het_values.pivot(columns='replica', index='step', values='het')
+print(len(pivot_df.columns))
+print(pivot_df)
+# Plot using the pivot DataFrame
+plt.figure(figsize=(10, 6))
+plt.plot(pivot_df.index, pivot_df, color='grey', alpha=0.1)
+
+plt.xlabel('Step')
+plt.ylabel('Heterozygosity')
+plt.title('Heterozygosity along DIVISIVE fragmentation')
+plt.show()
+
+x=add_replica(rand[2])
+
+
+
+
+
+
+
+
+
+# plot_network_realization(rand,step=100,save=True)
+
+# centrality_correlation(rand,step=100)
