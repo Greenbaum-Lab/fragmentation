@@ -77,12 +77,19 @@ def make_fst_dist(f: list, ignore: bool = False) -> pd.DataFrame:
     steps = []
 
     for i in range(len(f)):
-        F_no_diag = f[i][~np.eye(len(f[i]), dtype=bool)]  # remove diagonals of zero
+        upper_triangle = np.triu(f[i])
+
+        # Create a boolean mask for non-zero elements
+        non_zero_mask = upper_triangle != 0
+
+        # Apply the mask and flatten the array
+        upper_triangle_list = upper_triangle[non_zero_mask].flatten()
+
         if ignore:
             F_no_diag = F_no_diag[F_no_diag != 1]  # ignore all values of 1
 
-        fst_values.extend(F_no_diag)  # extend the list with values
-        steps.extend([i]*len(F_no_diag))  # extend the list with corresponding step
+        fst_values.extend(upper_triangle_list)  # extend the list with values
+        steps.extend([i]*len(upper_triangle_list))  # extend the list with corresponding step
 
     # Create a DataFrame
     df = pd.DataFrame({
