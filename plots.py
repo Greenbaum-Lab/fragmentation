@@ -331,94 +331,123 @@ color_palette = plt.get_cmap('tab10')  # You can change 'tab10' to any other ava
 
 ###############plot distributions
 
-# distribution fst
-# plt.figure()
-# joyplot(
-#     data=rand[4][['fst', 'step']],
-#     by='step', ylim=0, overlap=1,
-#     colormap=plt.cm.viridis_r, fade=True,range_style='all',
-#     figsize=(12, 8),  linecolor = "white", linewidth=0.1
-# )
-# plt.title('pairwise Fst in intance fragmentation',
-#           fontsize=16, pad=-20, y=1.02, verticalalignment='bottom')
-# plt.savefig("fst_distribution_ignore.png", format="png")
-# plt.show()
-# plt.figure()
-#
-#
-# #distribution heterozygosity
-# plt.figure()
-# joyplot(
-#     data=rand[2][['het', 'step']],
-#     by='step', ylim=0, overlap=1,
-#     colormap=plt.cm.viridis_r, fade=True,range_style='all',
-#     figsize=(12, 8),  linecolor = "white", linewidth=0.1
-# )
-# plt.title('Heterozygosity in intance fragmentation',
-#           fontsize=16, pad=-20, y=1.02, verticalalignment='bottom')
-# plt.savefig("het_distribution_ignore.png", format="png")
-# plt.show()
-# plt.figure()
+with open('RGG, rand_ignore_False.pickle', 'rb') as file:
+    rand = pickle.load(file)
 
-# with open('RGG, div_ignore_False.pickle', 'rb') as file:
-#     rand = pickle.load(file)
-#
-# # plot distributions interval
-# def plot_snapshot(df):
-#
-#     # Find the total number of rows
-#     num_rows = df.shape[0]
-#     # Calculate the 5% interval
-#     interval = round(num_rows * 0.1)
-#     # Create an auxiliary 'group' column
-#     df = df.sort_values('step').reset_index(drop=True)  # ensure 'step' is sorted
-#     df['group'] = df.index // interval
-#
-#     return df
-#
+# plot distributions interval
+def add_replica(df, step_column='step'):
+    """
+    add a column with the number of replica for each row based on 'step'
+    """
+    # Find where the step resets
+    df.loc[:, 'replica'] = (df[step_column] < df[step_column].shift(1)).astype(int)
+
+    # Compute the cumulative sum to get the replica number
+    df.loc[:, 'replica'] = df['replica'].cumsum()
+
+    return df
+
+
+def make_intervals(df, step_column='step'):
+    # Calculate the total number of unique steps
+    total_unique_steps = df[step_column].nunique()
+
+    # Determine the 10% interval steps, 11 intervals including 0% and 100%
+    interval_steps = [round(total_unique_steps * i / 10) for i in range(11)]
+
+    # Add a 'group' column to indicate the interval group, labeled as 0, 10, 20, ..., 100
+    df['group'] = df[step_column].apply(lambda x: min(range(11), key=lambda i: abs(interval_steps[i] - x)) * 10)
+
+    # Select rows where the 'step' is in the 10% interval steps
+    selected_df = df[df[step_column].isin(interval_steps)]
+
+    return selected_df
+
+# First plot for 'fst'
+df = make_intervals(rand[4])
+
+plt.figure(figsize=(10, 6))
+fig, axes = joyplot(
+    data=df[['fst', 'group']],
+    by='group', overlap=1,
+    colormap=plt.cm.viridis_r, fade=True, range_style='all',
+    linecolor="black", linewidth=0.1
+)
+
+fig.title('fst in divisive fragmentation', fontsize=22, verticalalignment='bottom', y=1.05)
+for ax in axes:
+    ax.tick_params(axis='both', which='major', labelsize=16)
+plt.show()
+
+# Second plot for 'het'
+df = make_intervals(rand[2])
+
+fig.figure(figsize=(10, 6))
+fig, axes = joyplot(
+    data=df[['het', 'group']],
+    by='group', overlap=1,
+    colormap=plt.cm.viridis_r, fade=True, range_style='all',
+    linecolor="black", linewidth=0.1
+)
+
+plt.title('Heterozygosity in divisive fragmentation', fontsize=22, verticalalignment='bottom', y=1.05)
+for ax in axes:
+    ax.tick_params(axis='both', which='major', labelsize=16)
+    ax.set_xlim(-0.2, 1.5)
+plt.show()
+
+
+
+
+
+
+
+
+
+
+
 # df = plot_snapshot(rand[4])
 #
 # #distribution heterozygosity
-# plt.figure()
+# plt.figure(figsize=(12, 8))
 # joyplot(
 #     data=df[['fst', 'group']],
 #     by='group', ylim=0, overlap=1,
 #     colormap=plt.cm.viridis_r, fade=True,range_style='all',
 #     figsize=(12, 8),  linecolor = "white", linewidth=0.1
 # )
-# plt.title('fst in divisive fragmentation',
-#           fontsize=16, pad=-20, y=1.02, verticalalignment='bottom')
-# # plt.savefig("fst_distribution_include_int.svg", format="svg")
 #
+# plt.title('fst in divisive fragmentation', fontsize=22, pad=-20, y=1.02, verticalalignment='bottom')
+# plt.tick_params(axis='both', which='major', labelsize=16)
+# # plt.savefig("fst_distribution_include_int.svg", format="svg")
 # plt.show()
 # plt.figure()
+#
 #
 # df = plot_snapshot(rand[2])
 #
-# #distribution heterozygosity
-# plt.figure()
+# plt.figure(figsize=(12, 8))
 # joyplot(
 #     data=df[['het', 'group']],
 #     by='group', ylim=0, overlap=1,
-#     colormap=plt.cm.viridis_r, fade=True,range_style='all',
-#     figsize=(12, 8),  linecolor = "white", linewidth=0.1
+#     colormap=plt.cm.viridis_r, fade=True, range_style='all',
+#     linecolor="white", linewidth=0.1
 # )
-# plt.title('Heterozygosity in divisive fragmentation',
-#           fontsize=16, pad=-20, y=1.02, verticalalignment='bottom')
+#
+# plt.title('Heterozygosity in divisive fragmentation', fontsize=22, pad=-20, y=1.02, verticalalignment='bottom')
+# plt.tick_params(axis='both', which='major', labelsize=16)
+# plt.xlim(0, 1.5)
 # # plt.savefig("het_distribution_include_int.svg", format="svg")
 # plt.show()
-# plt.figure()
-
-
-
-
-
-
-############### plot networks along steps of fragmentation
+#
+#
+#
+#
+# ############### plot networks along steps of fragmentation
 ############### to demonstrate the process
 
-with open('RGG, dist_ignore_False.pickle', 'rb') as file:
-    rand = pickle.load(file)
+# with open('RGG, dist_ignore_False.pickle', 'rb') as file:
+#     rand = pickle.load(file)
 #
 # with open('RGG, cor_ignore_False.pickle', 'rb') as file:
 #     cor = pickle.load(file)
@@ -438,32 +467,41 @@ with open('RGG, dist_ignore_False.pickle', 'rb') as file:
 # print("finish load !!!")
 #
 
-net50=rand[1][10][50]
-net100=rand[1][10][100]
-net150=rand[1][10][150]
-net200=rand[1][10][200]
-net250=rand[1][10][250]
 
-pos = nx.spring_layout(net50, k=0.2, iterations=20,seed=50)
 
-fig, axes = plt.subplots(1, 5, figsize=(20, 4))
 
-# Draw each network
-nx.draw_networkx(net50, pos=pos, ax=axes[0], node_size=20, with_labels=False)
-axes[0].set_title("50",fontsize=22)
 
-nx.draw_networkx(net100, pos=pos, ax=axes[1], node_size=20, with_labels=False)
-axes[1].set_title("100",fontsize=22)
 
-nx.draw_networkx(net150, pos=pos, ax=axes[2], node_size=20, with_labels=False)
-axes[2].set_title("150",fontsize=22)
 
-nx.draw_networkx(net200, pos=pos, ax=axes[3], node_size=20, with_labels=False)
-axes[3].set_title("200",fontsize=22)
 
-nx.draw_networkx(net250, pos=pos, ax=axes[4], node_size=20, with_labels=False)
-axes[4].set_title("250",fontsize=22)
-
-# Adjust layout and display the figure
-plt.tight_layout()
-plt.show()
+#
+# ##### plot fragmentation process
+# net50=rand[1][10][50]
+# net100=rand[1][10][100]
+# net150=rand[1][10][150]
+# net200=rand[1][10][200]
+# net250=rand[1][10][250]
+#
+# pos = nx.spring_layout(net50, k=0.2, iterations=20,seed=50)
+#
+# fig, axes = plt.subplots(1, 5, figsize=(20, 4))
+#
+# # Draw each network
+# nx.draw_networkx(net50, pos=pos, ax=axes[0], node_size=20, with_labels=False)
+# axes[0].set_title("50",fontsize=22)
+#
+# nx.draw_networkx(net100, pos=pos, ax=axes[1], node_size=20, with_labels=False)
+# axes[1].set_title("100",fontsize=22)
+#
+# nx.draw_networkx(net150, pos=pos, ax=axes[2], node_size=20, with_labels=False)
+# axes[2].set_title("150",fontsize=22)
+#
+# nx.draw_networkx(net200, pos=pos, ax=axes[3], node_size=20, with_labels=False)
+# axes[3].set_title("200",fontsize=22)
+#
+# nx.draw_networkx(net250, pos=pos, ax=axes[4], node_size=20, with_labels=False)
+# axes[4].set_title("250",fontsize=22)
+#
+# # Adjust layout and display the figure
+# plt.tight_layout()
+# plt.show()
