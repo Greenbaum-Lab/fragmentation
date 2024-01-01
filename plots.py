@@ -330,10 +330,6 @@ color_palette = plt.get_cmap('tab10')  # You can change 'tab10' to any other ava
 
 
 ###############plot distributions
-
-with open('RGG, rand_ignore_False.pickle', 'rb') as file:
-    rand = pickle.load(file)
-
 # plot distributions interval
 def add_replica(df, step_column='step'):
     """
@@ -363,37 +359,41 @@ def make_intervals(df, step_column='step'):
 
     return selected_df
 
+
+with open('RGG, div_ignore_False.pickle', 'rb') as file:
+    rand = pickle.load(file)
+
 # First plot for 'fst'
 df = make_intervals(rand[4])
 
-plt.figure(figsize=(10, 6))
+plt.figure(figsize=(8, 8))
 fig, axes = joyplot(
     data=df[['fst', 'group']],
     by='group', overlap=1,
-    colormap=plt.cm.viridis_r, fade=True, range_style='all',
+    colormap=plt.cm.viridis, fade=True, range_style='all',
     linecolor="black", linewidth=0.1
 )
 
-fig.title('fst in divisive fragmentation', fontsize=22, verticalalignment='bottom', y=1.05)
+fig.suptitle('Fst - divisive fragmentation', fontsize=18)
 for ax in axes:
     ax.tick_params(axis='both', which='major', labelsize=16)
 plt.show()
+
 
 # Second plot for 'het'
 df = make_intervals(rand[2])
 
-fig.figure(figsize=(10, 6))
+plt.figure(figsize=(8, 8))
 fig, axes = joyplot(
     data=df[['het', 'group']],
-    by='group', overlap=1,
-    colormap=plt.cm.viridis_r, fade=True, range_style='all',
-    linecolor="black", linewidth=0.1
-)
+    by='group', overlap=2,
+    colormap=plt.cm.viridis, fade=True, range_style='all',
+    linecolor="black", linewidth=0.1)
 
-plt.title('Heterozygosity in divisive fragmentation', fontsize=22, verticalalignment='bottom', y=1.05)
+fig.suptitle('Heterozygosity - divisive fragmentation', fontsize=18)
 for ax in axes:
     ax.tick_params(axis='both', which='major', labelsize=16)
-    ax.set_xlim(-0.2, 1.5)
+    ax.set_xlim(-0.1, 1.3)
 plt.show()
 
 
@@ -405,43 +405,6 @@ plt.show()
 
 
 
-
-# df = plot_snapshot(rand[4])
-#
-# #distribution heterozygosity
-# plt.figure(figsize=(12, 8))
-# joyplot(
-#     data=df[['fst', 'group']],
-#     by='group', ylim=0, overlap=1,
-#     colormap=plt.cm.viridis_r, fade=True,range_style='all',
-#     figsize=(12, 8),  linecolor = "white", linewidth=0.1
-# )
-#
-# plt.title('fst in divisive fragmentation', fontsize=22, pad=-20, y=1.02, verticalalignment='bottom')
-# plt.tick_params(axis='both', which='major', labelsize=16)
-# # plt.savefig("fst_distribution_include_int.svg", format="svg")
-# plt.show()
-# plt.figure()
-#
-#
-# df = plot_snapshot(rand[2])
-#
-# plt.figure(figsize=(12, 8))
-# joyplot(
-#     data=df[['het', 'group']],
-#     by='group', ylim=0, overlap=1,
-#     colormap=plt.cm.viridis_r, fade=True, range_style='all',
-#     linecolor="white", linewidth=0.1
-# )
-#
-# plt.title('Heterozygosity in divisive fragmentation', fontsize=22, pad=-20, y=1.02, verticalalignment='bottom')
-# plt.tick_params(axis='both', which='major', labelsize=16)
-# plt.xlim(0, 1.5)
-# # plt.savefig("het_distribution_include_int.svg", format="svg")
-# plt.show()
-#
-#
-#
 #
 # ############### plot networks along steps of fragmentation
 ############### to demonstrate the process
@@ -466,14 +429,6 @@ plt.show()
 #
 # print("finish load !!!")
 #
-
-
-
-
-
-
-
-
 #
 # ##### plot fragmentation process
 # net50=rand[1][10][50]
