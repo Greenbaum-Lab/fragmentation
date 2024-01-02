@@ -60,6 +60,7 @@ def calculate_genetics(migration_list: list) -> tuple:
 
     return het_list, fst_list
 
+
 def make_fst_dist(f: list, ignore: bool = False) -> pd.DataFrame:
     """
     Takes a list of F metrics and returns a DataFrame without diagonal values (zero).
@@ -86,7 +87,7 @@ def make_fst_dist(f: list, ignore: bool = False) -> pd.DataFrame:
         upper_triangle_list = upper_triangle[non_zero_mask].flatten()
 
         if ignore:
-            F_no_diag = F_no_diag[F_no_diag != 1]  # ignore all values of 1
+            upper_triangle_list = upper_triangle_list[upper_triangle_list != 1]  # ignore all values of 1
 
         fst_values.extend(upper_triangle_list)  # extend the list with values
         steps.extend([i]*len(upper_triangle_list))  # extend the list with corresponding step
@@ -99,8 +100,10 @@ def make_fst_dist(f: list, ignore: bool = False) -> pd.DataFrame:
 
     # Sort by 'step'
     df = df.sort_values(by='step')
+    df = df.reset_index(drop=True)
 
     return df
+
 
 
 
@@ -181,7 +184,7 @@ function_mapping = {
 }
 
 
-def make_fragmentation(net: nx.Graph, frag_type: str, ignore: bool) -> tuple:
+def make_fragmentation(net: nx.Graph, frag_type: str, ignore: bool, replica: int) -> tuple:
     """
     run the radom fragmentation pipeline to get genetic data
     :param net: network
@@ -198,13 +201,17 @@ def make_fragmentation(net: nx.Graph, frag_type: str, ignore: bool) -> tuple:
 
     # calculate heterozygosity
     het_dens = make_het_dist(genetics[0], ignore=ignore)
+    het_dens['replica'] = replica
+
     het_stat = make_het_stat(het_dens)
 
     # calculate fst
     fst_dens = make_fst_dist(genetics[1], ignore=ignore)
+    fst_dens['replica'] = replica
     fst_stat = make_fst_stat(fst_dens)
 
     return nets_number, migration, het_dens, het_stat, fst_dens, fst_stat
+
 
 
 def make_replicates(nets: list, frag_type: str, ignore: bool) -> tuple:
@@ -243,8 +250,9 @@ def make_replicates(nets: list, frag_type: str, ignore: bool) -> tuple:
 
 # Function to apply to each network in the list
 def apply_make_fragmentation(args):
-    net, frag_type, ignore = args
-    return make_fragmentation(net=net, frag_type=frag_type, ignore=ignore)
+    net, frag_type, ignore, replica = args
+    return make_fragmentation(net=net, frag_type=frag_type, ignore=ignore, replica=replica)
+
 
 def make_replicates_new(nets: list, frag_type: str, ignore: bool) -> tuple:
     """
@@ -256,7 +264,7 @@ def make_replicates_new(nets: list, frag_type: str, ignore: bool) -> tuple:
     """
 
     # Prepare arguments for the apply_make_fragmentation function
-    args = [(net, frag_type, ignore) for net in nets]
+    args = [(net, frag_type, ignore, i) for i, net in enumerate(nets)]
 
     # Use a pool of workers
     with Pool() as p:
