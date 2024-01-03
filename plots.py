@@ -1,148 +1,19 @@
-import random
-import statistics
 from statistics import mean
-import time
 import pickle
-
-import networkx as nx
 from joypy import joyplot
 from matplotlib import pyplot as plt
-import pandas as pd
 
+# from funcs3 import make_networks, make_replicates_new
 from processes import find_breaking_point, find_breakink_point_list
 
-# from funcs3 import make_replicates, make_replicates_new, make_networks
 
-#
+
+########### run pipeline
 # print("here i start!")
-n = 50  # no. of nodes
-n_rep = 100
-net = "RGG"
-ignore = False
-#
-color_palette = plt.get_cmap('tab10')  # You can change 'tab10' to any other available palette
-#
-# # Record the starting time
-# start_time = time.time()
-#
-# # # create list off nets
-# nets = make_networks(n_nets=n_rep, n_nodes=n, net_type=net)
-#
-# # run the pipeline for all fragmentation types
-# rand = make_replicates_new(nets=nets, frag_type='rand', ignore=ignore)
-# print("1")
-# cor = make_replicates_new(nets=nets, frag_type='cor', ignore=ignore)
-# print("2")
-# int = make_replicates_new(nets=nets, frag_type='int', ignore=ignore)
-# print("3")
-#
-# # Path and filename for the saved file using tuple
-# pickle_filename = f'{net}, rand_ignore_{ignore}.pickle'
-# with open(pickle_filename, 'wb') as file:
-#     pickle.dump(rand, file)
-#
-# pickle_filename = f'{net}, cor_ignore_{ignore}.pickle'
-# with open(pickle_filename, 'wb') as file:
-#     pickle.dump(cor, file)
-#
-# pickle_filename = f'{net}, int_ignore_{ignore}.pickle'
-# with open(pickle_filename, 'wb') as file:
-#     pickle.dump(int, file)
-# #
-# with open('ER, rand_ignore_False.pickle', 'rb') as file:
-#     rand = pickle.load(file)
-#
-# with open('ER, cor_ignore_False.pickle', 'rb') as file:
-#     cor = pickle.load(file)
-#
-# with open('ER, int_ignore_False.pickle', 'rb') as file:
-#     int = pickle.load(file)
-#
-#
-# breaking_point_rand = mean(find_breakink_point_list(rand[1]))
-# breaking_point_cor = mean(find_breakink_point_list(cor[1]))
-# breaking_point_int = mean(find_breakink_point_list(int[1]))
-#
-# #########plot fst
-# # Calculate the mean and median values over the 'step' column
-# mean_rand = rand[5].groupby('step')['avg'].mean()
-# mean_cor = cor[5].groupby('step')['avg'].mean()
-# mean_int = int[5].groupby('step')['avg'].mean()
-#
-#
-# # Calculate the confidence interval
-# confidence_rand = rand[5].groupby('step')['avg'].std()
-# confidence_cor = cor[5].groupby('step')['avg'].std()
-# confidence_int = int[5].groupby('step')['avg'].std()
-#
-# plt.figure()
-# # Plotting the line graph with mean and median values
-# plt.plot(mean_rand, label='Random')
-# plt.plot(mean_cor, label='Correlated')
-# plt.plot(mean_int, label='Intrusive')
-#
-# # Adding the confidence interval
-# plt.fill_between(mean_rand.index, mean_rand - confidence_rand, mean_rand + confidence_rand, alpha=0.2)
-# plt.fill_between(mean_cor.index, mean_cor - confidence_cor, mean_cor + confidence_cor, alpha=0.2)
-# plt.fill_between(mean_int.index, mean_int - confidence_int, mean_int + confidence_int, alpha=0.2)
-#
-# # add breaking points
-# plt.axvline(x=breaking_point_rand, color=color_palette(0), ymax=0.1)
-# plt.axvline(x=breaking_point_cor, color=color_palette(1), ymax=0.1)
-# plt.axvline(x=breaking_point_int, color=color_palette(2), ymax=0.1)
-#
-# # Add labels and legend
-# plt.xlabel('Fragmentation step')
-# plt.ylabel('Pairwise Fst')
-# plt.title(f'{net}, ignoring isolated={ignore} ')
-# plt.legend()
-#
-# # Display the plot
-# plt.savefig(f"fst {net} ignore={ignore}.svg", format="svg")
-# plt.close()
-# ####heterozygosity
-#
-# # Calculate the mean and median values over the 'step' column
-# mean_rand = rand[3].groupby('step')['avg'].mean()
-# mean_cor = cor[3].groupby('step')['avg'].mean()
-# mean_int = int[3].groupby('step')['avg'].mean()
-#
-# # Calculate the confidence interval
-# confidence_rand = rand[3].groupby('step')['avg'].std()
-# confidence_cor = cor[3].groupby('step')['avg'].std()
-# confidence_int = int[3].groupby('step')['avg'].std()
-#
-# plt.figure()
-# # Plotting the line graph with mean and median values
-# plt.plot(mean_rand, label='Random')
-# plt.plot(mean_cor, label='Correlated')
-# plt.plot(mean_int, label='Intrusive')
-#
-# # Adding the confidence interval
-# plt.fill_between(mean_rand.index, mean_rand - confidence_rand, mean_rand + confidence_rand, alpha=0.2)
-# plt.fill_between(mean_cor.index, mean_cor - confidence_cor, mean_cor + confidence_cor, alpha=0.2)
-# plt.fill_between(mean_int.index, mean_int - confidence_int, mean_int + confidence_int, alpha=0.2)
-#
-# # add breaking points
-# plt.axvline(x=breaking_point_rand, color=color_palette(0), ymax=0.1)
-# plt.axvline(x=breaking_point_cor, color=color_palette(1), ymax=0.1)
-# plt.axvline(x=breaking_point_int, color=color_palette(2), ymax=0.1)
-#
-# # Add labels and legend
-# plt.xlabel('Fragmentation step')
-# plt.ylabel('Unscaled heterozygosity')
-# plt.title(f'{net}, ignoring isolated={ignore}')
-# plt.legend()
-#
-# # Display the plot
-# plt.savefig(f"het {net} ignore={ignore}.svg", format="svg")
-# plt.close()
-
-
-
-#
-# color_palette = plt.get_cmap('tab10')  # You can change 'tab10' to any other available palette
-
+# n = 50  # no. of nodes
+# n_rep = 100
+# net = "RGG"
+# ignore = False
 #
 # # # create list off nets
 # nets = make_networks(n_nets=n_rep, n_nodes=n, net_type=net)
@@ -161,7 +32,7 @@ color_palette = plt.get_cmap('tab10')  # You can change 'tab10' to any other ava
 # dist = make_replicates_new(nets=nets, frag_type='dist', ignore=ignore)
 # print("6")
 #
-### save files as tuple
+## save files as tuple
 # pickle_filename = f'{net}, rand_ignore_{ignore}.pickle'
 # with open(pickle_filename, 'wb') as file:
 #     pickle.dump(rand, file)
@@ -187,153 +58,59 @@ color_palette = plt.get_cmap('tab10')  # You can change 'tab10' to any other ava
 #     pickle.dump(dist, file)
 
 
-# with open('RGG, rand_ignore_False.pickle', 'rb') as file:
-#     rand = pickle.load(file)
-#
-# with open('RGG, cor_ignore_False.pickle', 'rb') as file:
-#     cor = pickle.load(file)
-#
-# with open('RGG, dist_ignore_False.pickle', 'rb') as file:
-#     dist = pickle.load(file)
-#
-# with open('RGG, int_ignore_False.pickle', 'rb') as file:
-#     int = pickle.load(file)
-#
-# with open('RGG, reg_ignore_False.pickle', 'rb') as file:
-#     reg = pickle.load(file)
-#
-# with open('RGG, div_ignore_False.pickle', 'rb') as file:
-#     div = pickle.load(file)
-#
-# print("finish load !!!")
-#
-#
-# breaking_point_rand = mean(find_breakink_point_list(rand[1]))
-# breaking_point_cor = mean(find_breakink_point_list(cor[1]))
-# breaking_point_int = mean(find_breakink_point_list(int[1]))
-# breaking_point_reg = mean(find_breakink_point_list(reg[1]))
-# breaking_point_div = mean(find_breakink_point_list(div[1]))
-# breaking_point_dist = mean(find_breakink_point_list(dist[1]))
-#
-# #########plot fst
-# # Calculate the mean and median values over the 'step' column
-# mean_rand = rand[5].groupby('step')['avg'].mean()
-# mean_cor = cor[5].groupby('step')['avg'].mean()
-# mean_int = int[5].groupby('step')['avg'].mean()
-# mean_reg = reg[5].groupby('step')['avg'].mean()
-# mean_div = div[5].groupby('step')['avg'].mean()
-# mean_dist = dist[5].groupby('step')['avg'].mean()
-#
-#
-# # Calculate the confidence interval
-# confidence_rand = rand[5].groupby('step')['avg'].std()
-# confidence_cor = cor[5].groupby('step')['avg'].std()
-# confidence_int = int[5].groupby('step')['avg'].std()
-# confidence_reg = reg[5].groupby('step')['avg'].std()
-# confidence_div = div[5].groupby('step')['avg'].std()
-# confidence_dist = dist[5].groupby('step')['avg'].std()
-#
-# plt.figure()
-# # Plotting the line graph with mean and median values
-# plt.plot(mean_rand, label='Random')
-# plt.plot(mean_cor, label='Correlated')
-# plt.plot(mean_int, label='Intrusive')
-# plt.plot(mean_reg, label='Regressive')
-# plt.plot(mean_div, label='Divisive')
-# plt.plot(mean_dist, label='Distance')
-#
-# # Adding the confidence interval
-# plt.fill_between(mean_rand.index, mean_rand - confidence_rand, mean_rand + confidence_rand, alpha=0.2)
-# plt.fill_between(mean_cor.index, mean_cor - confidence_cor, mean_cor + confidence_cor, alpha=0.2)
-# plt.fill_between(mean_int.index, mean_int - confidence_int, mean_int + confidence_int, alpha=0.2)
-# plt.fill_between(mean_reg.index, mean_reg - confidence_reg, mean_reg + confidence_reg, alpha=0.2)
-# plt.fill_between(mean_div.index, mean_div - confidence_div, mean_div + confidence_div, alpha=0.2)
-# plt.fill_between(mean_dist.index, mean_dist - confidence_dist, mean_dist + confidence_dist, alpha=0.2)
-#
-# # add breaking points
-# plt.axvline(x=breaking_point_rand, color=color_palette(0), ymax=0.1)
-# plt.axvline(x=breaking_point_cor, color=color_palette(1), ymax=0.1)
-# plt.axvline(x=breaking_point_int, color=color_palette(2), ymax=0.1)
-# plt.axvline(x=breaking_point_reg, color=color_palette(3), ymax=0.1)
-# plt.axvline(x=breaking_point_div, color=color_palette(4), ymax=0.1)
-# plt.axvline(x=breaking_point_dist, color=color_palette(5), ymax=0.1)
-#
-# # Add labels and legend
-# plt.xlabel('Fragmentation step')
-# plt.ylabel('Pairwise Fst')
-# plt.title(f'{net}, ignoring isolated={ignore} ')
-# plt.legend()
-#
-# # Display the plot
-# plt.savefig(f"fst {net} ignore={ignore}.svg", format="svg")
-# plt.close()
-#
-# ####heterozygosity
-#
-# # Calculate the mean and median values over the 'step' column
-# mean_rand = rand[3].groupby('step')['avg'].mean()
-# mean_cor = cor[3].groupby('step')['avg'].mean()
-# mean_int = int[3].groupby('step')['avg'].mean()
-# mean_reg = reg[3].groupby('step')['avg'].mean()
-# mean_div = div[3].groupby('step')['avg'].mean()
-# mean_dist = dist[3].groupby('step')['avg'].mean()
-#
-# # Calculate the confidence interval
-# confidence_rand = rand[3].groupby('step')['avg'].std()
-# confidence_cor = cor[3].groupby('step')['avg'].std()
-# confidence_int = int[3].groupby('step')['avg'].std()
-# confidence_reg = reg[3].groupby('step')['avg'].std()
-# confidence_div = div[3].groupby('step')['avg'].std()
-# confidence_dist = dist[3].groupby('step')['avg'].std()
-#
-# plt.figure()
-# # Plotting the line graph with mean and median values
-# plt.plot(mean_rand, label='Random')
-# plt.plot(mean_cor, label='Correlated')
-# plt.plot(mean_int, label='Intrusive')
-# plt.plot(mean_reg, label='Regressive')
-# plt.plot(mean_div, label='Divisive')
-# plt.plot(mean_dist, label='Distance')
-#
-# # Adding the confidence interval
-# plt.fill_between(mean_rand.index, mean_rand - confidence_rand, mean_rand + confidence_rand, alpha=0.2)
-# plt.fill_between(mean_cor.index, mean_cor - confidence_cor, mean_cor + confidence_cor, alpha=0.2)
-# plt.fill_between(mean_int.index, mean_int - confidence_int, mean_int + confidence_int, alpha=0.2)
-# plt.fill_between(mean_reg.index, mean_reg - confidence_reg, mean_reg + confidence_reg, alpha=0.2)
-# plt.fill_between(mean_div.index, mean_div - confidence_div, mean_div + confidence_div, alpha=0.2)
-# plt.fill_between(mean_dist.index, mean_dist - confidence_dist, mean_dist + confidence_dist, alpha=0.2)
-#
-# # add breaking points
-# plt.axvline(x=breaking_point_rand, color=color_palette(0), ymax=0.1)
-# plt.axvline(x=breaking_point_cor, color=color_palette(1), ymax=0.1)
-# plt.axvline(x=breaking_point_int, color=color_palette(2), ymax=0.1)
-# plt.axvline(x=breaking_point_reg, color=color_palette(3), ymax=0.1)
-# plt.axvline(x=breaking_point_div, color=color_palette(4), ymax=0.1)
-# plt.axvline(x=breaking_point_dist, color=color_palette(5), ymax=0.1)
-#
-# # Add labels and legend
-# plt.xlabel('Fragmentation step')
-# plt.ylabel('Unscaled heterozygosity')
-# plt.title(f'{net}, ignoring isolated={ignore}')
-# plt.legend()
-#
-# # Display the plot
-# plt.savefig(f"het {net} ignore={ignore}.svg", format="svg")
-# plt.close()
-#
-#
-#
-#
-#
-#
+
+
+
+color_palette = plt.get_cmap('tab10')  # You can change 'tab10' to any other available palette
+
+
+
+def load_data(fragmentation_types, net, ignore):
+    data = {}
+    for frag_type in fragmentation_types:
+        filename = f'RGG, {frag_type}_ignore_{ignore}.pickle'
+        with open(filename, 'rb') as file:
+            data[frag_type] = pickle.load(file)
+    print("finish load")
+    return data
+
+def plot_data(data, index, ylabel, title, net, ignore, filename):
+    plt.figure()
+    for frag_type, datasets in data.items():
+        mean_values = datasets[index].groupby('step')['avg'].mean()
+        confidence = datasets[index].groupby('step')['avg'].std()
+        plt.plot(mean_values, label=frag_type.capitalize())
+        plt.fill_between(mean_values.index, mean_values - confidence, mean_values + confidence, alpha=0.2)
+
+    # Add breaking points and other plot details
+    for i, (frag_type, datasets) in enumerate(data.items()):
+        breaking_point = mean(find_breakink_point_list(datasets[1]))
+        plt.axvline(x=breaking_point, color=color_palette(i), ymax=0.1)
+
+    plt.xlabel('Fragmentation step')
+    plt.ylabel(ylabel)
+    plt.title(f'{net}, ignoring isolated={ignore}')
+    plt.legend()
+    # plt.savefig(f"{filename} {net} ignore={ignore}.svg", format="svg")
+    # plt.close()
+    plt.show()
+
+# Main script
+fragmentation_types = ['rand', 'cor', 'int', 'reg', 'div', 'dist']
+net = 'RGG'  # Example network type
+ignore = False
+
+data = load_data(fragmentation_types, net, ignore)
+
+# Plotting
+plot_data(data, 5, 'Pairwise Fst', 'Title here', net, ignore, 'fst')
+plot_data(data, 3, 'Unscaled heterozygosity', 'Title here', net, ignore, 'het')
+
 
 # pd.set_option('display.max_rows',None)
 
 ###############plot distributions
 # plot distributions interval
-
-
-
 def make_intervals(df, step_column='step'):
     # Calculate the total number of unique steps
     total_unique_steps = df[step_column].nunique()
@@ -382,47 +159,47 @@ with open('RGG, div_ignore_False.pickle', 'rb') as file:
 
 # First plot for 'fst'
 # df = make_intervals(rand[4])
-df = filter_df_for_intervals(rand[4])
-
-plt.figure(figsize=(8, 8))
-fig, axes = joyplot(
-    data=df[['fst', 'step']],
-    by='step', overlap=1,
-    colormap=plt.cm.viridis, fade=True, range_style='all',
-    linecolor="black", linewidth=0.1
-)
-
-fig.suptitle('Fst - divisive fragmentation', fontsize=18)
-for ax in axes:
-    ax.tick_params(axis='both', which='major', labelsize=16)
-
-plt.show()
-
-
-# Second plot for 'het'
-df = filter_df_for_intervals(rand[2])
-print(rand[2])
-print(df)
-plt.figure(figsize=(8, 8))
-fig, axes = joyplot(
-    data=df[['het', 'step']],
-    by='step', overlap=2,
-    colormap=plt.cm.viridis, fade=True, range_style='all',
-    linecolor="black", linewidth=0.1)
-
-fig.suptitle('Heterozygosity - divisive fragmentation', fontsize=18)
-for ax in axes:
-    ax.tick_params(axis='both', which='major', labelsize=16)
-    ax.set_xlim(-0.1, 1.3)
-plt.show()
-
-
-
-
-
-
-
-
+# df = filter_df_for_intervals(rand[4])
+#
+# plt.figure(figsize=(8, 8))
+# fig, axes = joyplot(
+#     data=df[['fst', 'step']],
+#     by='step', overlap=1,
+#     colormap=plt.cm.viridis, fade=True, range_style='all',
+#     linecolor="black", linewidth=0.1
+# )
+#
+# fig.suptitle('Fst - divisive fragmentation', fontsize=18)
+# for ax in axes:
+#     ax.tick_params(axis='both', which='major', labelsize=16)
+#
+# plt.show()
+#
+#
+# # Second plot for 'het'
+# df = filter_df_for_intervals(rand[2])
+# print(rand[2])
+# print(df)
+# plt.figure(figsize=(8, 8))
+# fig, axes = joyplot(
+#     data=df[['het', 'step']],
+#     by='step', overlap=2,
+#     colormap=plt.cm.viridis, fade=True, range_style='all',
+#     linecolor="black", linewidth=0.1)
+#
+# fig.suptitle('Heterozygosity - divisive fragmentation', fontsize=18)
+# for ax in axes:
+#     ax.tick_params(axis='both', which='major', labelsize=16)
+#     ax.set_xlim(-0.1, 1.3)
+# plt.show()
+#
+#
+#
+#
+#
+#
+#
+#
 
 
 #
