@@ -327,21 +327,11 @@ color_palette = plt.get_cmap('tab10')  # You can change 'tab10' to any other ava
 #
 #
 
-
+# pd.set_option('display.max_rows',None)
 
 ###############plot distributions
 # plot distributions interval
-def add_replica(df, step_column='step'):
-    """
-    add a column with the number of replica for each row based on 'step'
-    """
-    # Find where the step resets
-    df.loc[:, 'replica'] = (df[step_column] < df[step_column].shift(1)).astype(int)
 
-    # Compute the cumulative sum to get the replica number
-    df.loc[:, 'replica'] = df['replica'].cumsum()
-
-    return df
 
 
 def make_intervals(df, step_column='step'):
@@ -358,18 +348,46 @@ def make_intervals(df, step_column='step'):
     selected_df = df[df[step_column].isin(interval_steps)]
 
     return selected_df
+import pandas as pd
+
+def filter_df_for_intervals(df, interval_percentage=10):
+    """
+    Filter the DataFrame to include only specific intervals of steps.
+
+    Args:
+    df (pd.DataFrame): The original DataFrame with 'step' and 'replica' columns.
+    interval_percentage (int): The percentage interval for filtering steps.
+
+    Returns:
+    pd.DataFrame: Filtered DataFrame.
+    """
+    # Determine the maximum step value
+    max_step = df['step'].max()
+
+    # Calculate interval step based on the percentage
+    interval_step = max_step * interval_percentage // 100
+
+    # Create a list of steps to include
+    steps_to_include = list(range(0, max_step, interval_step))
+
+    # Filter the DataFrame to include only these steps
+    filtered_df = df[df['step'].isin(steps_to_include)]
+
+    return filtered_df
 
 
 with open('RGG, div_ignore_False.pickle', 'rb') as file:
     rand = pickle.load(file)
 
+
 # First plot for 'fst'
-df = make_intervals(rand[4])
+# df = make_intervals(rand[4])
+df = filter_df_for_intervals(rand[4])
 
 plt.figure(figsize=(8, 8))
 fig, axes = joyplot(
-    data=df[['fst', 'group']],
-    by='group', overlap=1,
+    data=df[['fst', 'step']],
+    by='step', overlap=1,
     colormap=plt.cm.viridis, fade=True, range_style='all',
     linecolor="black", linewidth=0.1
 )
@@ -377,16 +395,18 @@ fig, axes = joyplot(
 fig.suptitle('Fst - divisive fragmentation', fontsize=18)
 for ax in axes:
     ax.tick_params(axis='both', which='major', labelsize=16)
+
 plt.show()
 
 
 # Second plot for 'het'
-df = make_intervals(rand[2])
-
+df = filter_df_for_intervals(rand[2])
+print(rand[2])
+print(df)
 plt.figure(figsize=(8, 8))
 fig, axes = joyplot(
-    data=df[['het', 'group']],
-    by='group', overlap=2,
+    data=df[['het', 'step']],
+    by='step', overlap=2,
     colormap=plt.cm.viridis, fade=True, range_style='all',
     linecolor="black", linewidth=0.1)
 
