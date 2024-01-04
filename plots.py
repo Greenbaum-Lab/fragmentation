@@ -96,7 +96,7 @@ def plot_data(data, index, ylabel, title, net, ignore, filename):
     plt.show()
 
 # Main script
-fragmentation_types = ['rand', 'cor', 'int', 'reg', 'div', 'dist']
+fragmentation_types = ['rand', 'cor', 'int', 'dist', 'reg', 'div']
 net = 'RGG'  # Example network type
 ignore = False
 
@@ -111,23 +111,8 @@ plot_data(data, 3, 'Unscaled heterozygosity', 'Title here', net, ignore, 'het')
 
 ###############plot distributions
 # plot distributions interval
-def make_intervals(df, step_column='step'):
-    # Calculate the total number of unique steps
-    total_unique_steps = df[step_column].nunique()
 
-    # Determine the 10% interval steps, 11 intervals including 0% and 100%
-    interval_steps = [round(total_unique_steps * i / 10) for i in range(11)]
-
-    # Add a 'group' column to indicate the interval group, labeled as 0, 10, 20, ..., 100
-    df['group'] = df[step_column].apply(lambda x: min(range(11), key=lambda i: abs(interval_steps[i] - x)) * 10)
-
-    # Select rows where the 'step' is in the 10% interval steps
-    selected_df = df[df[step_column].isin(interval_steps)]
-
-    return selected_df
-import pandas as pd
-
-def filter_df_for_intervals(df, interval_percentage=10):
+def filter_intervals(df, interval_percentage=10):
     """
     Filter the DataFrame to include only specific intervals of steps.
 
@@ -158,8 +143,7 @@ with open('RGG, div_ignore_False.pickle', 'rb') as file:
 
 
 # First plot for 'fst'
-# df = make_intervals(rand[4])
-# df = filter_df_for_intervals(rand[4])
+# df = filter_intervals(rand[4])
 #
 # plt.figure(figsize=(8, 8))
 # fig, axes = joyplot(
@@ -177,9 +161,8 @@ with open('RGG, div_ignore_False.pickle', 'rb') as file:
 #
 #
 # # Second plot for 'het'
-# df = filter_df_for_intervals(rand[2])
-# print(rand[2])
-# print(df)
+# df = filter_intervals(rand[2])
+
 # plt.figure(figsize=(8, 8))
 # fig, axes = joyplot(
 #     data=df[['het', 'step']],
