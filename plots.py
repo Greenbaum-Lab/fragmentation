@@ -1,5 +1,7 @@
 from statistics import mean
 import pickle
+
+import pandas as pd
 from joypy import joyplot
 from matplotlib import pyplot as plt
 
@@ -74,8 +76,8 @@ color_palette = plt.get_cmap('tab10')  # You can change 'tab10' to any other ava
 def plot_data(data, index, ylabel, title, net, ignore, filename):
     plt.figure()
     for frag_type, datasets in data.items():
-        mean_values = datasets[index].groupby('step')['median'].mean()
-        confidence = datasets[index].groupby('step')['median'].std()
+        mean_values = datasets[index].groupby('step')['avg'].mean()
+        confidence = datasets[index].groupby('step')['avg'].std()
         plt.plot(mean_values, label=frag_type.capitalize())
         plt.fill_between(mean_values.index, mean_values - confidence, mean_values + confidence, alpha=0.2)
 
@@ -92,16 +94,40 @@ def plot_data(data, index, ylabel, title, net, ignore, filename):
     # plt.close()
     plt.show()
 
-# Main script
+##### Main script
 fragmentation_types = ['rand', 'cor', 'int', 'dist', 'reg', 'div']
 net = 'RGG'  # Example network type
 ignore = False
 
 data = load_data(fragmentation_types, net, ignore)
 
-# Plotting
-plot_data(data, 5, 'Pairwise Fst', 'Title here', net, ignore, 'fst')
-plot_data(data, 3, 'Unscaled heterozygosity', 'Title here', net, ignore, 'het')
+# # Plotting
+# plot_data(data, 5, 'Pairwise Fst', 'Title here', net, ignore, 'fst')
+# plot_data(data, 3, 'Heterozygosity', 'Title here', net, ignore, 'het')
+
+
+
+def ignore_isolated(df:pd.DataFrame):
+    """
+    Filter the DataFrame to include only non-isolated populations
+    in fst remove fst=1
+    in heterozygosity remove het=0.02
+    :param df: dataframe with fst and heterozygosity distributions
+    :return: filtered dataframe
+    """
+    if 'het' in df.columns:
+        df_filtered = df[df['het'] != 0.02]
+    if 'fst' in df.columns:
+        df_filtered = df[df['fst'] != 1]
+
+    return df_filtered
+
+df_items = [item[2] for item in data]
+
+filtered_dfs = [ignore_isolated(df) for df in df_items if isinstance(df, pd.DataFrame)]
+
+print(filtered_dfs)
+
 
 
 ###############plot distributions
@@ -133,13 +159,6 @@ def filter_intervals(df, interval_percentage=10):
     return filtered_df
 
 
-with open('RGG, div_ignore_False.pickle', 'rb') as file:
-    rand = pickle.load(file)
-
-print(rand[2])
-print(rand[3])
-print(rand[4])
-print(rand[5])
 
 # First plot for 'fst'
 # df = filter_intervals(rand[4])
