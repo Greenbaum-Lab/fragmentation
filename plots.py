@@ -6,6 +6,7 @@ from matplotlib import pyplot as plt
 # from funcs3 import make_networks, make_replicates_new
 from processes import find_breaking_point, find_breakink_point_list
 
+# pd.set_option('display.max_rows',None)
 
 
 ########### run pipeline
@@ -57,14 +58,6 @@ from processes import find_breaking_point, find_breakink_point_list
 # with open(pickle_filename, 'wb') as file:
 #     pickle.dump(dist, file)
 
-
-
-
-
-color_palette = plt.get_cmap('tab10')  # You can change 'tab10' to any other available palette
-
-
-
 def load_data(fragmentation_types, net, ignore):
     data = {}
     for frag_type in fragmentation_types:
@@ -74,11 +67,15 @@ def load_data(fragmentation_types, net, ignore):
     print("finish load")
     return data
 
+
+color_palette = plt.get_cmap('tab10')  # You can change 'tab10' to any other available palette
+
+
 def plot_data(data, index, ylabel, title, net, ignore, filename):
     plt.figure()
     for frag_type, datasets in data.items():
-        mean_values = datasets[index].groupby('step')['avg'].mean()
-        confidence = datasets[index].groupby('step')['avg'].std()
+        mean_values = datasets[index].groupby('step')['median'].mean()
+        confidence = datasets[index].groupby('step')['median'].std()
         plt.plot(mean_values, label=frag_type.capitalize())
         plt.fill_between(mean_values.index, mean_values - confidence, mean_values + confidence, alpha=0.2)
 
@@ -106,8 +103,6 @@ data = load_data(fragmentation_types, net, ignore)
 plot_data(data, 5, 'Pairwise Fst', 'Title here', net, ignore, 'fst')
 plot_data(data, 3, 'Unscaled heterozygosity', 'Title here', net, ignore, 'het')
 
-
-# pd.set_option('display.max_rows',None)
 
 ###############plot distributions
 # plot distributions interval
@@ -141,6 +136,10 @@ def filter_intervals(df, interval_percentage=10):
 with open('RGG, div_ignore_False.pickle', 'rb') as file:
     rand = pickle.load(file)
 
+print(rand[2])
+print(rand[3])
+print(rand[4])
+print(rand[5])
 
 # First plot for 'fst'
 # df = filter_intervals(rand[4])
