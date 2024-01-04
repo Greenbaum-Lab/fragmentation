@@ -308,3 +308,5 @@ def make_networks(n_nets: int, n_nodes: int, net_type) -> list:
             nets.append(net)
 
     return nets
+
+
