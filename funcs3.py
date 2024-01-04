@@ -1,5 +1,3 @@
-from typing import Tuple, List, Any
-
 from Transformation import transform_matrix
 from processes import remove_edge_random, remove_edge_correlated, remove_edge_distance
 import numpy as np
@@ -7,7 +5,6 @@ import pandas as pd
 from statistics import mean, median
 from multiprocessing import Pool
 import networkx as nx
-
 
 
 def normalize(matrix: np.array) -> np.array:
@@ -33,9 +30,6 @@ def normalize(matrix: np.array) -> np.array:
     return normalized_matrix
 
 
-
-
-
 def normalize_list(migration_list: list):
     new_list = list(map(lambda x: normalize(x), migration_list))
     return new_list
@@ -47,8 +41,8 @@ def calculate_genetics(migration_list: list) -> tuple:
     fst_list = []
 
     for M in migration_list:
-        M = normalize(M)
-
+        # M = normalize(M)
+        M = nx.attr_matrix(M)[0]
         # Transform matrix to coalescence and fst function
         T, F = transform_matrix(M)
 
