@@ -1,5 +1,9 @@
+import pickle
+
+from matplotlib import pyplot as plt
+
 from Transformation import transform_matrix
-from processes import remove_edge_random, remove_edge_correlated, remove_edge_distance
+from processes import remove_edge_random, remove_edge_correlated, remove_edge_distance, find_breakink_point_list
 import numpy as np
 import pandas as pd
 from statistics import mean, median
@@ -303,4 +307,60 @@ def make_networks(n_nets: int, n_nodes: int, net_type) -> list:
 
     return nets
 
+
+def load_data(fragmentation_types, net, ignore):
+    data = {}
+    for frag_type in fragmentation_types:
+        filename = f'RGG, {frag_type}_ignore_{ignore}.pickle'
+        with open(filename, 'rb') as file:
+            data[frag_type] = pickle.load(file)
+    print("I finished loading")
+    return data
+
+def plot_data_full(data, index, ylabel, title, net, ignore, filename):
+    plt.figure()
+    for frag_type, datasets in data.items():
+        mean_values = datasets[index].groupby('step')['avg'].mean()
+        confidence = datasets[index].groupby('step')['avg'].std()
+        plt.plot(mean_values, label=frag_type.capitalize())
+        plt.fill_between(mean_values.index, mean_values - confidence, mean_values + confidence, alpha=0.2)
+
+    # Add breaking points and other plot details
+    for i, (frag_type, datasets) in enumerate(data.items()):
+        breaking_point = mean(find_breakink_point_list(datasets[1]))
+        plt.axvline(x=breaking_point, color=color_palette(i), ymax=0.1)
+
+    plt.xlabel('Fragmentation step')
+    plt.ylabel(ylabel)
+    plt.title(f'{net}, ignoring isolated={ignore}')
+    plt.legend()
+    # plt.savefig(f"{filename} {net} ignore={ignore}.svg", format="svg")
+    # plt.close()
+    plt.show()
+
+
+def filter_intervals(df, interval_percentage=10):
+    """
+    Filter the DataFrame to include only specific intervals of steps.
+
+    Args:
+    df (pd.DataFrame): The original DataFrame with 'step' and 'replica' columns.
+    interval_percentage (int): The percentage interval for filtering steps.
+
+    Returns:
+    pd.DataFrame: Filtered DataFrame.
+    """
+    # Determine the maximum step value
+    max_step = df['step'].max()
+
+    # Calculate interval step based on the percentage
+    interval_step = max_step * interval_percentage // 100
+
+    # Create a list of steps to include
+    steps_to_include = list(range(0, max_step, interval_step))
+
+    # Filter the DataFrame to include only these steps
+    filtered_df = df[df['step'].isin(steps_to_include)]
+
+    return filtered_df
 

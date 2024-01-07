@@ -1,10 +1,10 @@
 from statistics import mean
 import pickle
-
 import pandas as pd
 from joypy import joyplot
 from matplotlib import pyplot as plt
 
+from funcs3 import load_data
 # from funcs3 import make_networks, make_replicates_new
 from processes import find_breaking_point, find_breakink_point_list
 
@@ -59,40 +59,13 @@ from processes import find_breaking_point, find_breakink_point_list
 # pickle_filename = f'{net}, dist_ignore_{ignore}.pickle'
 # with open(pickle_filename, 'wb') as file:
 #     pickle.dump(dist, file)
+########### finish pipeline
 
-def load_data(fragmentation_types, net, ignore):
-    data = {}
-    for frag_type in fragmentation_types:
-        filename = f'RGG, {frag_type}_ignore_{ignore}.pickle'
-        with open(filename, 'rb') as file:
-            data[frag_type] = pickle.load(file)
-    print("finish load")
-    return data
 
 
 color_palette = plt.get_cmap('tab10')  # You can change 'tab10' to any other available palette
 
 
-def plot_data(data, index, ylabel, title, net, ignore, filename):
-    plt.figure()
-    for frag_type, datasets in data.items():
-        mean_values = datasets[index].groupby('step')['avg'].mean()
-        confidence = datasets[index].groupby('step')['avg'].std()
-        plt.plot(mean_values, label=frag_type.capitalize())
-        plt.fill_between(mean_values.index, mean_values - confidence, mean_values + confidence, alpha=0.2)
-
-    # Add breaking points and other plot details
-    for i, (frag_type, datasets) in enumerate(data.items()):
-        breaking_point = mean(find_breakink_point_list(datasets[1]))
-        plt.axvline(x=breaking_point, color=color_palette(i), ymax=0.1)
-
-    plt.xlabel('Fragmentation step')
-    plt.ylabel(ylabel)
-    plt.title(f'{net}, ignoring isolated={ignore}')
-    plt.legend()
-    # plt.savefig(f"{filename} {net} ignore={ignore}.svg", format="svg")
-    # plt.close()
-    plt.show()
 
 ##### Main script
 fragmentation_types = ['rand', 'cor', 'int', 'dist', 'reg', 'div']
@@ -106,58 +79,86 @@ data = load_data(fragmentation_types, net, ignore)
 # plot_data(data, 3, 'Heterozygosity', 'Title here', net, ignore, 'het')
 
 
-
-def ignore_isolated(df:pd.DataFrame):
-    """
-    Filter the DataFrame to include only non-isolated populations
-    in fst remove fst=1
-    in heterozygosity remove het=0.02
-    :param df: dataframe with fst and heterozygosity distributions
-    :return: filtered dataframe
-    """
-    if 'het' in df.columns:
-        df_filtered = df[df['het'] != 0.02]
-    if 'fst' in df.columns:
-        df_filtered = df[df['fst'] != 1]
-
-    return df_filtered
-
-df_items = [item[2] for item in data]
-
-filtered_dfs = [ignore_isolated(df) for df in df_items if isinstance(df, pd.DataFrame)]
-
-print(filtered_dfs)
-
+#
+# def ignore_isolated(df:pd.DataFrame):
+#     """
+#     Filter the DataFrame to include only non-isolated populations
+#     in fst remove fst=1
+#     in heterozygosity remove het=0.02
+#     :param df: dataframe with fst and heterozygosity distributions
+#     :return: filtered dataframe
+#     """
+#     if 'het' in df.columns:
+#         df_filtered = df[df['het'] != 0.02]
+#     if 'fst' in df.columns:
+#         df_filtered = df[df['fst'] != 1]
+#
+#     return df_filtered
+#
+#
+#
+# def make_het_stat(df: pd.DataFrame) -> pd.DataFrame:
+#     """
+#     Calculate the mean heterozygosity of each step for each replica.
+#
+#     :param df: DataFrame of heterozygosity distribution in each step and replica
+#     :return: DataFrame of average heterozygosity for each step and replica
+#     """
+#
+#     if 'het' in df.columns:
+#         group_means = df.groupby(['step', 'replica'])['het'].mean().reset_index()
+#         group_means = group_means.rename(columns={'het': 'avg'})
+#
+#     if 'fst' in df.columns:
+#         group_means = df.groupby(['step', 'replica'])['fst'].mean().reset_index()
+#         group_means = group_means.rename(columns={'fst': 'avg'})
+#     print(group_means)
+#     return group_means
+#
+#
+# def plot_data_from_list(dataframes, column, labels, ylabel, title):
+#     """
+#     Plot data from a list of dataframes.
+#
+#     :param dataframes: List of dataframes to be plotted.
+#     :param column: The column name to be used for plotting.
+#     :param labels: List of labels for each dataframe.
+#     :param ylabel: Label for the Y-axis.
+#     :param title: Title of the plot.
+#     :param filename: Filename for saving the plot.
+#     """
+#     plt.figure()
+#
+#     # Iterate over each dataframe and its corresponding label
+#     for df, label in zip(dataframes, labels):
+#         mean_values = df.groupby('step')['avg'].mean()
+#         confidence = df.groupby('step')['avg'].std()
+#
+#         plt.plot(mean_values, label=label)
+#         plt.fill_between(mean_values.index, mean_values - confidence, mean_values + confidence, alpha=0.2)
+#
+#     plt.xlabel('Fragmentation step')
+#     plt.ylabel(ylabel)
+#     plt.title(title)
+#     plt.legend()
+#     # plt.savefig(f"{filename}.svg", format="svg")
+#     # plt.close()
+#     plt.show()  # Uncomment if you want to display the plot as well
+#
+#
+# df_items = list(data.values())
+# df_items = [item[4] for item in df_items]
+# filtered_dfs = [ignore_isolated(df) for df in df_items]
+#
+# x = [make_het_stat(df) for df in filtered_dfs]
+#
+# plot_data_from_list(x, 'avg',
+#                     fragmentation_types,
+#                     'Y-axis Label', 'Plot Title')
 
 
 ###############plot distributions
 # plot distributions interval
-
-def filter_intervals(df, interval_percentage=10):
-    """
-    Filter the DataFrame to include only specific intervals of steps.
-
-    Args:
-    df (pd.DataFrame): The original DataFrame with 'step' and 'replica' columns.
-    interval_percentage (int): The percentage interval for filtering steps.
-
-    Returns:
-    pd.DataFrame: Filtered DataFrame.
-    """
-    # Determine the maximum step value
-    max_step = df['step'].max()
-
-    # Calculate interval step based on the percentage
-    interval_step = max_step * interval_percentage // 100
-
-    # Create a list of steps to include
-    steps_to_include = list(range(0, max_step, interval_step))
-
-    # Filter the DataFrame to include only these steps
-    filtered_df = df[df['step'].isin(steps_to_include)]
-
-    return filtered_df
-
 
 
 # First plot for 'fst'
