@@ -64,11 +64,7 @@ from processes import find_breaking_point, find_breakink_point_list
 ########### finish pipeline
 
 
-
-
-
-
-##### Main script
+####### Main script
 fragmentation_types = ['rand', 'cor', 'int', 'dist', 'reg', 'div', 'opt']
 net = 'RGG'  # Example network type
 ignore = False

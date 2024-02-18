@@ -218,7 +218,6 @@ def make_fragmentation(net: nx.Graph, frag_type: str, ignore: bool, replica: int
     return nets_number, migration, het_dens, het_stat, fst_dens, fst_stat
 
 
-
 def make_replicates(nets: list, frag_type: str, ignore: bool) -> tuple:
     """
     run multiple iterations of the fragmentation process
@@ -371,3 +370,5 @@ def filter_intervals(df, interval_percentage=10):
     filtered_df = df[df['step'].isin(steps_to_include)]
 
     return filtered_df
+
+x

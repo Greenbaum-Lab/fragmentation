@@ -324,6 +324,8 @@ def remove_edge_optimal(net: nx.Graph) -> list:
     return migration_list
 
 
+
+#
 #
 # def remove_edge_random_giant_comp(net: nx.Graph) -> list:
 #     """
