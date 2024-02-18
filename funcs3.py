@@ -1,14 +1,20 @@
 import pickle
+from statistics import mean
 
+import numpy as np
+import pandas as pd
+import networkx as nx
+from multiprocessing import Pool
 from matplotlib import pyplot as plt
 
 from Transformation import transform_matrix
-from processes import remove_edge_random, remove_edge_correlated, remove_edge_distance, find_breakink_point_list
-import numpy as np
-import pandas as pd
-from statistics import mean, median
-from multiprocessing import Pool
-import networkx as nx
+from processes import (
+    remove_edge_random, remove_edge_correlated, remove_edge_distance,
+    remove_edge_intrusive, remove_edge_divisive, remove_edge_regressive,
+    find_breakink_point_list, remove_edge_optimal
+)
+# from Transformation import transform_matrix
+
 
 
 def normalize(matrix: np.array) -> np.array:
@@ -179,6 +185,7 @@ function_mapping = {
     'reg': remove_edge_regressive,
     'div': remove_edge_divisive,
     'dist': remove_edge_distance,
+    'opt': remove_edge_optimal,
 }
 
 
@@ -317,7 +324,8 @@ def load_data(fragmentation_types, net, ignore):
     print("I finished loading")
     return data
 
-def plot_data_full(data, index, ylabel, title, net, ignore, filename):
+def plot_data(data, index, ylabel, title, net, ignore, filename):
+    color_palette = plt.get_cmap('tab10')  # You can change 'tab10' to any other available palette
     plt.figure()
     for frag_type, datasets in data.items():
         mean_values = datasets[index].groupby('step')['avg'].mean()
@@ -363,4 +371,3 @@ def filter_intervals(df, interval_percentage=10):
     filtered_df = df[df['step'].isin(steps_to_include)]
 
     return filtered_df
-

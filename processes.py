@@ -32,7 +32,6 @@ def remove_edge_random(net: nx.Graph) -> list:
     return migration_list
 
 
-
 def remove_edge_intrusive(net: nx.Graph) -> list:
     """
     Remove edges from specific nodes until there are no more
@@ -296,9 +295,35 @@ def remove_edge_divisive(net: nx.Graph) -> list:
     return migration_list
 
 
+def remove_edge_optimal(net: nx.Graph) -> list:
+    """
+    Remove edges from the network to maximize connectivity between nodes for as long as possible.
+    Track all intermediate states of the network in a list until the stopping condition is met.
+
+    :param net: initial networkx object
+    :return: list of networkx objects showing the network's evolution
+    """
+    migration = net.copy()
+    migration_list = [migration.copy()]  # start with the original network
+
+    while nx.number_of_edges(migration) > 2:  # Adjust the condition as needed
+        # Compute edge betweenness centrality to determine the importance of edges
+        centrality = nx.edge_betweenness_centrality(migration)
+
+        # Find the edge with the lowest centrality (minimal impact on connectivity)
+        edge_to_remove = min(centrality, key=centrality.get)
+
+        # Remove the selected edge
+        migration.remove_edge(*edge_to_remove)
+
+        # Add the resulting graph to the list
+        migration_list.append(migration.copy())
+        # pos = nx.spring_layout(migration,seed=5)
+        # nx.draw_networkx(migration,pos)
+        # plt.show()
+    return migration_list
 
 
-#
 #
 # def remove_edge_random_giant_comp(net: nx.Graph) -> list:
 #     """
@@ -493,110 +518,3 @@ def find_breakink_point_list(networks: list):
         x = find_breaking_point(net)
         breaking_point.append(x)
     return breaking_point
-
-# def create_networks(n, p_or_k, replicates=200):
-#     er_edges = []
-#     rgg_edges = []
-#     ab_edges = []
-#     sw_edges = []
-#
-#     er_density = []
-#     rgg_density = []
-#     ab_density = []
-#     sw_density = []
-#     connect = []
-#     for _ in range(replicates):
-#         # Erdos-Renyi (ER) Graph
-#         er_graph = nx.erdos_renyi_graph(n, 0.2)
-#         er_edges.append(er_graph.number_of_edges())
-#         er_density.append(nx.density(er_graph))
-#
-#         # Random Geometric Graph (RGG)
-#         rgg_graph = nx.random_geometric_graph(n, 0.3)
-#
-#         rgg_edges.append(rgg_graph.number_of_edges())
-#         rgg_density.append(nx.density(rgg_graph))
-#         connect.append(nx.is_connected(rgg_graph))
-#         # Albert-Barabasi Graph
-#         ab_graph = nx.barabasi_albert_graph(n, m=5)
-#         ab_edges.append(ab_graph.number_of_edges())
-#         ab_density.append(nx.density(ab_graph))
-#
-#         # Small-World Graph
-#         sw_graph = nx.watts_strogatz_graph(n,k=9, p=0.1)
-#         sw_edges.append(sw_graph.number_of_edges())
-#         sw_density.append(nx.density(sw_graph))
-#
-#     print(sum(connect))
-#     return er_edges, rgg_edges, ab_edges, sw_edges, er_density, rgg_density, ab_density, sw_density
-
-# def plot_distribution(edges, title):
-#     plt.hist(edges, bins=20, alpha=0.5)
-#     plt.title(title)
-#     plt.xlabel('Number of Edges')
-#     plt.ylabel('Frequency')
-#     plt.legend(['ER;p=0.2', 'RGG;d=0.3', 'Albert-Barabasi;m=5', 'Small World;-k=9, p=0.1'])
-#     plt.savefig(f'edges.png',format="png")
-#     plt.show()
-
-# def plot_density(density, title):
-#     plt.hist(density, bins=20, alpha=0.5)
-#     plt.title(title)
-#     plt.xlabel('Density')
-#     plt.ylabel('Frequency')
-#     plt.legend(['ER', 'RGG', 'Albert-Barabasi', 'Small World'])
-#     plt.show()
-
-# # Parameters
-# n = 50  # Number of nodes
-# p_or_k = 0.1  # Probability for ER and RGG, and k (nearest neighbors) for Albert-Barabasi and Small World
-#
-# # Create networks
-# er_edges, rgg_edges, ab_edges, sw_edges, er_density, rgg_density, ab_density, sw_density = create_networks(n, p_or_k)
-#
-# # Plot distribution of edges
-# plot_distribution([er_edges, rgg_edges, ab_edges, sw_edges], 'Distribution of Edges')
-
-# Plot density
-# plot_density([er_density, rgg_density, ab_density, sw_density], 'Density Distribution')
-#
-# net = nx.newman_watts_strogatz_graph(50,10,0.1)
-# nx.draw_networkx(net)
-# plt.show()
-
-# net = nx.random_geometric_graph(50,0.4,seed=5)
-# nx.draw_networkx(net)
-# plt.show()
-#
-# print(nx.all_pairs_shortest_path_length(net))
-# # net = nx.erdos_renyi_graph(50,0.15)
-# # nx.draw_networkx(net)
-# # plt.show()
-#
-# 3
-#
-# # basic usage
-# import community as community_louvain
-# import networkx as nx
-# G = nx.erdos_renyi_graph(100, 0.01)
-# partion = community_louvain.best_partition(G)
-# # display a graph with its communities:
-# # as Erdos-Renyi graphs don't have true community structure,
-# # instead load the karate club graph
-# import community as community_louvain
-# import matplotlib.cm as cm
-# import matplotlib.pyplot as plt
-# import networkx as nx
-# G = nx.random_geometric_graph(50,0.01)
-# # compute the best partition
-# partition = community_louvain.best_partition(G)
-# modularity_value = community_louvain.modularity(partition, G)
-# print(modularity_value)
-# # draw the graph
-# pos = nx.spring_layout(G)
-# # color the nodes according to their partition
-# cmap = cm.get_cmap('viridis', max(partition.values()) + 1)
-# nx.draw_networkx_nodes(G, pos, partition.keys(), node_size=40,
-#                     cmap=cmap, node_color=list(partition.values()))
-# nx.draw_networkx_edges(G, pos, alpha=0.5)
-# plt.show()

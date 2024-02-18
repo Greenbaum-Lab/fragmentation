@@ -4,7 +4,7 @@ import pandas as pd
 from joypy import joyplot
 from matplotlib import pyplot as plt
 
-from funcs3 import load_data
+from funcs3 import load_data, plot_data, filter_intervals
 # from funcs3 import make_networks, make_replicates_new
 from processes import find_breaking_point, find_breakink_point_list
 
@@ -34,6 +34,8 @@ from processes import find_breaking_point, find_breakink_point_list
 # print("5")
 # dist = make_replicates_new(nets=nets, frag_type='dist', ignore=ignore)
 # print("6")
+# dist = make_replicates_new(nets=nets, frag_type='opt', ignore=ignore)
+# print("7")
 #
 ## save files as tuple
 # pickle_filename = f'{net}, rand_ignore_{ignore}.pickle'
@@ -63,20 +65,19 @@ from processes import find_breaking_point, find_breakink_point_list
 
 
 
-color_palette = plt.get_cmap('tab10')  # You can change 'tab10' to any other available palette
 
 
 
 ##### Main script
-fragmentation_types = ['rand', 'cor', 'int', 'dist', 'reg', 'div']
+fragmentation_types = ['rand', 'cor', 'int', 'dist', 'reg', 'div', 'opt']
 net = 'RGG'  # Example network type
 ignore = False
 
 data = load_data(fragmentation_types, net, ignore)
 
-# # Plotting
-# plot_data(data, 5, 'Pairwise Fst', 'Title here', net, ignore, 'fst')
-# plot_data(data, 3, 'Heterozygosity', 'Title here', net, ignore, 'het')
+# Plotting
+plot_data(data, 5, 'Pairwise Fst', 'Title here', net, ignore, 'fst')
+plot_data(data, 3, 'Heterozygosity', 'Title here', net, ignore, 'het')
 
 
 #
@@ -160,54 +161,55 @@ data = load_data(fragmentation_types, net, ignore)
 ###############plot distributions
 # plot distributions interval
 
-
+with open('RGG, dist_ignore_True.pickle', 'rb') as file:
+    rand = pickle.load(file)
 # First plot for 'fst'
-# df = filter_intervals(rand[4])
-#
-# plt.figure(figsize=(8, 8))
-# fig, axes = joyplot(
-#     data=df[['fst', 'step']],
-#     by='step', overlap=1,
-#     colormap=plt.cm.viridis, fade=True, range_style='all',
-#     linecolor="black", linewidth=0.1
-# )
-#
-# fig.suptitle('Fst - divisive fragmentation', fontsize=18)
-# for ax in axes:
-#     ax.tick_params(axis='both', which='major', labelsize=16)
-#
-# plt.show()
-#
-#
-# # Second plot for 'het'
-# df = filter_intervals(rand[2])
+df = filter_intervals(rand[4])
 
-# plt.figure(figsize=(8, 8))
-# fig, axes = joyplot(
-#     data=df[['het', 'step']],
-#     by='step', overlap=2,
-#     colormap=plt.cm.viridis, fade=True, range_style='all',
-#     linecolor="black", linewidth=0.1)
-#
-# fig.suptitle('Heterozygosity - divisive fragmentation', fontsize=18)
-# for ax in axes:
-#     ax.tick_params(axis='both', which='major', labelsize=16)
-#     ax.set_xlim(-0.1, 1.3)
-# plt.show()
-#
-#
-#
-#
-#
-#
-#
-#
+plt.figure(figsize=(8, 8))
+fig, axes = joyplot(
+    data=df[['fst', 'step']],
+    by='step', overlap=1,
+    colormap=plt.cm.viridis, fade=True, range_style='all',
+    linecolor="black", linewidth=0.1
+)
+
+fig.suptitle('Fst - distance fragmentation', fontsize=18)
+for ax in axes:
+    ax.tick_params(axis='both', which='major', labelsize=16)
+
+plt.show()
 
 
-#
-# ############### plot networks along steps of fragmentation
-############### to demonstrate the process
+# Second plot for 'het'
+df = filter_intervals(rand[2])
 
+plt.figure(figsize=(8, 8))
+fig, axes = joyplot(
+    data=df[['het', 'step']],
+    by='step', overlap=2,
+    colormap=plt.cm.viridis, fade=True, range_style='all',
+    linecolor="black", linewidth=0.1)
+
+fig.suptitle('Heterozygosity - distance fragmentation', fontsize=18)
+for ax in axes:
+    ax.tick_params(axis='both', which='major', labelsize=16)
+    ax.set_xlim(-0.1, 1.3)
+plt.show()
+
+
+
+
+
+
+
+
+
+
+
+############### plot networks along steps of fragmentation
+############## to demonstrate the process
+#
 # with open('RGG, dist_ignore_False.pickle', 'rb') as file:
 #     rand = pickle.load(file)
 #
