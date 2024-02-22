@@ -4,9 +4,9 @@ import pandas as pd
 from joypy import joyplot
 from matplotlib import pyplot as plt
 
-from funcs3 import load_data, plot_data, filter_intervals
+from funcs_analysis import load_data, plot_data, filter_intervals
+
 # from funcs3 import make_networks, make_replicates_new
-from processes import find_breaking_point, find_breakink_point_list
 
 # pd.set_option('display.max_rows',None)
 
@@ -61,19 +61,96 @@ from processes import find_breaking_point, find_breakink_point_list
 # pickle_filename = f'{net}, dist_ignore_{ignore}.pickle'
 # with open(pickle_filename, 'wb') as file:
 #     pickle.dump(dist, file)
+#
+# pickle_filename = f'{net}, opt_ignore_{ignore}.pickle'
+# with open(pickle_filename, 'wb') as file:
+#     pickle.dump(opt, file)
 ########### finish pipeline
 
 
-####### Main script
-fragmentation_types = ['rand', 'cor', 'int', 'dist', 'reg', 'div', 'opt']
-net = 'RGG'  # Example network type
-ignore = False
 
+fragmentation_types = ['rand', 'cor', 'int', 'dist', 'reg', 'div', 'opt']
+net = 'RGG'
+ignore = False
 data = load_data(fragmentation_types, net, ignore)
 
-# Plotting
-plot_data(data, 5, 'Pairwise Fst', 'Title here', net, ignore, 'fst')
-plot_data(data, 3, 'Heterozygosity', 'Title here', net, ignore, 'het')
+# Plot fst and het along fragmentation
+plot_data(data, 5, 'Pairwise Fst',measure='fst', save=True)
+plot_data(data, 3, 'Heterozygosity',measure='heterozygosity', save=True)
+
+##############plot distributions
+
+
+def plot_fragmentation_types(data):
+    """
+    Plots density plots for each fragmentation type separately in a single figure.
+
+    :param data: Dictionary containing data for all fragmentation types.
+    """
+    # Determine the number of fragmentation types to decide the number of subplots
+    num_types = len(data)
+    fig, axes = plt.subplots(num_types, 1, figsize=(8, 4 * num_types))  # Adjust size as needed
+
+    for i, (frag_type, frag_data) in enumerate(data.items()):
+        df = filter_intervals(frag_data[4])  # Assuming this returns a DataFrame
+
+        # Plotting each density plot separately
+        joyplot(
+            data=df[['fst', 'step']],
+            by='step', overlap=1,
+            colormap=plt.cm.viridis, fade=True, range_style='all',
+            linecolor="black", linewidth=0.1,
+            ax=axes[i]  # This specifies which subplot to use
+        )
+
+        axes[i].set_title(f'{frag_type.capitalize()} Fragmentation', fontsize=18)  # Customize title as needed
+        axes[i].tick_params(axis='both', which='major', labelsize=16)
+
+    plt.tight_layout()
+    plt.show()
+
+
+plot_fragmentation_types(data)
+
+
+
+# with open('RGG, opt_ignore_True.pickle', 'rb') as file:
+#     rand = pickle.load(file)
+# # First plot for 'fst'
+# df = filter_intervals(rand[4])
+#
+# plt.figure(figsize=(8, 8))
+# fig, axes = joyplot(
+#     data=df[['fst', 'step']],
+#     by='step', overlap=1,
+#     colormap=plt.cm.viridis, fade=True, range_style='all',
+#     linecolor="black", linewidth=0.1
+# )
+#
+# fig.suptitle('Fst - distance fragmentation', fontsize=18)
+# for ax in axes:
+#     ax.tick_params(axis='both', which='major', labelsize=16)
+#
+# plt.show()
+#
+#
+# # Second plot for 'het'
+# df = filter_intervals(rand[2])
+#
+# plt.figure(figsize=(8, 8))
+# fig, axes = joyplot(
+#     data=df[['het', 'step']],
+#     by='step', overlap=2,
+#     colormap=plt.cm.viridis, fade=True, range_style='all',
+#     linecolor="black", linewidth=0.1)
+#
+# fig.suptitle('Heterozygosity - distance fragmentation', fontsize=18)
+# for ax in axes:
+#     ax.tick_params(axis='both', which='major', labelsize=16)
+#     ax.set_xlim(-0.1, 1.3)
+# plt.show()
+
+
 
 
 #
@@ -153,107 +230,3 @@ plot_data(data, 3, 'Heterozygosity', 'Title here', net, ignore, 'het')
 #                     fragmentation_types,
 #                     'Y-axis Label', 'Plot Title')
 
-
-###############plot distributions
-# plot distributions interval
-
-with open('RGG, dist_ignore_True.pickle', 'rb') as file:
-    rand = pickle.load(file)
-# First plot for 'fst'
-df = filter_intervals(rand[4])
-
-plt.figure(figsize=(8, 8))
-fig, axes = joyplot(
-    data=df[['fst', 'step']],
-    by='step', overlap=1,
-    colormap=plt.cm.viridis, fade=True, range_style='all',
-    linecolor="black", linewidth=0.1
-)
-
-fig.suptitle('Fst - distance fragmentation', fontsize=18)
-for ax in axes:
-    ax.tick_params(axis='both', which='major', labelsize=16)
-
-plt.show()
-
-
-# Second plot for 'het'
-df = filter_intervals(rand[2])
-
-plt.figure(figsize=(8, 8))
-fig, axes = joyplot(
-    data=df[['het', 'step']],
-    by='step', overlap=2,
-    colormap=plt.cm.viridis, fade=True, range_style='all',
-    linecolor="black", linewidth=0.1)
-
-fig.suptitle('Heterozygosity - distance fragmentation', fontsize=18)
-for ax in axes:
-    ax.tick_params(axis='both', which='major', labelsize=16)
-    ax.set_xlim(-0.1, 1.3)
-plt.show()
-
-
-
-
-
-
-
-
-
-
-
-############### plot networks along steps of fragmentation
-############## to demonstrate the process
-#
-# with open('RGG, dist_ignore_False.pickle', 'rb') as file:
-#     rand = pickle.load(file)
-#
-# with open('RGG, cor_ignore_False.pickle', 'rb') as file:
-#     cor = pickle.load(file)
-#
-# with open('RGG, dist_ignore_False.pickle', 'rb') as file:
-#     dist = pickle.load(file)
-#
-# with open('RGG, int_ignore_False.pickle', 'rb') as file:
-#     int = pickle.load(file)
-#
-# with open('RGG, reg_ignore_False.pickle', 'rb') as file:
-#     reg = pickle.load(file)
-#
-# with open('RGG, div_ignore_False.pickle', 'rb') as file:
-#     div = pickle.load(file)
-#
-# print("finish load !!!")
-#
-#
-# ##### plot fragmentation process
-# net50=rand[1][10][50]
-# net100=rand[1][10][100]
-# net150=rand[1][10][150]
-# net200=rand[1][10][200]
-# net250=rand[1][10][250]
-#
-# pos = nx.spring_layout(net50, k=0.2, iterations=20,seed=50)
-#
-# fig, axes = plt.subplots(1, 5, figsize=(20, 4))
-#
-# # Draw each network
-# nx.draw_networkx(net50, pos=pos, ax=axes[0], node_size=20, with_labels=False)
-# axes[0].set_title("50",fontsize=22)
-#
-# nx.draw_networkx(net100, pos=pos, ax=axes[1], node_size=20, with_labels=False)
-# axes[1].set_title("100",fontsize=22)
-#
-# nx.draw_networkx(net150, pos=pos, ax=axes[2], node_size=20, with_labels=False)
-# axes[2].set_title("150",fontsize=22)
-#
-# nx.draw_networkx(net200, pos=pos, ax=axes[3], node_size=20, with_labels=False)
-# axes[3].set_title("200",fontsize=22)
-#
-# nx.draw_networkx(net250, pos=pos, ax=axes[4], node_size=20, with_labels=False)
-# axes[4].set_title("250",fontsize=22)
-#
-# # Adjust layout and display the figure
-# plt.tight_layout()
-# plt.show()

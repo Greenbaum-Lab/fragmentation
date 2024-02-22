@@ -492,31 +492,3 @@ def get_connected_edges(net: nx.Graph, connected_nodes: set) -> list:
     return connected_edges
 
 
-def intervals(lst):
-    """
-    take snapshots of the process
-    :param lst:
-    :return:
-    """
-    if len(lst) <= 50:
-        return lst
-    n = 19 # number of bins (-1)
-    interval = max((len(lst) - 1) // n, 1)
-    return lst[:n * interval:interval] + [lst[-1]]
-
-
-def find_breaking_point(networks):
-    """
-    find the index of the list where the network is no longer connected
-    """
-    for index, network in enumerate(networks):
-        if not nx.is_connected(network):
-            return index
-    return None
-
-def find_breakink_point_list(networks: list):
-    breaking_point = []
-    for net in networks:
-        x = find_breaking_point(net)
-        breaking_point.append(x)
-    return breaking_point
