@@ -13,7 +13,7 @@ import pandas as pd
 from scipy import stats
 import math
 from funcs_analysis import load_data, plot_fragmentation, plot_data, giant_component_replicates, compute_mean_std, \
-    plot_component_genetics, plot_centrality
+    plot_component_genetics, plot_centrality, plot_degree_distributions
 
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -25,17 +25,15 @@ net = 'RGG'
 ignore = False
 data = load_data(fragmentation_types, net, ignore)
 
-############## plot networks along steps of fragmentation
-############# to demonstrate the process
+############## plot snapshots of networks along steps of fragmentation
 # plot_fragmentation(data)
 #
-###### plot giant component with heterozygosity
-# plot_component_genetics(data)
-#
+
 ####plot centrality vs fragmnetation
-plot_centrality(data,centrality='modularity')
+# plot_centrality(data,centrality='connect')
 
-
+####plot degree distribution of fragemtation types
+# plot_degree_distributions(data)
 ################ make distribution of breaking point
 # # create list off nets
 # nets = make_networks(n_nets=n_rep, n_nodes=n, connectivity=p, net_type='ER')

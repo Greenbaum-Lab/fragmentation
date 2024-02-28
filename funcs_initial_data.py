@@ -109,8 +109,6 @@ def make_fst_dist(f: list, ignore: bool = False) -> pd.DataFrame:
     return df
 
 
-
-
 def make_het_dist(het_list: list, ignore: bool=False) -> pd.DataFrame:
     """
     Takes a list of heterozygosity values and returns a DataFrame.

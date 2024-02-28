@@ -3,4 +3,5 @@ files/
 *.csv
 *.svg
 *.txt
+*.jpg
 *.pickle
