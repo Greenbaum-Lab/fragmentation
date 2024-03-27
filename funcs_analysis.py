@@ -268,7 +268,8 @@ def compute_modularity(net):
 
 
 def calculate_centrality(all_nets: list,
-                         measures: list = ['clustering', 'degree', 'modularity','transitivity'
+                         measure: list = ['clustering', 'degree','component',
+                                           'modularity','transitivity',
                                            'connectivity', 'connect']) -> (
         pd.DataFrame, pd.DataFrame):
     """
@@ -285,28 +286,28 @@ def calculate_centrality(all_nets: list,
         for step, net in enumerate(nets):
             record = {'replicate': i, 'step': step}
 
-            if 'clustering' in measures:
+            if 'clustering' in measure:
                 record['clustering'] = nx.average_clustering(net)
 
-            if 'transitivity' in measures:
+            if 'transitivity' in measure:
                 record['transitivity'] = nx.transitivity(net)
 
-            if 'degree' in measures:
+            if 'degree' in measure:
                 degree = sum(nx.degree_centrality(net).values()) / len(net.nodes)
                 record['degree'] = degree
 
-            if 'connect' in measures:
+            if 'connect' in measure:
                 record['connect'] = nx.average_node_connectivity(net)
 
-            if 'modularity' in measures:
+            if 'modularity' in measure:
                 # partition = community_louvain.best_partition(net, resolution=1)
                 # record['modularity'] = community_louvain.modularity(partition, net)
                 record['modularity'] = compute_modularity(net)
 
-            if 'connectivity' in measures:
+            if 'connectivity' in measure:
                 record['connectivity'] = weighted_algebraic_connectivity(net)
 
-            if 'component' in measures:
+            if 'component' in measure:
                 record['component'] = measure_giant_component(net)
 
             data.append(record)
@@ -335,7 +336,7 @@ def plot_centrality(data, centrality='modularity'):
 
     for name, label in zip(names, labels):
         # Calculate centrality and its standard deviation using your function
-        mean_centrality, std_centrality = calculate_centrality(data[name][1], measures=[centrality])
+        mean_centrality, std_centrality = calculate_centrality(data[name][1], measure=[centrality])
 
         steps = mean_centrality.index
 
@@ -365,7 +366,7 @@ def weighted_algebraic_connectivity(G):
     return weighted_connectivity
 
 
-def weighted_algebraic_connectivity(net):
+def weighted_algebraic_connectivity1(net):
     """Calculate the weighted algebraic connectivity of a graph with disconnected components."""
     if nx.is_connected(net):
         return nx.algebraic_connectivity(net)
@@ -525,7 +526,7 @@ def plot_nodes(df, frag_type):
     plt.xlabel('Step', fontsize=18)
     plt.ylabel('Heterozygosity', fontsize=18)
     plt.title(f'{frag_type} fragmentation', fontsize=20)
-    plt.tick_params(axis='both', which='major', labelsize=18)  # Increase tick labels font size
+    plt.tick_params(axis='both', which='major', labelsize=18)
     plt.tight_layout()
     plt.show()
 
@@ -540,10 +541,49 @@ def plot_nodes_all(data):
         plot_nodes(het_nodes, frag_type)
 
 
-fragmentation_types = ['rand', 'int', 'dist', 'reg', 'div', 'opt']
+fragmentation_types = ['rand', 'cor', 'int', 'dist', 'reg', 'div', 'opt']
 net = 'RGG'
-ignore = True
-data = load_data(fragmentation_types, net, ignore)
+ignore = False
+# data = load_data(fragmentation_types, net, ignore)
+
+# with open('RGG, rand_ignore_True.pickle', 'rb') as file:
+#     rand = pickle.load(file)
+#
+# with open('RGG, div_ignore_True.pickle', 'rb') as file:
+#     div = pickle.load(file)
 
 print("finsh load!!!!")
-x = plot_nodes_all(data)
+
+
+def plot_het_central(data:dict,measure:str,save=bool):
+
+    fragmentation_types = list(data.keys())
+
+    plt.figure()
+
+    for frag_type in fragmentation_types:
+        het = compute_mean_std(data[frag_type][3])[0]
+        central = calculate_centrality(data[frag_type][1], measure=measure)[0]
+
+        plt.plot(het,central, label=frag_type.capitalize())
+
+    plt.xlabel('Heterozygosity', fontsize=16)
+    plt.ylabel('Average node connectivity', fontsize=16)
+    plt.legend()
+    if save == True:
+        plt.savefig(f'./figs/het_{measure}.jpg', format="jpg")
+    plt.show()
+
+
+# plot_het_central(data,measure='modularity',save=True)
+
+net = nx.random_geometric_graph(100,0.1)
+nx.draw_networkx(net)
+plt.show()
+net2 = nx.random_geometric_graph(100,0.15)
+nx.draw_networkx(net)
+plt.show()
+print(weighted_algebraic_connectivity1(net))
+print(weighted_algebraic_connectivity1(net))
+
+print(weighted_algebraic_connectivity(net2))
