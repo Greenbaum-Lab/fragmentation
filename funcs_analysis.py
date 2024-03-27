@@ -6,6 +6,7 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 from infomap import Infomap
+from joypy import joyplot
 from matplotlib import pyplot as plt
 
 
@@ -38,7 +39,6 @@ def plot_data(data, index, ylabel, measure, save=bool):
     plt.legend()
     if save == True:
         plt.savefig(f'./figs/genetics general {measure}.jpg', format="jpg")
-        plt.close()
     plt.show()
 
 
@@ -60,7 +60,7 @@ def filter_intervals(df, interval_percentage=10):
     interval_step = max_step * interval_percentage // 100
 
     # Create a list of steps to include
-    steps_to_include = list(range(0, max_step, interval_step))
+    steps_to_include = list(range(0, max_step - 40, interval_step))
 
     # Filter the DataFrame to include only these steps
     filtered_df = df[df['step'].isin(steps_to_include)]
@@ -97,6 +97,56 @@ def find_breakink_point_list(networks: list):
         x = find_breaking_point(net)
         breaking_point.append(x)
     return breaking_point
+
+
+def plot_distribution(df, name, type):
+    """
+    Desnsity plots for 'fst' or 'het' data.
+    :param df: DataFrame containing the data to plot.
+    :param name: Name of the value to plot ('fst' or 'het').
+    """
+
+    # Plotting
+    plt.figure(figsize=(8, 8))
+    fig, axes = joyplot(
+        data=df[[name, 'step']],
+        by='step', overlap=3,
+        colormap=plt.cm.viridis, fade=True, range_style='all',
+        linecolor="black", linewidth=0.1
+    )
+
+    # Set plot title
+    title = f'{name.capitalize()} - {type} Fragmentation'
+    fig.suptitle(title, fontsize=18)
+    plt.ylabel('Step', fontsize=18)
+    plt.xlabel(type, fontsize=18)
+
+    for ax in axes:
+        ax.tick_params(axis='both', which='major', labelsize=16)
+        ax.set_xlim(-0.1, 1.3)
+
+    plt.savefig('./figs/' + name +'_'+ type + '.png')
+    plt.show()
+
+
+def plot_all_distributions(data, types=['fst', 'het']):
+    """
+    Plots distributions for all fragmentation types and data types ('fst', 'het').
+
+    :param data: Dictionary containing loaded data for each fragmentation type.
+    :param types: List of data types to plot ('fst', 'het').
+    """
+    for frag_type in data:
+        for data_type in types:
+
+            df_index = 4 if data_type == 'fst' else 2
+            df = filter_intervals(data[frag_type][df_index])
+
+            plot_distribution(df, data_type, frag_type)
+
+            print(f"Plot generated for {frag_type} - {data_type}")
+#
+
 
 
 def plot_fragmentation(data):
@@ -393,164 +443,107 @@ def plot_degree_distributions(data):
     plt.show()
 
 
-def extract_nodes(df):
+def select_nodes(df, num_nodes=5):
     """
-    tracking each node separately and extract its heterozygosity
-    :param df: df of heterozygous of all nodes for all replicates (het dens)
-    :return: df for each node along the fragmentation for each replica
+    Selects a specified number of random node indices for each replica.
+
+    :param df: DataFrame containing the heterozygosity data (dat[2]).
+    :param num_nodes: Number of nodes to select per replica.
+    :return: A dictionary with replicas as keys and lists of selected node indices as values.
     """
-    df.reset_index(drop=True, inplace=True)
-
-    # count how many nodes are in a network
-    nodes = np.argmax(df['step'] != 0)
-
-    # Randomly select 5 unique nodes from the network
-    random_indices = np.random.choice(nodes, 5, replace=False)
-
-    # Initialize an empty DataFrame to store the selected rows
-    selected_rows = pd.DataFrame()
-
-    # Iterate over each randomly selected index and get the corresponding rows
-    for index in random_indices:
-        node_rows = df.iloc[index::nodes].copy()
-        selected_rows = pd.concat([selected_rows, node_rows])
-
-    return selected_rows
+    selection_dict = {}
+    for replica in df['replica'].unique():
+        df_replica = df[df['replica'] == replica]
+        nodes_per_replica = np.argmax(df_replica['step'].to_numpy()[1:] != df_replica['step'].to_numpy()[:-1]) + 1
+        random_indices = np.random.choice(nodes_per_replica, min(num_nodes, nodes_per_replica), replace=False)
+        selection_dict[replica] = random_indices
+    return selection_dict
 
 
-
-
-
-def plot_heterozygosity(data):
+def extract_selected_nodes(df):
     """
-    Plots heterozygosity along fragmentation steps for selected nodes in a single fragmentation type.
-
-    :param data: DataFrame returned by extract_nodes function.
-    """
-    plt.figure(figsize=(10, 6))
-
-    # Assuming 'data' already contains only the rows for the nodes of interest
-    # Group by 'replica' to plot each replica's path separately
-    for replica, group in data.groupby('replica'):
-        plt.plot(group['step'], group['het'], label=f'Replica {replica}', alpha=0.5)
-
-    plt.xlabel('Step')
-    plt.ylabel('Heterozygosity')
-    plt.title('Heterozygosity along fragmentation')
-    plt.legend()
-    plt.show()
-
-
-def plot_heterozygosity_for_nodes(df, num_nodes=5):
-    """
-    Plots heterozygosity for a subset of nodes across steps.
+    Extracts rows for the selected nodes across all steps for each replica.
 
     :param df: DataFrame containing heterozygosity data.
-    :param num_nodes: Number of nodes to plot.
+    :param selection_dict: A dictionary with replicas as keys and lists of selected node indices as values.
+    :return: DataFrame with the extracted rows, including a node_number column.
     """
-    # Determine the total number of nodes per step in the first replica
-    nodes_per_step = df[df['replica'] == df['replica'].unique()[0]]['step'].value_counts().iloc[0]
 
-    # Select a subset of nodes to track
-    node_indices = np.linspace(0, nodes_per_step - 1, num=num_nodes, dtype=int)
+    selection_dict = select_nodes(df, num_nodes=5)
+    selected_rows_across_replicas = pd.DataFrame()
+    for replica, indices in selection_dict.items():
+        df_replica = df[df['replica'] == replica]
+        nodes_per_replica = np.argmax(df_replica['step'].to_numpy()[1:] != df_replica['step'].to_numpy()[:-1]) + 1
+        for index in indices:
+            node_rows = df_replica.iloc[index::nodes_per_replica].copy()
+            node_rows['node_number'] = index + 1  # Assign node number
+            selected_rows_across_replicas = pd.concat([selected_rows_across_replicas, node_rows], ignore_index=True)
+    return selected_rows_across_replicas
+
+
+def plot_nodes(df, frag_type):
+    """
+    Plots the heterozygosity ('het') values for each node across steps using a pivot table approach.
+
+    :param df: DataFrame with 'het' values, 'step', 'node_number', and 'replica'.
+    """
+    # Create a unique identifier for each node across replicas
+    df['node_replica_id'] = df['node_number'].astype(str) + '_replica_' + df['replica'].astype(str)
+
+    # Pivot the DataFrame
+    pivot_df = df.pivot_table(index='step', columns='node_replica_id', values='het')
 
     plt.figure(figsize=(10, 6))
+    # Plotting each column in the pivot table
+    for column in pivot_df.columns:
+        plt.plot(pivot_df.index, pivot_df[column], color='grey', alpha=0.2)
 
-    # Plot heterozygosity for each selected node
-    for node_idx in node_indices:
-        # Extract rows corresponding to this node across all steps and replicas
-        node_data = df.iloc[node_idx::nodes_per_step].copy()
-
-        # Assuming steps are consistent across replicas, use the first replica's steps for x-axis
-        steps = df[df['replica'] == df['replica'].unique()[0]]['step'].unique()
-
-        plt.plot(steps, node_data['het'], label=f'Node {node_idx}', alpha=0.5)
-
-    plt.xlabel('Step', fontsize=12)
-    plt.ylabel('Heterozygosity', fontsize=12)
-    plt.title('Heterozygosity for Selected Nodes Across Steps', fontsize=14)
-    plt.legend()
+    plt.xlabel('Step', fontsize=18)
+    plt.ylabel('Heterozygosity', fontsize=18)
+    plt.title(f'{frag_type} fragmentation', fontsize=20)
+    plt.tick_params(axis='both', which='major', labelsize=18)  # Increase tick labels font size
     plt.tight_layout()
     plt.show()
 
-fragmentation_types = ['rand', 'cor', 'int', 'dist', 'reg', 'div', 'opt']
-net = 'RGG'
-ignore = False
-data = load_data(fragmentation_types, net, ignore)
-pd.set_option('display.max_rows', None)
-
-print(data['rand'][2])
-def track_sampled_nodes_heterozygosity(df):
+def plot_nodes(df, frag_type):
     """
-    Samples 5 random nodes from step 0 of each replica and tracks their heterozygosity across all steps.
+    Plots the heterozygosity ('het') values for each node across steps using a pivot table approach.
 
-    :param df: DataFrame with columns ['step', 'het', 'replica'], where the index corresponds to nodes.
-    :return: A dictionary with keys as replicas and values as DataFrames of tracked heterozygosity for sampled nodes.
+    :param df: DataFrame with 'het' values, 'step', 'node_number', and 'replica'.
     """
-    sampled_nodes_data = {}  # Dictionary to store DataFrames for sampled nodes in each replica
-    replicas = df['replica'].unique()
+    # Create a unique identifier for each node across replicas
+    df['node_replica_id'] = df['node_number'].astype(str) + '_replica_' + df['replica'].astype(str)
 
-    for replica in replicas:
-        # Filter for step 0 in the current replica
-        step_0_data = df[(df['step'] == 0) & (df['replica'] == replica)]
+    # Pivot the DataFrame
+    pivot_df = df.pivot_table(index='step', columns='node_replica_id', values='het')
 
-        # Sample 5 random nodes
-        sampled_nodes = step_0_data.sample(n=5, random_state=1).index
-
-        # Track these nodes across all steps for the current replica
-        node_data = pd.DataFrame()
-        for node_idx in sampled_nodes:
-            # Assuming consistent ordering of nodes across steps within a replica
-            node_df = df[df.index % (df['step'].nunique() * 50) == node_idx]
-            node_data = pd.concat([node_data, node_df], ignore_index=True)
-
-        sampled_nodes_data[replica] = node_data
-
-    return sampled_nodes_data
-
-
-def plot_sampled_nodes_heterozygosity(sampled_nodes_data, replica):
-    """
-    Plots the heterozygosity of sampled nodes across steps for a specific replica.
-
-    :param sampled_nodes_data: Dictionary with DataFrames of tracked heterozygosity for sampled nodes.
-    :param replica: The replica to plot data for.
-    """
-    node_data = sampled_nodes_data[replica]
     plt.figure(figsize=(10, 6))
+    # Plotting each column in the pivot table
+    for column in pivot_df.columns:
+        plt.plot(pivot_df.index, pivot_df[column], color='grey', alpha=0.2)
 
-    # Plot heterozygosity for each sampled node
-    for node_idx in node_data['index'].unique():
-        node_df = node_data[node_data['index'] == node_idx]
-        plt.plot(node_df['step'], node_df['het'], label=f'Node {node_idx}')
-
-    plt.xlabel('Step')
-    plt.ylabel('Heterozygosity')
-    plt.title(f'Heterozygosity Across Steps for Sampled Nodes in Replica {replica}')
-    plt.legend()
+    plt.xlabel('Step', fontsize=18)
+    plt.ylabel('Heterozygosity', fontsize=18)
+    plt.title(f'{frag_type} fragmentation', fontsize=20)
+    plt.tick_params(axis='both', which='major', labelsize=18)  # Increase tick labels font size
+    plt.tight_layout()
     plt.show()
 
 
-# Assuming 'het_data' is your DataFrame containing the heterozygosity data for 'rand' fragmentation type
-het_data = data['rand'][2]
+def plot_nodes_all(data):
+    fragmentation_types = list(data.keys())
 
-# Track the heterozygosity for sampled nodes
-sampled_nodes_data = track_sampled_nodes_heterozygosity(het_data)
+    for frag_type in fragmentation_types:
+        het = data[frag_type][2]
+        het_nodes = extract_selected_nodes(het)
 
-# Plot the heterozygosity for sampled nodes in a specific replica, for example, replica 0
-plot_sampled_nodes_heterozygosity(sampled_nodes_data, 0)
-
-
+        plot_nodes(het_nodes, frag_type)
 
 
-# Create a pivot DataFrame
-pivot_df = het.pivot(columns='replica', index='step', values='het')
+fragmentation_types = ['rand', 'int', 'dist', 'reg', 'div', 'opt']
+net = 'RGG'
+ignore = True
+data = load_data(fragmentation_types, net, ignore)
 
-# Plot using the pivot DataFrame
-plt.figure(figsize=(10, 6))
-plt.plot(pivot_df.index, pivot_df, color='grey', alpha=0.1)
-
-plt.xlabel('Step')
-plt.ylabel('Heterozygosity')
-plt.title('Heterozygosity along RANDOM fragmentation')
-plt.show()
+print("finsh load!!!!")
+x = plot_nodes_all(data)
