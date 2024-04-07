@@ -13,7 +13,7 @@ import pandas as pd
 from scipy import stats
 import math
 from funcs_analysis import load_data, plot_fragmentation, plot_data, giant_component_replicates, compute_mean_std, \
-    plot_component_genetics, plot_centrality, plot_degree_distributions
+    plot_component_genetics, plot_centrality, plot_degree_distributions, plot_nodes_all, plot_het_central
 
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -24,16 +24,34 @@ fragmentation_types = ['rand', 'cor', 'int', 'dist', 'reg', 'div', 'opt']
 net = 'RGG'
 ignore = False
 data = load_data(fragmentation_types, net, ignore)
-
+print('I have finished loading. Now we start!')
 ############## plot snapshots of networks along steps of fragmentation
 # plot_fragmentation(data)
-#
 
 ####plot centrality vs fragmnetation
-# plot_centrality(data,centrality='connect')
+# plot_centrality(data,centrality='degree')
+
+####plot centrality vs heterozygosity
+plot_het_central(data,measure='transitivity',save=True)
 
 ####plot degree distribution of fragemtation types
 # plot_degree_distributions(data)
+
+###### plot individual nodes
+# plot_nodes_all(data)
+
+
+
+
+
+
+
+
+
+
+
+
+
 ################ make distribution of breaking point
 # # create list off nets
 # nets = make_networks(n_nets=n_rep, n_nodes=n, connectivity=p, net_type='ER')

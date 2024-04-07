@@ -8,6 +8,7 @@ import pandas as pd
 from infomap import Infomap
 from joypy import joyplot
 from matplotlib import pyplot as plt
+import seaborn as sns
 
 
 def load_data(fragmentation_types, net, ignore):
@@ -482,29 +483,29 @@ def extract_selected_nodes(df):
     return selected_rows_across_replicas
 
 
-def plot_nodes(df, frag_type):
-    """
-    Plots the heterozygosity ('het') values for each node across steps using a pivot table approach.
-
-    :param df: DataFrame with 'het' values, 'step', 'node_number', and 'replica'.
-    """
-    # Create a unique identifier for each node across replicas
-    df['node_replica_id'] = df['node_number'].astype(str) + '_replica_' + df['replica'].astype(str)
-
-    # Pivot the DataFrame
-    pivot_df = df.pivot_table(index='step', columns='node_replica_id', values='het')
-
-    plt.figure(figsize=(10, 6))
-    # Plotting each column in the pivot table
-    for column in pivot_df.columns:
-        plt.plot(pivot_df.index, pivot_df[column], color='grey', alpha=0.2)
-
-    plt.xlabel('Step', fontsize=18)
-    plt.ylabel('Heterozygosity', fontsize=18)
-    plt.title(f'{frag_type} fragmentation', fontsize=20)
-    plt.tick_params(axis='both', which='major', labelsize=18)  # Increase tick labels font size
-    plt.tight_layout()
-    plt.show()
+# def plot_nodes(df, frag_type):
+#     """
+#     Plots the heterozygosity ('het') values for each node across steps using a pivot table approach.
+#
+#     :param df: DataFrame with 'het' values, 'step', 'node_number', and 'replica'.
+#     """
+#     # Create a unique identifier for each node across replicas
+#     df['node_replica_id'] = df['node_number'].astype(str) + '_replica_' + df['replica'].astype(str)
+#
+#     # Pivot the DataFrame
+#     pivot_df = df.pivot_table(index='step', columns='node_replica_id', values='het')
+#
+#     plt.figure(figsize=(10, 6))
+#     # Plotting each column in the pivot table
+#     for column in pivot_df.columns:
+#         plt.plot(pivot_df.index, pivot_df[column], color='grey', alpha=0.2)
+#
+#     plt.xlabel('Step', fontsize=18)
+#     plt.ylabel('Heterozygosity', fontsize=18)
+#     plt.title(f'{frag_type} fragmentation', fontsize=20)
+#     plt.tick_params(axis='both', which='major', labelsize=18)  # Increase tick labels font size
+#     plt.tight_layout()
+#     plt.show()
 
 def plot_nodes(df, frag_type):
     """
@@ -541,20 +542,6 @@ def plot_nodes_all(data):
         plot_nodes(het_nodes, frag_type)
 
 
-fragmentation_types = ['rand', 'cor', 'int', 'dist', 'reg', 'div', 'opt']
-net = 'RGG'
-ignore = False
-# data = load_data(fragmentation_types, net, ignore)
-
-# with open('RGG, rand_ignore_True.pickle', 'rb') as file:
-#     rand = pickle.load(file)
-#
-# with open('RGG, div_ignore_True.pickle', 'rb') as file:
-#     div = pickle.load(file)
-
-print("finsh load!!!!")
-
-
 def plot_het_central(data:dict,measure:str,save=bool):
 
     fragmentation_types = list(data.keys())
@@ -568,22 +555,93 @@ def plot_het_central(data:dict,measure:str,save=bool):
         plt.plot(het,central, label=frag_type.capitalize())
 
     plt.xlabel('Heterozygosity', fontsize=16)
-    plt.ylabel('Average node connectivity', fontsize=16)
+    plt.ylabel('Transitivity', fontsize=16)
     plt.legend()
+    plt.gca().invert_xaxis()
+
     if save == True:
         plt.savefig(f'./figs/het_{measure}.jpg', format="jpg")
     plt.show()
 
+fragmentation_types = ['rand', 'cor', 'int', 'dist', 'reg', 'div', 'opt']
+net = 'RGG'
+ignore = False
+# data = load_data(fragmentation_types, net, ignore)
 
-# plot_het_central(data,measure='modularity',save=True)
+with open('RGG, rand_ignore_True.pickle', 'rb') as file:
+    rand = pickle.load(file)
 
-net = nx.random_geometric_graph(100,0.1)
-nx.draw_networkx(net)
-plt.show()
-net2 = nx.random_geometric_graph(100,0.15)
-nx.draw_networkx(net)
-plt.show()
-print(weighted_algebraic_connectivity1(net))
-print(weighted_algebraic_connectivity1(net))
 
-print(weighted_algebraic_connectivity(net2))
+#[1-all networks][replica no.][step number]
+#[2-all heterozygosity][replica no.][step number]
+print("finsh load!!!!")
+
+def prepare_het_df(dat):
+    """
+    Process the input DataFrame to add a 'node' column for each replica,
+    considering up to the first 50 rows for each replica.
+
+    Parameters:
+    - df: pandas.DataFrame with columns ['replica', 'step', 'het']
+
+    Returns:
+    - het_df: pandas.DataFrame, the processed DataFrame with an additional 'node' column
+    """
+    all_het = []
+    nodes = 50
+    df = dat[2]
+    # Iterate over each unique replica
+    for replica in df['replica'].unique():
+        # Select up to the first 50 rows for the current replica
+        replica_net = df[df['replica'] == replica].head(nodes)
+
+        # Generate a sequence for the 'node' column within each replica slice
+        replica_net['node'] = range(replica_net.shape[0])
+
+        all_het.append(replica_net)
+
+    # Concatenate all processed slices into a single DataFrame and reset the index
+    het_df = pd.concat(all_het).reset_index(drop=True)
+
+    return het_df
+
+
+def calculate_node_centrality(dat):
+    """
+    Calculates the betweenness centrality for the first network in each replica
+    and organizes the results into a DataFrame.
+
+    Parameters:
+    - rand: A nested list where rand[1] contains replicas, and each replica contains networks.
+
+    Returns:
+    - betweenness_df: A DataFrame with columns 'replica', 'node', and 'bet' for betweenness centrality.
+    """
+    central_dict = {}
+    for rep_index in range(len(dat[1])):
+        net = rand[1][rep_index][0]  # Assuming the first network in each replica
+        central = nx.betweenness_centrality(net)
+        central_dict[rep_index] = central
+
+    # Convert the dictionary to a DataFrame
+    central_df = pd.DataFrame([
+        {'replica': rep, 'node': node, 'central': centrality}
+        for rep, centrality_dict in central_dict.items()
+        for node, centrality in centrality_dict.items()
+    ])
+
+    return central_df
+
+def plot_node_centrality(dat):
+
+    het = prepare_het_df(dat)
+    central = calculate_node_centrality(dat)
+    final_df = pd.merge(het, central)
+
+    sns.regplot(x='central', y='het', data=final_df, fit_reg=True, order=2,
+                scatter_kws={'s': 50, 'alpha': 0.1, 'color': 'grey'})
+    plt.show()
+
+plot_node_centrality(rand)
+
+#####make the function modular for step number and for other centralty meausres
