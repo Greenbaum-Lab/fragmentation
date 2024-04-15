@@ -40,6 +40,9 @@ plot_het_central(data,measure='transitivity',save=True)
 ###### plot individual nodes
 # plot_nodes_all(data)
 
+##### plot heterozygisuty vs. node centrality
+# plot_node_centrality(rand,step=200,centrality='betweenness')
+
 
 
 

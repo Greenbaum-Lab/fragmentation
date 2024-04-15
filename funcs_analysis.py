@@ -10,6 +10,7 @@ from joypy import joyplot
 from matplotlib import pyplot as plt
 import seaborn as sns
 
+pd.set_option('display.max_rows', None)
 
 def load_data(fragmentation_types, net, ignore):
     data = {}
@@ -594,7 +595,7 @@ def prepare_het_df(dat, step:int):
     return het_df
 
 
-def calculate_node_centrality(dat, step: int):
+def calculate_node_centrality(dat, step: int, centrality:str):
     """
     Calculates the betweenness centrality for the first network in each replica
     and organizes the results into a DataFrame, ensuring that the specified step
@@ -614,11 +615,15 @@ def calculate_node_centrality(dat, step: int):
         # Ensure the step index is within the bounds of the list for this replica
         if step < len(dat[1][rep_index]):
             net = dat[1][rep_index][step]  # Safely get the network at the given step
-            central = nx.betweenness_centrality(net)
+
+            if centrality == 'betweenness':
+                central = nx.betweenness_centrality(net)
+
+            if centrality =='degree':
+                central = nx.degree_centrality(net)
             central_dict[rep_index] = central
+
         else:
-            # Optionally handle cases where the step index is out of bounds
-            # For example, log an error, return None, or continue without crashing
             print(f"Skipping replica index {rep_index}: step index {step} is out of range.")
             continue
 
@@ -631,19 +636,22 @@ def calculate_node_centrality(dat, step: int):
 
     return central_df
 
-def plot_node_centrality(dat,step:int):
+def plot_node_centrality(dat,step:int,centrality:str):
 
     het = prepare_het_df(dat,step)
-    central = calculate_node_centrality(dat,step)
+    central = calculate_node_centrality(dat,step,centrality)
+
     final_df = pd.merge(het, central)
-    print(final_df)
+
     sns.regplot(x='central', y='het', data=final_df, fit_reg=True, order=2,
                 scatter_kws={'s': 50, 'alpha': 0.1, 'color': 'grey'})
+    plt.ylabel("Heterozygosity",fontsize=18)
+    plt.xlabel(centrality.capitalize(),fontsize=18)
     plt.ylim(0, 1.8)
-    plt.savefig(f'./figs/node_betweenness_int_{step}.jpg', format="jpg")
+    plt.savefig(f'./figs/node_{centrality}_int_{step}.jpg', format="jpg")
     plt.show()
 
-
+from math import log10
 
 
 fragmentation_types = ['rand', 'cor', 'int', 'dist', 'reg', 'div', 'opt']
@@ -651,16 +659,38 @@ net = 'RGG'
 ignore = False
 # data = load_data(fragmentation_types, net, ignore)
 
-with open('RGG, int_ignore_False.pickle', 'rb') as file:
+with open('RGG, opt_ignore_False.pickle', 'rb') as file:
     rand = pickle.load(file)
 
-
+# plot_node_centrality(rand,centrality='betweenness',step=100)
 #[1-all networks][replica no.][step number]
 #[2-all heterozygosity][replica no.][step number]
 print("finsh load!!!!")
+node = 11
+het = rand[2]
+het = het[het['replica'] == 0]
+het['node'] = (het.index % 50) + 1
+het = het[het['node'] == node]
+print(het)
 
 
-plot_node_centrality(rand,step=200)
+nets = rand[1][0]
+centrality_data = []
+pos = nx.spring_layout(nets[0],seed=5)
+for step, net in enumerate(nets):
+    # nx.draw_networkx(net,with_labels=True,pos=pos)
+    # plt.show()
+    centrality_dict = nx.common_neighbor_centrality(net)
+    centrality_value = centrality_dict[node-1]
+    centrality_data.append({'step': step, 'degree': centrality_value})
+degree_df = pd.DataFrame(centrality_data)
+
+print(degree_df)
+#
+plt.plot(het['step'],het['het'])
+plt.plot(degree_df['step'],degree_df['degree'])
+plt.show()
+
 
 #####make the function modular for step number and for other centralty meausres
 
@@ -670,7 +700,7 @@ plot_node_centrality(rand,step=200)
 # replica_net = df[(df['replica'] == 0) & (df['step'] == 200)].head(50)
 # print(replica_net)
 # net = rand[1][0][200]  # Safely get the network at the given step
-# central = nx.betweenness_centrality(net)
+# central = nx.degree_centrality(net)
 # print(central)
 # nx.draw_networkx(net,with_labels=True)
 # plt.show()
