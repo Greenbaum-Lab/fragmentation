@@ -318,15 +318,69 @@ def remove_edge_optimal(net: nx.Graph) -> list:
 
         # Add the resulting graph to the list
         migration_list.append(migration.copy())
-        # pos = nx.spring_layout(migration,seed=5)
-        # nx.draw_networkx(migration,pos)
-        # plt.show()
     return migration_list
 
 
+def remove_edge_optimal_no_update(net: nx.Graph) -> list:
+    """
+    Remove edges from the network to maximize connectivity between nodes.
+    unlike optimal, this process calculates the edges importance at the begining once, without updating.
+    Track all intermediate states of the network in a list until the stopping condition is met.
 
-#
-#
+    :param net: initial networkx object
+    :return: list of networkx objects showing the network's evolution
+    """
+    migration = net.copy()
+    migration_list = [migration.copy()]  # start with the original network
+
+    # Compute edge betweenness centrality to determine the importance of edges
+    centrality = nx.edge_betweenness_centrality(migration)
+    edges = sorted(centrality, key=centrality.get)
+
+    while nx.number_of_edges(migration) > 2:
+        # Find the edge with the lowest centrality (minimal impact on connectivity)
+        edge_to_remove = edges[0]
+
+        # Remove the selected edge
+        migration.remove_edge(*edge_to_remove)
+
+        # Add the resulting graph to the list
+        migration_list.append(migration.copy())
+
+        # Remove the edge with the highest betweenness from the edges list
+        edges.pop(0)
+
+    return migration_list
+
+
+def remove_edge_worst(net: nx.Graph) -> list:
+    """
+    Remove edges from the network to minimze connectivity between nodes.
+    Track all intermediate states of the network in a list until the stopping condition is met.
+
+    :param net: initial networkx object
+    :return: list of networkx objects showing the network's evolution
+    """
+    migration = net.copy()
+    migration_list = [migration.copy()]  # start with the original network
+
+    while nx.number_of_edges(migration) > 2:  # Adjust the condition as needed
+        # Compute edge betweenness centrality to determine the importance of edges
+        centrality = nx.edge_betweenness_centrality(migration)
+
+        # Find the edge with the lowest centrality (minimal impact on connectivity)
+        edge_to_remove = max(centrality, key=centrality.get)
+
+        # Remove the selected edge
+        migration.remove_edge(*edge_to_remove)
+
+        # Add the resulting graph to the list
+        migration_list.append(migration.copy())
+    return migration_list
+
+net1 = nx.random_geometric_graph(10,0.6,seed=7)
+
+remove_edge_optimal_no_update(net1)
 # def remove_edge_random_giant_comp(net: nx.Graph) -> list:
 #     """
 #     Remove a random edge from the input network in each iteration.
