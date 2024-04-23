@@ -32,7 +32,7 @@ print('I have finished loading. Now we start!')
 # plot_centrality(data,centrality='degree')
 
 ####plot centrality vs heterozygosity
-plot_het_central(data,measure='transitivity',save=True)
+# plot_het_central(data,measure='transitivity',save=True)
 
 ####plot degree distribution of fragemtation types
 # plot_degree_distributions(data)
@@ -102,29 +102,3 @@ plot_het_central(data,measure='transitivity',save=True)
 #
 # plt.show()
 
-
-
-########################### plot  centrality vs genetics
-# central = {}
-# for name, label in zip(names, labels):
-#     central[name] = list(mean_centrality[name][centrality])
-#
-#     plt.plot(mean_values[name], central[name], label=label)
-#     plt.fill_between(central[name], mean_centrality[name][centrality] - std_centrality[name][centrality],
-#                      mean_centrality[name][centrality] + std_centrality[name][centrality], alpha=0.2)
-#
-# plt.gca().invert_xaxis()
-# plt.xlabel('Heterozygosity')
-# plt.ylabel(centrality)
-# plt.title(f'heterozygosity vs. {centrality}')
-# # plt.legend()
-# plt.savefig("clust het.svg", format="svg")
-# plt.show()
-#
-# for name, label in zip(names, labels):
-#     plt.plot(mean_values[name], central[name], label=label)
-#     # Assuming mean_values[name] is correctly ordered and corresponds to central[name]
-#     # And assuming you have a way to calculate confidence intervals for heterozygosity vs. centrality
-#     lower_bound = central[name] - std_deviation  # You need to calculate or retrieve std_deviation
-#     upper_bound = central[name] + std_deviation  # Similarly, calculate or retrieve std_deviation
-#     plt.fill_between(mean_values[name], lower_bound, upper_bound, alpha=0.2)

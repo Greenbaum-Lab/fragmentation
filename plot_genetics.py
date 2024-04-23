@@ -4,7 +4,7 @@ import pandas as pd
 from joypy import joyplot
 from matplotlib import pyplot as plt
 
-from funcs_analysis import load_data, plot_data, filter_intervals, plot_all_distributions
+from funcs_analysis import load_data, plot_data, filter_intervals, plot_all_distributions, plot_distribution
 
 # from funcs3 import make_networks, make_replicates_new
 
@@ -67,17 +67,23 @@ from funcs_analysis import load_data, plot_data, filter_intervals, plot_all_dist
 #     pickle.dump(opt, file)
 ########### finish pipeline
 
+#
+# with open('RGG, opt_ignore_False.pickle', 'rb') as file:
+#     rand = pickle.load(file)
 
-
+#
 fragmentation_types = ['rand', 'cor', 'int', 'dist', 'reg', 'div', 'opt']
 net = 'RGG'
 ignore = True
 data = load_data(fragmentation_types, net, ignore)
 
 # Plot fst and het along fragmentation
-plot_data(data, 5, 'Pairwise Fst',measure='fst', save=True)
-plot_data(data, 3, 'Heterozygosity',measure='heterozygosity', save=True)
+# plot_data(data, 5, 'Pairwise Fst',measure='fst', save=True)
+# plot_data(data, 3, 'Heterozygosity',measure='heterozygosity', save=True)
+
 
 ##############plot distributions
 
+# rand = filter_intervals(rand[2])
+# plot_distribution(rand,'het','rand')
 plot_all_distributions(data)
