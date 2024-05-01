@@ -454,7 +454,7 @@ def plot_degree_distributions(data):
     plt.show()
 
 
-def select_nodes(df, num_nodes=5):
+def select_nodes(df, num_nodes=1):
     """
     Selects a specified number of random node indices for each replica.
 
@@ -480,7 +480,7 @@ def extract_selected_nodes(df):
     :return: DataFrame with the extracted rows, including a node_number column.
     """
 
-    selection_dict = select_nodes(df, num_nodes=5)
+    selection_dict = select_nodes(df, num_nodes=1)
     selected_rows_across_replicas = pd.DataFrame()
     for replica, indices in selection_dict.items():
         df_replica = df[df['replica'] == replica]
@@ -663,7 +663,6 @@ def plot_node_centrality(dat,step:int,centrality:str):
     plt.savefig(f'./figs/node_{centrality}_int_{step}.jpg', format="jpg")
     plt.show()
 
-from math import log10
 
 
 fragmentation_types = ['rand', 'cor', 'int', 'dist', 'reg', 'div', 'opt']
@@ -675,108 +674,80 @@ with open('RGG, opt_ignore_False.pickle', 'rb') as file:
     rand = pickle.load(file)
 
 print("finsh load!!!!")
+rand = rand[2]
+df = extract_selected_nodes(rand)
+df = df[df['replica'] == 1]
+df = df['het']
+df = pd.DataFrame(df).reset_index(drop=True)
+print(df)
 
-nets = rand[1][0][0]
-print(nets)
+df.to_csv('df.csv')
 
-
-
-
-def get_pairwise_distance_matrix(G, default_distance=50, weight=None):
-    nodes = list(G.nodes())
-    n = len(nodes)
-    distance_matrix = np.full((n, n), default_distance)  # Initialize matrix with default distance
-    node_index = {node: idx for idx, node in enumerate(nodes)}  # Map nodes to indices
-
-    # Calculate shortest paths using Floyd-Warshall algorithm
-    # This considers all path lengths and sets distances for all connected pairs
-    path_lengths = dict(nx.all_pairs_dijkstra_path_length(G, weight=weight))
-
-    for i, distances in path_lengths.items():
-        for j, dist in distances.items():
-            distance_matrix[node_index[i]][node_index[j]] = dist
-
-    return distance_matrix
-
-
-# Example usage for unweighted graph
-pairwise_distances = get_pairwise_distance_matrix(nets)
-
-# Example usage for weighted graph
-
-# Print distances and node order for reference
-print("Distance Matrix (Unweighted):\n", pairwise_distances)
-
-
-
-rand = rand[4]
-rand = rand[rand['replica']==0]
-
-
-
-def df_to_matrix(df: pd.DataFrame) -> np.ndarray:
-    """
-    Reconstructs a symmetric matrix from a DataFrame containing non-diagonal elements.
-
-    Args:
-    df : DataFrame with columns 'step', 'fst' indicating the step (matrix index) and FST values.
-    size : Size of the square matrix to be reconstructed.
-
-    Returns:
-    A symmetric numpy array representing the reconstructed matrix.
-    """
-    # Initialize a list to hold matrices
-    matrices = [np.zeros((50, 50)) for _ in range(df['step'].max() + 1)]
-
-    # Fill the upper and the corresponding lower triangle of each matrix
-    for step in range(len(matrices)):
-        # Filter the dataframe for the current step
-        step_df = df[df['step'] == step]
-        idx = 0
-        for i in range(50):
-            for j in range(i + 1, 50):
-                if idx < len(step_df):
-                    value = step_df.iloc[idx]['fst']
-                    matrices[step][i, j] = value
-                    matrices[step][j, i] = value
-                    idx += 1
-
-    return matrices
-
-
-
-
-reconstructed_matrices = df_to_matrix(rand)[0]
-print(np.round(reconstructed_matrices,decimals=2))
-
-
-
-from skbio.stats.distance import mantel
-
-# Perform Mantel test
-correlation, p_value, n = mantel(reconstructed_matrices, pairwise_distances, method='pearson', permutations=999)
-
-print(f'Correlation: {correlation}')
-print(f'P-value: {p_value}')
-print(f'Number of permutations: {n}')
-
-flat_matrix1 = pairwise_distances.flatten()
-flat_matrix2 = reconstructed_matrices.flatten()
-
-
-plt.figure(figsize=(8, 6))
-plt.scatter(flat_matrix1, flat_matrix2, color='blue', edgecolor='k', alpha=0.7)
-
-# Add labels and title
-plt.xlabel('Distance Matrix 1')
-plt.ylabel('Distance Matrix 2')
-plt.title('Relationship between Two Pairwise Distance Matrices')
-
-# Optional: Add a line of best fit
-m, b = np.polyfit(flat_matrix1, flat_matrix2, 1)
-plt.plot(flat_matrix1, m*flat_matrix1 + b, color='red')
-
-plt.show()
+# nets = rand[1][0][0]
+# print(nets)
+#
+#
+#
+#
+# def get_pairwise_distance_matrix(G, default_distance=50, weight=None):
+#     nodes = list(G.nodes())
+#     n = len(nodes)
+#     distance_matrix = np.full((n, n), default_distance)  # Initialize matrix with default distance
+#     node_index = {node: idx for idx, node in enumerate(nodes)}  # Map nodes to indices
+#
+#     # Calculate shortest paths using Floyd-Warshall algorithm
+#     # This considers all path lengths and sets distances for all connected pairs
+#     path_lengths = dict(nx.all_pairs_dijkstra_path_length(G, weight=weight))
+#
+#     for i, distances in path_lengths.items():
+#         for j, dist in distances.items():
+#             distance_matrix[node_index[i]][node_index[j]] = dist
+#
+#     return distance_matrix
+#
+#
+# # Example usage for unweighted graph
+# pairwise_distances = get_pairwise_distance_matrix(nets)
+#
+# # Example usage for weighted graph
+#
+# # Print distances and node order for reference
+# print("Distance Matrix (Unweighted):\n", pairwise_distances)
+#
+#
+#
+# rand = rand[4]
+# rand = rand[rand['replica']==0]
+#
+#
+#
+#
+# from skbio.stats.distance import mantel
+#
+# # Perform Mantel test
+# correlation, p_value, n = mantel(reconstructed_matrices, pairwise_distances, method='pearson', permutations=999)
+#
+# print(f'Correlation: {correlation}')
+# print(f'P-value: {p_value}')
+# print(f'Number of permutations: {n}')
+#
+# flat_matrix1 = pairwise_distances.flatten()
+# flat_matrix2 = reconstructed_matrices.flatten()
+#
+#
+# plt.figure(figsize=(8, 6))
+# plt.scatter(flat_matrix1, flat_matrix2, color='blue', edgecolor='k', alpha=0.7)
+#
+# # Add labels and title
+# plt.xlabel('Distance Matrix 1')
+# plt.ylabel('Distance Matrix 2')
+# plt.title('Relationship between Two Pairwise Distance Matrices')
+#
+# # Optional: Add a line of best fit
+# m, b = np.polyfit(flat_matrix1, flat_matrix2, 1)
+# plt.plot(flat_matrix1, m*flat_matrix1 + b, color='red')
+#
+# plt.show()
 
 
 # plot_node_centrality(rand,centrality='betweenness',step=200)
