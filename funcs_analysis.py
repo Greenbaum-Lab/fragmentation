@@ -9,6 +9,8 @@ from infomap import Infomap
 from joypy import joyplot
 from matplotlib import pyplot as plt
 import seaborn as sns
+from mantel import test
+
 
 # pd.set_option('display.max_rows', None)
 
@@ -135,7 +137,7 @@ def plot_distribution(df, name, type):
         ax.tick_params(axis='both', which='major', labelsize=16)
         ax.set_xlim(-0.1, 1.3)  # Set appropriate limits
 
-    plt.savefig('./figs/' + name +'_'+ type + '.png')
+    plt.savefig('./figs/' + name + '_' + type + '.png')
     plt.show()
 
 
@@ -148,15 +150,15 @@ def plot_all_distributions(data, types=['fst', 'het']):
     """
     for frag_type in data:
         for data_type in types:
-
             df_index = 4 if data_type == 'fst' else 2
             df = filter_intervals(data[frag_type][df_index])
 
             plot_distribution(df, data_type, frag_type)
 
             print(f"Plot generated for {frag_type} - {data_type}")
-#
 
+
+#
 
 
 def plot_fragmentation(data):
@@ -278,9 +280,9 @@ def compute_modularity(net):
 
 
 def calculate_centrality(all_nets: list,
-                         measure: list = ['clustering', 'degree','component',
-                                           'modularity','transitivity',
-                                           'connectivity', 'connect']) -> (
+                         measure: list = ['clustering', 'degree', 'component',
+                                          'modularity', 'transitivity',
+                                          'connectivity', 'connect']) -> (
         pd.DataFrame, pd.DataFrame):
     """
     Calculate specified centrality measures of networks over multiple replicates.
@@ -424,6 +426,7 @@ def compute_degree_distributions(data, frag_type, step):
 
     return deg, degree_counts
 
+
 def plot_degree_distributions(data):
     """
     Plots degree distributions across fragmentation processes for specified steps,
@@ -443,7 +446,7 @@ def plot_degree_distributions(data):
             ax.set_title(f"Step {step}" if row_idx == 0 else "", fontsize=18)
             ax.set_xlabel('Degree', fontsize=14)
             ax.set_ylabel('Count', fontsize=14)
-            ax.set_xlim(0, max(deg)+1)
+            ax.set_xlim(0, max(deg) + 1)
             plt.tick_params(axis='both', which='major', labelsize=22)  # Increase tick labels font size
 
             if col_idx == 0:
@@ -551,8 +554,7 @@ def plot_nodes_all(data):
         plot_nodes(het_nodes, frag_type)
 
 
-def plot_het_central(data:dict,measure:str,save=bool):
-
+def plot_het_central(data: dict, measure: str, save=bool):
     fragmentation_types = list(data.keys())
 
     plt.figure()
@@ -561,7 +563,7 @@ def plot_het_central(data:dict,measure:str,save=bool):
         het = compute_mean_std(data[frag_type][3])[0]
         central = calculate_centrality(data[frag_type][1], measure=measure)[0]
 
-        plt.plot(het,central, label=frag_type.capitalize())
+        plt.plot(het, central, label=frag_type.capitalize())
 
     plt.xlabel('Heterozygosity', fontsize=16)
     plt.ylabel('Transitivity', fontsize=16)
@@ -573,7 +575,7 @@ def plot_het_central(data:dict,measure:str,save=bool):
     plt.show()
 
 
-def prepare_het_df(dat, step:int):
+def prepare_het_df(dat, step: int):
     """
     Process the input DataFrame to add a 'node' column for each replica,
     considering up to the first 50 rows for each replica.
@@ -589,7 +591,7 @@ def prepare_het_df(dat, step:int):
     df = dat[2]
 
     # Iterate over each unique replica
-    for replica in df['replica'].unique() :
+    for replica in df['replica'].unique():
         # Select rows based on the 'step' value and up to the first 50 rows for the current replica
         replica_net = df[(df['replica'] == replica) & (df['step'] == step)].head(nodes)
         # Generate a sequence for the 'node' column within each replica slice
@@ -603,7 +605,7 @@ def prepare_het_df(dat, step:int):
     return het_df
 
 
-def calculate_node_centrality(dat, step: int, centrality:str):
+def calculate_node_centrality(dat, step: int, centrality: str):
     """
     Calculates the betweenness centrality for the first network in each replica
     and organizes the results into a DataFrame, ensuring that the specified step
@@ -627,7 +629,7 @@ def calculate_node_centrality(dat, step: int, centrality:str):
             if centrality == 'betweenness':
                 central = nx.betweenness_centrality(net)
 
-            if centrality =='degree':
+            if centrality == 'degree':
                 central = nx.degree_centrality(net)
             central_dict[rep_index] = central
 
@@ -644,25 +646,24 @@ def calculate_node_centrality(dat, step: int, centrality:str):
 
     return central_df
 
-def plot_node_centrality(dat,step:int,centrality:str):
 
-    het = prepare_het_df(dat,step)
-    central = calculate_node_centrality(dat,step,centrality)
-    print(central)
-    central = central[central['central']!=0]
-    print(central)
-    central['central'] = np.log10(central['central'])
-    print(central)
+def plot_node_centrality(dat, step: int, centrality: str, log=True):
+    het = prepare_het_df(dat, step)
+    central = calculate_node_centrality(dat, step, centrality)
+    # remove zero values
+    central = central[central['central'] != 0]
+    if log == True:
+        central['central'] = np.log10(central['central'])
+
     final_df = pd.merge(het, central)
 
     sns.regplot(x='central', y='het', data=final_df, fit_reg=True, order=2,
                 scatter_kws={'s': 50, 'alpha': 0.1, 'color': 'grey'})
-    plt.ylabel("Heterozygosity",fontsize=18)
-    plt.xlabel(centrality.capitalize(),fontsize=18)
+    plt.ylabel("Heterozygosity", fontsize=18)
+    plt.xlabel(centrality.capitalize(), fontsize=18)
     plt.ylim(0, 1.8)
     plt.savefig(f'./figs/node_{centrality}_int_{step}.jpg', format="jpg")
     plt.show()
-
 
 
 fragmentation_types = ['rand', 'cor', 'int', 'dist', 'reg', 'div', 'opt']
@@ -670,118 +671,81 @@ net = 'RGG'
 ignore = False
 # data = load_data(fragmentation_types, net, ignore)
 
-with open('RGG, opt_ignore_False.pickle', 'rb') as file:
+with open('RGG, rand_ignore_False.pickle', 'rb') as file:
     rand = pickle.load(file)
 
 print("finsh load!!!!")
-rand = rand[2]
-df = extract_selected_nodes(rand)
-df = df[df['replica'] == 1]
-df = df['het']
-df = pd.DataFrame(df).reset_index(drop=True)
-print(df)
 
-df.to_csv('df.csv')
-
-# nets = rand[1][0][0]
-# print(nets)
-#
-#
-#
-#
-# def get_pairwise_distance_matrix(G, default_distance=50, weight=None):
-#     nodes = list(G.nodes())
-#     n = len(nodes)
-#     distance_matrix = np.full((n, n), default_distance)  # Initialize matrix with default distance
-#     node_index = {node: idx for idx, node in enumerate(nodes)}  # Map nodes to indices
-#
-#     # Calculate shortest paths using Floyd-Warshall algorithm
-#     # This considers all path lengths and sets distances for all connected pairs
-#     path_lengths = dict(nx.all_pairs_dijkstra_path_length(G, weight=weight))
-#
-#     for i, distances in path_lengths.items():
-#         for j, dist in distances.items():
-#             distance_matrix[node_index[i]][node_index[j]] = dist
-#
-#     return distance_matrix
-#
-#
-# # Example usage for unweighted graph
-# pairwise_distances = get_pairwise_distance_matrix(nets)
-#
-# # Example usage for weighted graph
-#
-# # Print distances and node order for reference
-# print("Distance Matrix (Unweighted):\n", pairwise_distances)
-#
-#
-#
-# rand = rand[4]
-# rand = rand[rand['replica']==0]
-#
-#
-#
-#
-# from skbio.stats.distance import mantel
-#
-# # Perform Mantel test
-# correlation, p_value, n = mantel(reconstructed_matrices, pairwise_distances, method='pearson', permutations=999)
-#
-# print(f'Correlation: {correlation}')
-# print(f'P-value: {p_value}')
-# print(f'Number of permutations: {n}')
-#
-# flat_matrix1 = pairwise_distances.flatten()
-# flat_matrix2 = reconstructed_matrices.flatten()
-#
-#
-# plt.figure(figsize=(8, 6))
-# plt.scatter(flat_matrix1, flat_matrix2, color='blue', edgecolor='k', alpha=0.7)
-#
-# # Add labels and title
-# plt.xlabel('Distance Matrix 1')
-# plt.ylabel('Distance Matrix 2')
-# plt.title('Relationship between Two Pairwise Distance Matrices')
-#
-# # Optional: Add a line of best fit
-# m, b = np.polyfit(flat_matrix1, flat_matrix2, 1)
-# plt.plot(flat_matrix1, m*flat_matrix1 + b, color='red')
-#
-# plt.show()
+# get df of het of a single node
+# rand = rand[2]
+# df = extract_selected_nodes(rand)
+# df = df[df['replica'] == 1]
+# df = df['het']
+# df = pd.DataFrame(df).reset_index(drop=True)
+# print(df)
+# df.to_csv('df.csv')
 
 
-# plot_node_centrality(rand,centrality='betweenness',step=200)
+
+def get_distance_matrix(net, default_distance=50, weight=None):
+    nodes = list(net.nodes())
+    n = len(nodes)
+    distance_matrix = np.full((n, n), default_distance)  # Initialize matrix with default distance
+    node_index = {node: idx for idx, node in enumerate(nodes)}  # Map nodes to indices
+
+    # Calculate shortest paths using Floyd-Warshall algorithm
+    # This considers all path lengths and sets distances for all connected pairs
+    path_lengths = dict(nx.all_pairs_dijkstra_path_length(net, weight=weight))
+
+    for i, distances in path_lengths.items():
+        for j, dist in distances.items():
+            distance_matrix[node_index[i]][node_index[j]] = dist
+
+    return distance_matrix
+
+
+
+def plot_matrix_relationship(distance_matrix, fst_matrix, method='pearson', perms=999):
+    # Convert all zeros to NaN in both matrices
+    distance_matrix = np.where(distance_matrix == 0, np.nan, distance_matrix)
+    fst_matrix = np.where(fst_matrix == 0, np.nan, fst_matrix)
+
+    # Perform Mantel test, expecting a dictionary as a return value
+    result = test(distance_matrix, fst_matrix, perms=perms, method=method, ignore_nans=True)
+    print(f"Correlation: {result[0]}")
+    print(f"P-value: {result[1]}")
+
+    # Flatten the matrices for plotting, ignoring NaN values
+    flat_matrix1 = distance_matrix.flatten()
+    flat_matrix2 = fst_matrix.flatten()
+
+    valid_indices = ~np.isnan(flat_matrix1) & ~np.isnan(flat_matrix2)
+    flat_matrix1 = flat_matrix1[valid_indices]
+    flat_matrix2 = flat_matrix2[valid_indices]
+
+    # Create scatter plot
+    plt.figure(figsize=(8, 6))
+    plt.scatter(flat_matrix1, flat_matrix2, color='blue', edgecolor='k', alpha=0.7)
+
+    # Add labels and title
+    plt.xlabel('Distance')
+    plt.ylabel('Fst')
+    plt.title('Relationship between Two Pairwise Distance Matrices')
+
+    # Add a line of best fit
+    print(np.polyfit(flat_matrix1, flat_matrix2, 2))
+    m, b = np.polyfit(flat_matrix1, flat_matrix2, 2)
+
+    plt.plot(flat_matrix1, m * flat_matrix1 + b, color='red')
+
+    plt.show()
+
+matrix = rand[7][0][150]
+
+net = rand[1][0][150]
+
+
+distance_matrix = get_distance_matrix(net)
+plot_matrix_relationship(distance_matrix=distance_matrix,fst_matrix=matrix)
 # [1-all networks][replica no.][step number]
 # [2-all heterozygosity][replica no.][step number]
-# node = 11
-# het = rand[2]
-# het = het[het['replica'] == 0]
-# het['node'] = (het.index % 50) + 1
-# het = het[het['node'] == node]
-
-# nets = rand[1][0]
-# centrality_data = []
-# pos = nx.spring_layout(nets[0],seed=5)
-# for step, net in enumerate(nets):
-#     centrality_dict = nx.betweenness_centrality(net)
-#     centrality_value = centrality_dict[node-1]
-#     centrality_data.append({'step': step, 'degree': centrality_value})
-# degree_df = pd.DataFrame(centrality_data)
-#
-# #
-# plt.plot(het['step'],het['het'])
-# plt.plot(degree_df['step'],degree_df['degree'])
-# plt.show()
-
-
-
-# print(rand[2]['replica' == 100])
-# print(rand[(rand['replica'] == 100)])
-# df = rand[2]
-# replica_net = df[(df['replica'] == 0) & (df['step'] == 200)].head(50)
-# print(replica_net)
-# net = rand[1][0][200]  # Safely get the network at the given step
-# central = nx.degree_centrality(net)
-# print(central)
-# nx.draw_networkx(net,with_labels=True)
-# plt.show()
