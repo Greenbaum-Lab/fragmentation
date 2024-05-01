@@ -11,8 +11,9 @@ from Transformation import transform_matrix
 from processes import (
     remove_edge_random, remove_edge_correlated, remove_edge_distance,
     remove_edge_intrusive, remove_edge_divisive, remove_edge_regressive,
-    find_breakink_point_list, remove_edge_optimal
+    remove_edge_optimal, remove_edge_optimal_no_update, remove_edge_worst
 )
+from funcs_analysis import find_breakink_point_list
 # from Transformation import transform_matrix
 
 
@@ -184,6 +185,8 @@ function_mapping = {
     'div': remove_edge_divisive,
     'dist': remove_edge_distance,
     'opt': remove_edge_optimal,
+    'opt2': remove_edge_optimal_no_update,
+    'wrst': remove_edge_worst
 }
 
 
@@ -200,20 +203,20 @@ def make_fragmentation(net: nx.Graph, frag_type: str, ignore: bool, replica: int
 
     # migration2 = intervals(migration1) # take bins of the process
 
-    genetics = calculate_genetics(migration_list=migration)
+    genetics_coal, genetics_fst = calculate_genetics(migration_list=migration)
 
     # calculate heterozygosity
-    het_dens = make_het_dist(genetics[0], ignore=ignore)
+    het_dens = make_het_dist(genetics_coal, ignore=ignore)
     het_dens['replica'] = replica
 
     het_stat = make_het_stat(het_dens)
 
     # calculate fst
-    fst_dens = make_fst_dist(genetics[1], ignore=ignore)
+    fst_dens = make_fst_dist(genetics_fst, ignore=ignore)
     fst_dens['replica'] = replica
     fst_stat = make_fst_stat(fst_dens)
 
-    return nets_number, migration, het_dens, het_stat, fst_dens, fst_stat
+    return nets_number, migration, het_dens, het_stat, fst_dens, fst_stat, genetics_coal, genetics_fst
 
 
 def make_replicates(nets: list, frag_type: str, ignore: bool) -> tuple:
@@ -230,6 +233,8 @@ def make_replicates(nets: list, frag_type: str, ignore: bool) -> tuple:
     het_stat = []
     fst_dens = []
     fst_stat = []
+    genetics_coal = []
+    genetics_fst = []
 
     for i in range(len(nets)):
         net = make_fragmentation(net=nets[i], frag_type=frag_type, ignore=ignore)
@@ -239,6 +244,8 @@ def make_replicates(nets: list, frag_type: str, ignore: bool) -> tuple:
         het_stat.append(net[3])
         fst_dens.append(net[4])
         fst_stat.append(net[5])
+        genetics_coal.append(net[6])
+        genetics_fst.append(net[7])
 
     # Combine the dataframes into a single dataframe
     nets_number = mean(nets_number)
@@ -247,7 +254,8 @@ def make_replicates(nets: list, frag_type: str, ignore: bool) -> tuple:
     fst_dens = pd.concat(fst_dens)
     fst_stat = pd.concat(fst_stat)
 
-    return nets_number, all_nets, het_dens, het_stat, fst_dens, fst_stat
+
+    return nets_number, all_nets, het_dens, het_stat, fst_dens, fst_stat, genetics_coal, genetics_fst
 
 
 # Function to apply to each network in the list
@@ -273,7 +281,7 @@ def make_replicates_new(nets: list, frag_type: str, ignore: bool) -> tuple:
         results = p.map(apply_make_fragmentation, args)
 
     # Unpack the results
-    nets_number, all_nets, het_dens, het_stat, fst_dens, fst_stat = zip(*results)
+    nets_number, all_nets, het_dens, het_stat, fst_dens, fst_stat, genetics_coal, genetics_fst = zip(*results)
 
     # Combine the dataframes into a single dataframe
     nets_number = np.mean(nets_number)
@@ -282,7 +290,7 @@ def make_replicates_new(nets: list, frag_type: str, ignore: bool) -> tuple:
     fst_dens = pd.concat(fst_dens)
     fst_stat = pd.concat(fst_stat)
 
-    return nets_number, all_nets, het_dens, het_stat, fst_dens, fst_stat
+    return nets_number, all_nets, het_dens, het_stat, fst_dens, fst_stat, genetics_coal, genetics_fst
 
 def make_networks(n_nets: int, n_nodes: int, net_type) -> list:
     """
