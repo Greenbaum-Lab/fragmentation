@@ -650,32 +650,87 @@ def calculate_node_centrality(dat, step: int, centrality: str):
     return central_df
 
 
-def plot_node_centrality(dat, step: int, centrality: str, log=bool):
+def merge_het_central(dat, step: int, centrality: str, frag: str, log=bool):
     het = prepare_het_df(dat, step)
     central = calculate_node_centrality(dat, step, centrality)
     # remove zero values
     central = central[central['central'] != 0]
+
     if log == True:
         central['central'] = np.log10(central['central'])
 
     final_df = pd.merge(het, central)
+    return final_df
 
+def plot_node_centrality(dat, step: int, centrality: str, frag: str, log=bool):
+
+    final_df = merge_het_central(dat, step, centrality, frag, log)
     sns.regplot(x='central', y='het', data=final_df, fit_reg=True, order=2,
                 scatter_kws={'s': 50, 'alpha': 0.1, 'color': 'grey'})
     plt.ylabel("Heterozygosity", fontsize=18)
     plt.xlabel(centrality.capitalize(), fontsize=18)
     plt.ylim(0, 1.8)
-    plt.savefig(f'./figs/node_{centrality}_int_{step}.jpg', format="jpg")
+    plt.savefig(f'./figs/node_{centrality}_{step}_{frag}.jpg', format="jpg")
     plt.show()
 
 
 fragmentation_types = ['rand', 'cor', 'int', 'dist', 'reg', 'div', 'opt']
 net = 'RGG'
 ignore = False
-# data = load_data(fragmentation_types, net, ignore)
+data = load_data(fragmentation_types, net, ignore)
+data.items()
+print(data.items())
+data.keys()
+print(data.keys())
 
-# with open('RGG, div_ignore_False.pickle', 'rb') as file:
-#     rand = pickle.load(file)
+print("finish load")
+from scipy.stats import pearsonr
+
+
+def make_cor_df(data, frag: str):
+
+    correlation_df = []
+
+    for step in range(0, 20):
+        df = merge_het_central(data, step, 'degree', frag, False)
+        correlation = pearsonr(x=df['central'],y= df['het'])[0]
+        correlation_df.append({'step': step, 'cor': correlation})
+
+    results_df = pd.DataFrame(correlation_df)
+
+    return results_df
+
+
+def plot_cor_df(data):
+
+    df =make_cor_df(data)
+
+    plt.plot(df['step'], df['cor'], marker='o')
+    plt.xlabel('Step',fontsize=20)
+    plt.ylabel('Correlation (r)',fontsize=20)
+    plt.show()
+
+
+def plot_cor_df(data):
+
+    plt.figure(figsize=(10, 6))
+
+    for frag_type, datasets in data.items():
+        frag = frag_type
+
+        df = make_cor_df(datasets,frag)
+        plt.plot(df['step'], df['cor'], marker='o', linestyle='-', label=frag_type.capitalize())
+
+    plt.xlabel('Step', fontsize=20)
+    plt.ylabel('Correlation (r)', fontsize=20)
+    plt.title('Correlation vs Step for Multiple Datasets')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+
+# Example usage:
+plot_cor_df(data)
 
 
 # get df of het of a single node

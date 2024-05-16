@@ -27,7 +27,9 @@ ignore = False
 # data = load_data(fragmentation_types, net, ignore)
 print('I have finished loading. Now we start!')
 
-with open('RGG, rand_ignore_False.pickle', 'rb') as file:
+
+frag = 'div'
+with open(f'RGG, {frag}_ignore_False.pickle', 'rb') as file:
     rand = pickle.load(file)
 ############## plot snapshots of networks along steps of fragmentation
 # plot_fragmentation(data)
@@ -45,7 +47,9 @@ with open('RGG, rand_ignore_False.pickle', 'rb') as file:
 # plot_nodes_all(data)
 
 ##### plot heterozygisuty vs. node centrality
-plot_node_centrality(rand,step=150,centrality='degree',log=False)
+plot_node_centrality(rand,step=200,centrality='degree',log=False,frag=frag)
+
+
 
 ##plot fst-distance relationship
 # matrix = rand[7][0][150]
@@ -53,6 +57,8 @@ plot_node_centrality(rand,step=150,centrality='degree',log=False)
 # distance_matrix = get_euclidean_matrix(net)
 # distance_matrix = get_distance_matrix(net)
 # plot_matrix_relationship(distance_matrix=distance_matrix,fst_matrix=matrix)
+
+
 
 
 
