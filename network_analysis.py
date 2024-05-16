@@ -13,7 +13,8 @@ import pandas as pd
 from scipy import stats
 import math
 from funcs_analysis import load_data, plot_fragmentation, plot_data, giant_component_replicates, compute_mean_std, \
-    plot_component_genetics, plot_centrality, plot_degree_distributions, plot_nodes_all, plot_het_central
+    plot_component_genetics, plot_centrality, plot_degree_distributions, plot_nodes_all, plot_het_central, get_distance_matrix,\
+    get_euclidean_matrix,plot_matrix_relationship, plot_node_centrality
 
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -23,8 +24,11 @@ import pickle
 fragmentation_types = ['rand', 'cor', 'int', 'dist', 'reg', 'div', 'opt']
 net = 'RGG'
 ignore = False
-data = load_data(fragmentation_types, net, ignore)
+# data = load_data(fragmentation_types, net, ignore)
 print('I have finished loading. Now we start!')
+
+with open('RGG, rand_ignore_False.pickle', 'rb') as file:
+    rand = pickle.load(file)
 ############## plot snapshots of networks along steps of fragmentation
 # plot_fragmentation(data)
 
@@ -41,10 +45,14 @@ print('I have finished loading. Now we start!')
 # plot_nodes_all(data)
 
 ##### plot heterozygisuty vs. node centrality
-# plot_node_centrality(rand,step=200,centrality='betweenness')
+plot_node_centrality(rand,step=150,centrality='degree',log=False)
 
-
-
+##plot fst-distance relationship
+# matrix = rand[7][0][150]
+# net = rand[1][0][150]
+# distance_matrix = get_euclidean_matrix(net)
+# distance_matrix = get_distance_matrix(net)
+# plot_matrix_relationship(distance_matrix=distance_matrix,fst_matrix=matrix)
 
 
 

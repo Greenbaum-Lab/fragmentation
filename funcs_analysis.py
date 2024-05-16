@@ -269,14 +269,17 @@ def plot_component_genetics(data):
 
 
 def compute_modularity(net):
-    im = Infomap(silent=True, markov_time=1, variable_markov_time=True)
+
+    im = Infomap(silent=True, markov_time=1, variable_markov_time=True,flow_model='undirected',num_trials=1)
 
     # Add edges to the Infomap instance
     for edge in net.edges():
-        im.addLink(*edge)
+        im.add_link(*edge)
     im.run()
 
     return im.codelength
+
+
 
 
 def calculate_centrality(all_nets: list,
@@ -647,7 +650,7 @@ def calculate_node_centrality(dat, step: int, centrality: str):
     return central_df
 
 
-def plot_node_centrality(dat, step: int, centrality: str, log=True):
+def plot_node_centrality(dat, step: int, centrality: str, log=bool):
     het = prepare_het_df(dat, step)
     central = calculate_node_centrality(dat, step, centrality)
     # remove zero values
@@ -671,10 +674,9 @@ net = 'RGG'
 ignore = False
 # data = load_data(fragmentation_types, net, ignore)
 
-with open('RGG, rand_ignore_False.pickle', 'rb') as file:
-    rand = pickle.load(file)
+# with open('RGG, div_ignore_False.pickle', 'rb') as file:
+#     rand = pickle.load(file)
 
-print("finsh load!!!!")
 
 # get df of het of a single node
 # rand = rand[2]
@@ -686,8 +688,7 @@ print("finsh load!!!!")
 # df.to_csv('df.csv')
 
 
-
-def get_distance_matrix(net, default_distance=50, weight=None):
+def get_distance_matrix(net, default_distance=50):
     nodes = list(net.nodes())
     n = len(nodes)
     distance_matrix = np.full((n, n), default_distance)  # Initialize matrix with default distance
@@ -695,7 +696,7 @@ def get_distance_matrix(net, default_distance=50, weight=None):
 
     # Calculate shortest paths using Floyd-Warshall algorithm
     # This considers all path lengths and sets distances for all connected pairs
-    path_lengths = dict(nx.all_pairs_dijkstra_path_length(net, weight=weight))
+    path_lengths = dict(nx.all_pairs_dijkstra_path_length(net))
 
     for i, distances in path_lengths.items():
         for j, dist in distances.items():
@@ -707,11 +708,12 @@ def get_distance_matrix(net, default_distance=50, weight=None):
 
 def plot_matrix_relationship(distance_matrix, fst_matrix, method='pearson', perms=999):
     # Convert all zeros to NaN in both matrices
-    distance_matrix = np.where(distance_matrix == 0, np.nan, distance_matrix)
+    #convert 50 to NaN. 50 is the defeault value for isolated nodes
+    distance_matrix = np.where((distance_matrix == 0) | (distance_matrix == 50), np.nan, distance_matrix)
     fst_matrix = np.where(fst_matrix == 0, np.nan, fst_matrix)
 
     # Perform Mantel test, expecting a dictionary as a return value
-    result = test(distance_matrix, fst_matrix, perms=perms, method=method, ignore_nans=True)
+    result = test(fst_matrix, distance_matrix, perms=perms, method=method, ignore_nans=True)
     print(f"Correlation: {result[0]}")
     print(f"P-value: {result[1]}")
 
@@ -728,24 +730,39 @@ def plot_matrix_relationship(distance_matrix, fst_matrix, method='pearson', perm
     plt.scatter(flat_matrix1, flat_matrix2, color='blue', edgecolor='k', alpha=0.7)
 
     # Add labels and title
-    plt.xlabel('Distance')
+    plt.xlabel('Euclidean distance')
     plt.ylabel('Fst')
-    plt.title('Relationship between Two Pairwise Distance Matrices')
+    plt.title('Random fragmentation in the 150th step')
 
     # Add a line of best fit
-    print(np.polyfit(flat_matrix1, flat_matrix2, 2))
-    m, b = np.polyfit(flat_matrix1, flat_matrix2, 2)
-
+    m, b = np.polyfit(flat_matrix1, flat_matrix2, 1)
     plt.plot(flat_matrix1, m * flat_matrix1 + b, color='red')
+    #
+    # coeffs = np.polyfit(flat_matrix1, flat_matrix2, 2)  # Quadratic fit
+    # p = np.poly1d(coeffs)  # Create polynomial function
+    # t = np.linspace(min(flat_matrix1), max(flat_matrix1), 500)
+    # plt.plot(t, p(t), color='red')
 
     plt.show()
 
-matrix = rand[7][0][150]
 
-net = rand[1][0][150]
+def get_euclidean_matrix(net):
+    # Extract node positions into a numpy array
+    nodes = list(net.nodes())
+    positions = np.array([net.nodes[node]['pos'] for node in nodes])
+
+    # Calculate the difference matrix for each dimension
+    diff = positions[:, np.newaxis, :] - positions[np.newaxis, :, :]
+
+    # Compute the Euclidean distance matrix
+    distance_matrix = np.linalg.norm(diff, axis=-1)
+
+    return distance_matrix
 
 
-distance_matrix = get_distance_matrix(net)
-plot_matrix_relationship(distance_matrix=distance_matrix,fst_matrix=matrix)
 # [1-all networks][replica no.][step number]
 # [2-all heterozygosity][replica no.][step number]
+
+
+
+
