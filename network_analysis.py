@@ -47,7 +47,7 @@ with open(f'RGG, {frag}_ignore_False.pickle', 'rb') as file:
 # plot_nodes_all(data)
 
 ##### plot heterozygisuty vs. node centrality
-plot_node_centrality(rand,step=200,centrality='degree',log=False,frag=frag)
+plot_node_centrality(rand,step=60,centrality='degree',log=False,frag=frag)
 
 
 

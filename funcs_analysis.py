@@ -10,6 +10,7 @@ from joypy import joyplot
 from matplotlib import pyplot as plt
 import seaborn as sns
 from mantel import test
+from scipy.stats import pearsonr
 
 
 # pd.set_option('display.max_rows', None)
@@ -637,8 +638,8 @@ def calculate_node_centrality(dat, step: int, centrality: str):
             central_dict[rep_index] = central
 
         else:
-            print(f"Skipping replica index {rep_index}: step index {step} is out of range.")
-            continue
+            print(f"Skipping replica {rep_index}: step {step} is out of range.")
+            break
 
     # Convert the dictionary to a DataFrame
     central_df = pd.DataFrame([
@@ -674,63 +675,192 @@ def plot_node_centrality(dat, step: int, centrality: str, frag: str, log=bool):
     plt.show()
 
 
-fragmentation_types = ['rand', 'cor', 'int', 'dist', 'reg', 'div', 'opt']
-net = 'RGG'
-ignore = False
-data = load_data(fragmentation_types, net, ignore)
-data.items()
-print(data.items())
-data.keys()
-print(data.keys())
 
-print("finish load")
-from scipy.stats import pearsonr
+# def make_cor_df(data, frag: str):
+#
+#     correlation_df = []
+#
+#     for step in range(0, 20):
+#         df = merge_het_central(data, step, 'degree', frag, False)
+#         # correlation = pearsonr(x=df['central'],y= df['het'])[0]
+#         # correlation_df.append({'step': step, 'cor': correlation})
+#
+#     results_df = pd.DataFrame(correlation_df)
+#
+#     return results_df
 
 
-def make_cor_df(data, frag: str):
+def het_central_process_level(data, frag: str):
+    """
+    Create a DataFrame for all steps and replicas
 
-    correlation_df = []
+    Parameters:
+        data (pd.DataFrame): Input data.
+        frag (str): Fragmentation strategy or other parameter used in merge_het_central.
 
-    for step in range(0, 20):
-        df = merge_het_central(data, step, 'degree', frag, False)
-        correlation = pearsonr(x=df['central'],y= df['het'])[0]
-        correlation_df.append({'step': step, 'cor': correlation})
+    Returns:
+        pd.DataFrame: Concatenated DataFrame for all steps and replicas.
+    """
+    # Initialize a list to store the DataFrames for each step
+    df_list = []
 
-    results_df = pd.DataFrame(correlation_df)
+    # Iterate over the range of steps
+    for step in range(0, 300):
+        # Generate the DataFrame for the current step
+        step_df = merge_het_central(data, step, 'degree', frag, False)
+        # Append the DataFrame to the list
+        df_list.append(step_df)
+
+    # Concatenate all the DataFrames in the list into a single DataFrame
+    results_df = pd.concat(df_list, ignore_index=True)
 
     return results_df
 
 
-def plot_cor_df(data):
+def compute_correlation(data, frag: str):
+    """
+    Calculate the Pearson correlation coefficient between 'het' and 'central'
+    for each combination of 'step' and 'replica' in the DataFrame.
 
-    df =make_cor_df(data)
+    Parameters:
+        df (pd.DataFrame): Input DataFrame containing 'step', 'het', 'replica', and 'central' columns.
 
-    plt.plot(df['step'], df['cor'], marker='o')
-    plt.xlabel('Step',fontsize=20)
-    plt.ylabel('Correlation (r)',fontsize=20)
-    plt.show()
+    Returns:
+        pd.DataFrame: DataFrame with columns 'step', 'replica', and 'cor', containing the correlation values.
+    """
+    # Initialize a list to store the results
+    results = []
+
+    df = het_central_process_level(data, frag)
+    # Group by 'step' and 'replica'
+    grouped = df.groupby(['step', 'replica'])
+
+    # Iterate over each group
+    for (step, replica), group in grouped:
+        # Calculate the Pearson correlation coefficient
+        correlation = pearsonr(group['het'], group['central'])[0]
+        # Append the results as a dictionary
+        results.append({'step': step, 'replica': replica, 'cor': correlation})
+
+    # Convert the results list to a DataFrame
+    results_df = pd.DataFrame(results)
+
+    return results_df
 
 
-def plot_cor_df(data):
 
+from scipy.stats import norm
+
+def calculate_statistics(correlation_df,frag_type):
+    """
+    Calculate the mean and 95% confidence interval for each step across all replicas for a single frag_type.
+
+    Parameters:
+        correlation_df (pd.DataFrame): DataFrame containing the correlation results with columns 'step', 'replica', and 'cor'.
+
+    Returns:
+        pd.DataFrame: DataFrame with columns 'step', 'mean_cor', 'ci_lower', 'ci_upper', containing the mean correlation and confidence interval bounds for each step.
+    """
+    # Initialize a list to store the statistics
+    statistics = []
+
+    # Group by 'step'
+    grouped = correlation_df.groupby('step')
+
+    # Iterate over each group
+    for step, group in grouped:
+        # Calculate mean correlation
+        mean_cor = group['cor'].mean()
+
+        # Calculate standard error
+        se = group['cor'].std() / np.sqrt(len(group['cor']))
+
+        # Calculate the 95% confidence interval
+        ci_lower, ci_upper = norm.interval(0.95, loc=mean_cor, scale=se)
+
+        # Append the results
+        statistics.append({
+            'step': step,
+            'mean_cor': mean_cor,
+            'ci_lower': ci_lower,
+            'ci_upper': ci_upper,
+            'frag': frag_type
+        })
+
+    # Convert the statistics list to a DataFrame
+    statistics_df = pd.DataFrame(statistics)
+
+    return statistics_df
+
+
+def compute_correlation_all(data):
+
+    all_correlations = []
+    for frag_type, dataset in data.items():
+        cor_frag = compute_correlation(dataset,frag_type)
+        cor_frag = calculate_statistics(cor_frag,frag_type)
+        all_correlations.append(cor_frag)
+
+    return all_correlations
+
+
+
+def plot_mean_with_ci(data_list):
+    """
+    Plot the mean correlation with shaded 95% confidence intervals for each 'frag' type.
+
+    Parameters:
+        data_list (list): List of DataFrames, each containing 'step', 'mean_cor', 'ci_lower', 'ci_upper', and 'frag' columns.
+    """
     plt.figure(figsize=(10, 6))
 
-    for frag_type, datasets in data.items():
-        frag = frag_type
-
-        df = make_cor_df(datasets,frag)
-        plt.plot(df['step'], df['cor'], marker='o', linestyle='-', label=frag_type.capitalize())
+    # Iterate over the list of DataFrames
+    for df in data_list:
+        # Extract the frag type (assuming it's the same for all rows in the df)
+        frag = df['frag'].iloc[0]
+        plt.plot(df['step'], df['mean_cor'], label=frag)
+        plt.fill_between(df['step'], df['ci_lower'], df['ci_upper'], alpha=0.2)
 
     plt.xlabel('Step', fontsize=20)
     plt.ylabel('Correlation (r)', fontsize=20)
-    plt.title('Correlation vs Step for Multiple Datasets')
-    plt.legend()
-    plt.grid(True)
+    plt.legend(title='Fragmentation Type')
+    plt.savefig(f'./figs/cor_central.jpg', format="jpg")
     plt.show()
 
 
-# Example usage:
-plot_cor_df(data)
+fragmentation_types = ['rand', 'cor', 'int', 'dist', 'reg', 'div', 'opt']
+# fragmentation_types = ['rand', 'cor']
+
+net = 'RGG'
+ignore = False
+data = load_data(fragmentation_types, net, ignore)
+frag = 'dist'
+
+
+
+results = compute_correlation_all(data)
+# Assuming `results_df` is the DataFrame containing the necessary columns
+plot_mean_with_ci(results)
+
+
+
+with open(f'RGG, {frag}_ignore_False.pickle', 'rb') as file:
+    rand = pickle.load(file)
+
+print("finish load!!!!!")
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # get df of het of a single node
