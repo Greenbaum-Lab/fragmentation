@@ -11,6 +11,7 @@ from matplotlib import pyplot as plt
 import seaborn as sns
 from mantel import test
 from scipy.stats import pearsonr
+from scipy.stats import norm
 
 
 # pd.set_option('display.max_rows', None)
@@ -25,14 +26,43 @@ def load_data(fragmentation_types, net, ignore):
     return data
 
 
-def plot_data(data, index, ylabel, measure, save=bool):
+def find_breaking_point(networks):
+    """
+    find the index of the list where the network is no longer connected
+    """
+    for index, network in enumerate(networks):
+        if not nx.is_connected(network):
+            return index
+    return None
+
+
+def find_breakink_point_list(networks: list):
+    breaking_point = []
+    for net in networks:
+        x = find_breaking_point(net)
+        breaking_point.append(x)
+    return breaking_point
+
+def calculate_statistics(df, index):
+    """Calculate mean and 95% confidence interval."""
+    mean_values = df[index].groupby('step')['avg'].mean()
+    sem = df[index].groupby('step')['avg'].sem()  # Standard error of the mean
+    confidence_interval = 1.96 * sem  # 95% confidence interval
+    return mean_values, confidence_interval
+
+
+def plot_data(data, index, ylabel, measure, save=False):
+    """Plot data with mean and 95% confidence interval."""
     color_palette = plt.get_cmap('tab10')  # You can change 'tab10' to any other available palette
     plt.figure()
+
+    # Plot each dataset's mean and confidence interval
     for frag_type, datasets in data.items():
-        mean_values = datasets[index].groupby('step')['avg'].mean()
-        confidence = datasets[index].groupby('step')['avg'].std()
+        mean_values, confidence_interval = calculate_statistics(datasets, index)
+        print(confidence_interval)
         plt.plot(mean_values, label=frag_type.capitalize())
-        plt.fill_between(mean_values.index, mean_values - confidence, mean_values + confidence, alpha=0.2)
+        plt.fill_between(mean_values.index, mean_values - confidence_interval, mean_values + confidence_interval,
+                         alpha=0.2)
 
     # Add breaking points and other plot details
     for i, (frag_type, datasets) in enumerate(data.items()):
@@ -42,8 +72,8 @@ def plot_data(data, index, ylabel, measure, save=bool):
     plt.xlabel('Fragmentation step', fontsize=16)
     plt.ylabel(ylabel, fontsize=16)
     plt.legend()
-    if save == True:
-        plt.savefig(f'./figs/genetics general {measure}.jpg', format="jpg")
+    if save:
+        plt.savefig(f'./figs/genetics_general_{measure}.jpg', format="jpg")
     plt.show()
 
 
@@ -85,23 +115,6 @@ def intervals(lst):
     interval = max((len(lst) - 1) // n, 1)
     return lst[:n * interval:interval] + [lst[-1]]
 
-
-def find_breaking_point(networks):
-    """
-    find the index of the list where the network is no longer connected
-    """
-    for index, network in enumerate(networks):
-        if not nx.is_connected(network):
-            return index
-    return None
-
-
-def find_breakink_point_list(networks: list):
-    breaking_point = []
-    for net in networks:
-        x = find_breaking_point(net)
-        breaking_point.append(x)
-    return breaking_point
 
 
 def plot_distribution(df, name, type):
@@ -611,6 +624,53 @@ def prepare_het_df(dat, step: int):
 
 def calculate_node_centrality(dat, step: int, centrality: str):
     """
+    Calculates the specified centrality for the first network in each replica
+    and organizes the results into a DataFrame, ensuring that the specified step
+    index is available to avoid IndexError.
+
+    Parameters:
+    - dat: A nested list where dat[1] contains replicas, and each replica contains networks.
+    - step: The step index to look for in each replica.
+    - centrality: The type of centrality to calculate ('betweenness' or 'degree').
+
+    Returns:
+    - central_df: A DataFrame with columns 'replica', 'node', and 'central' for the specified centrality.
+    """
+    central_dict = {}
+
+    # Iterate over each replica in dat[1]
+    for rep_index in range(len(dat[1])):
+        # Ensure the step index is within the bounds of the list for this replica
+        if step > len(dat[1][rep_index]):
+            print(f"Skipping replica {rep_index}: step {step} is out of range.")
+            continue
+
+        # Safely get the network at the given step
+        net = dat[1][rep_index][step]
+
+        if centrality == 'betweenness':
+            central = nx.betweenness_centrality(net)
+        elif centrality == 'degree':
+            central = nx.degree_centrality(net)
+        else:
+            raise ValueError("Unsupported centrality type. Use 'betweenness' or 'degree'.")
+
+        central_dict[rep_index] = central
+
+    # Convert the dictionary to a DataFrame
+    central_df = pd.DataFrame([
+        {'replica': rep, 'node': node, 'central': centrality}
+        for rep, centrality_dict in central_dict.items()
+        for node, centrality in centrality_dict.items()
+    ])
+
+    return central_df
+
+
+
+
+def calculate_node_centrality(dat, step: int, centrality: str):
+    """
     Calculates the betweenness centrality for the first network in each replica
     and organizes the results into a DataFrame, ensuring that the specified step
     index is available to avoid IndexError.
@@ -639,7 +699,7 @@ def calculate_node_centrality(dat, step: int, centrality: str):
 
         else:
             print(f"Skipping replica {rep_index}: step {step} is out of range.")
-            break
+            continue
 
     # Convert the dictionary to a DataFrame
     central_df = pd.DataFrame([
@@ -649,7 +709,6 @@ def calculate_node_centrality(dat, step: int, centrality: str):
     ])
 
     return central_df
-
 
 def merge_het_central(dat, step: int, centrality: str, frag: str, log=bool):
     het = prepare_het_df(dat, step)
@@ -676,21 +735,8 @@ def plot_node_centrality(dat, step: int, centrality: str, frag: str, log=bool):
 
 
 
-# def make_cor_df(data, frag: str):
-#
-#     correlation_df = []
-#
-#     for step in range(0, 20):
-#         df = merge_het_central(data, step, 'degree', frag, False)
-#         # correlation = pearsonr(x=df['central'],y= df['het'])[0]
-#         # correlation_df.append({'step': step, 'cor': correlation})
-#
-#     results_df = pd.DataFrame(correlation_df)
-#
-#     return results_df
 
-
-def het_central_process_level(data, frag: str):
+def het_central_process_level(data, frag: str,centrality: str):
     """
     Create a DataFrame for all steps and replicas
 
@@ -705,9 +751,9 @@ def het_central_process_level(data, frag: str):
     df_list = []
 
     # Iterate over the range of steps
-    for step in range(0, 300):
+    for step in range(0, 200):
         # Generate the DataFrame for the current step
-        step_df = merge_het_central(data, step, 'degree', frag, False)
+        step_df = merge_het_central(data, step, centrality, frag, False)
         # Append the DataFrame to the list
         df_list.append(step_df)
 
@@ -717,7 +763,7 @@ def het_central_process_level(data, frag: str):
     return results_df
 
 
-def compute_correlation(data, frag: str):
+def compute_correlation(data, frag: str,centrality:str):
     """
     Calculate the Pearson correlation coefficient between 'het' and 'central'
     for each combination of 'step' and 'replica' in the DataFrame.
@@ -731,14 +777,15 @@ def compute_correlation(data, frag: str):
     # Initialize a list to store the results
     results = []
 
-    df = het_central_process_level(data, frag)
+    df = het_central_process_level(data, centrality, frag)
     # Group by 'step' and 'replica'
     grouped = df.groupby(['step', 'replica'])
 
     # Iterate over each group
     for (step, replica), group in grouped:
+        print(group)
         # Calculate the Pearson correlation coefficient
-        correlation = pearsonr(group['het'], group['central'])[0]
+        correlation = pearsonr(x=group['central'],y=group['het'])[0]
         # Append the results as a dictionary
         results.append({'step': step, 'replica': replica, 'cor': correlation})
 
@@ -749,9 +796,8 @@ def compute_correlation(data, frag: str):
 
 
 
-from scipy.stats import norm
 
-def calculate_statistics(correlation_df,frag_type):
+def calculate_statistics_cor(correlation_df,frag_type):
     """
     Calculate the mean and 95% confidence interval for each step across all replicas for a single frag_type.
 
@@ -793,12 +839,12 @@ def calculate_statistics(correlation_df,frag_type):
     return statistics_df
 
 
-def compute_correlation_all(data):
+def compute_correlation_all(data, centrality:str):
 
     all_correlations = []
     for frag_type, dataset in data.items():
-        cor_frag = compute_correlation(dataset,frag_type)
-        cor_frag = calculate_statistics(cor_frag,frag_type)
+        cor_frag = compute_correlation(dataset, centrality, frag_type)
+        cor_frag = calculate_statistics_cor(cor_frag,frag_type)
         all_correlations.append(cor_frag)
 
     return all_correlations
@@ -812,7 +858,6 @@ def plot_mean_with_ci(data_list):
     Parameters:
         data_list (list): List of DataFrames, each containing 'step', 'mean_cor', 'ci_lower', 'ci_upper', and 'frag' columns.
     """
-    plt.figure(figsize=(10, 6))
 
     # Iterate over the list of DataFrames
     for df in data_list:
@@ -829,26 +874,28 @@ def plot_mean_with_ci(data_list):
 
 
 fragmentation_types = ['rand', 'cor', 'int', 'dist', 'reg', 'div', 'opt']
-# fragmentation_types = ['rand', 'cor']
+fragmentation_types = ['rand', 'cor']
 
 net = 'RGG'
 ignore = False
-data = load_data(fragmentation_types, net, ignore)
-frag = 'dist'
+# data = load_data(fragmentation_types, net, ignore)
 
 
+# net = data.keys()
+# results = compute_correlation_all(data,centrality='betweenness')
+# plot_mean_with_ci(results)
 
-results = compute_correlation_all(data)
-# Assuming `results_df` is the DataFrame containing the necessary columns
-plot_mean_with_ci(results)
 
-
+frag = 'rand'
 
 with open(f'RGG, {frag}_ignore_False.pickle', 'rb') as file:
     rand = pickle.load(file)
 
 print("finish load!!!!!")
-
+net = rand[1][33][197]
+nx.draw_networkx(net)
+plt.show()
+print(nx.betweenness_centrality(net))
 
 
 
