@@ -59,7 +59,6 @@ def plot_data(data, index, ylabel, measure, save=False):
     # Plot each dataset's mean and confidence interval
     for frag_type, datasets in data.items():
         mean_values, confidence_interval = calculate_statistics(datasets, index)
-        print(confidence_interval)
         plt.plot(mean_values, label=frag_type.capitalize())
         plt.fill_between(mean_values.index, mean_values - confidence_interval, mean_values + confidence_interval,
                          alpha=0.2)
@@ -77,7 +76,7 @@ def plot_data(data, index, ylabel, measure, save=False):
     plt.show()
 
 
-def filter_intervals(df, interval_percentage=10):
+def filter_intervals(df, interval_percentage=15):
     """
     Filter the DataFrame to include only specific intervals of steps.
 
@@ -95,11 +94,10 @@ def filter_intervals(df, interval_percentage=10):
     interval_step = max_step * interval_percentage // 100
 
     # Create a list of steps to include
-    steps_to_include = list(range(0, max_step - 40, interval_step))
+    steps_to_include = list(range(0, max_step - 50, interval_step))
 
     # Filter the DataFrame to include only these steps
     filtered_df = df[df['step'].isin(steps_to_include)]
-
     return filtered_df
 
 
@@ -125,20 +123,20 @@ def plot_distribution(df, name, type):
     :param type: The type of analysis or data grouping.
     """
 
-    plt.figure(figsize=(8, 8))
+    plt.figure(figsize=(12, 12))
     # Using joyplot to create histograms
     fig, axes = joyplot(
         data=df[[name, 'step']],
         by='step',
-        figsize=(8, 8),
         hist=True,
-        bins=50,
-        overlap=0.5,
+        bins=100,
+        overlap=0.2,
         colormap=plt.cm.viridis,
-        fade=True,
+        fade=False,
         range_style='all',
         linecolor="black",
-        linewidth=0.1
+        linewidth=0.1,
+        normalize=True
     )
 
     # Set plot title
@@ -151,7 +149,7 @@ def plot_distribution(df, name, type):
         ax.tick_params(axis='both', which='major', labelsize=16)
         ax.set_xlim(-0.1, 1.3)  # Set appropriate limits
 
-    plt.savefig('./figs/' + name + '_' + type + '.png')
+    plt.savefig('./figs/''dist' + '_' + name + '_' + type + '.png')
     plt.show()
 
 
@@ -722,6 +720,36 @@ def merge_het_central(dat, step: int, centrality: str, frag: str, log=bool):
     final_df = pd.merge(het, central)
     return final_df
 
+#
+# def merge_het_central(dat, step: int, centrality: str, frag: str, log=bool):
+#     """
+#     Merge heterogeneity and centrality data, removing rows with zero centrality.
+#     If only one row remains after removing zero centrality rows, discard the entire DataFrame.
+#
+#     Parameters:
+#     - dat: Input data.
+#     - step: The step index to process.
+#     - centrality: The type of centrality to calculate ('betweenness' or 'degree').
+#     - frag: Fragmentation strategy or other parameter.
+#     - log: Whether to apply log transformation to the centrality values.
+#
+#     Returns:
+#     - final_df: The merged DataFrame after processing.
+#     """
+#     het = prepare_het_df(dat, step)
+#     central = calculate_node_centrality(dat, step, centrality)
+#
+#     # Remove zero values
+#     central = central[central['central'] != 0]
+#
+#     if log:
+#         central['central'] = np.log10(central['central'])
+#
+#     final_df = pd.merge(het, central, on='node')  # Assuming 'node' is the common column for merging
+#     return final_df
+#
+
+
 def plot_node_centrality(dat, step: int, centrality: str, frag: str, log=bool):
 
     final_df = merge_het_central(dat, step, centrality, frag, log)
@@ -749,9 +777,9 @@ def het_central_process_level(data, frag: str,centrality: str):
     """
     # Initialize a list to store the DataFrames for each step
     df_list = []
-
+    steps = 300
     # Iterate over the range of steps
-    for step in range(0, 200):
+    for step in range(0, steps):
         # Generate the DataFrame for the current step
         step_df = merge_het_central(data, step, centrality, frag, False)
         # Append the DataFrame to the list
@@ -761,6 +789,8 @@ def het_central_process_level(data, frag: str,centrality: str):
     results_df = pd.concat(df_list, ignore_index=True)
 
     return results_df
+
+
 
 
 def compute_correlation(data, frag: str,centrality:str):
@@ -778,12 +808,18 @@ def compute_correlation(data, frag: str,centrality:str):
     results = []
 
     df = het_central_process_level(data, centrality, frag)
+
+
     # Group by 'step' and 'replica'
     grouped = df.groupby(['step', 'replica'])
 
     # Iterate over each group
     for (step, replica), group in grouped:
-        print(group)
+
+        # Check if the group has at least 2 rows
+        if len(group) <= 2:
+            continue
+
         # Calculate the Pearson correlation coefficient
         correlation = pearsonr(x=group['central'],y=group['het'])[0]
         # Append the results as a dictionary
@@ -874,31 +910,43 @@ def plot_mean_with_ci(data_list):
 
 
 fragmentation_types = ['rand', 'cor', 'int', 'dist', 'reg', 'div', 'opt']
-fragmentation_types = ['rand', 'cor']
+# fragmentation_types = ['rand', 'cor']
 
 net = 'RGG'
 ignore = False
 # data = load_data(fragmentation_types, net, ignore)
 
 
-# net = data.keys()
-# results = compute_correlation_all(data,centrality='betweenness')
-# plot_mean_with_ci(results)
-
 
 frag = 'rand'
-
 with open(f'RGG, {frag}_ignore_False.pickle', 'rb') as file:
     rand = pickle.load(file)
 
-print("finish load!!!!!")
-net = rand[1][33][197]
-nx.draw_networkx(net)
-plt.show()
-print(nx.betweenness_centrality(net))
 
 
 
+
+def make_het_dist(het_list: list, ignore: bool=False) -> pd.DataFrame:
+    """
+    Takes a list of heterozygosity values and returns a DataFrame.
+    If ignore_ones is set to True, it will ignore all values of 1.
+
+    Args:
+    het_list : List of heterozygosity vectors
+    ignore_ones : If True, ignores all values of 1
+
+    Returns:
+    DataFrame with a column of all the heterozygosity values and the corresponding fragmentation step.
+    """
+    df = pd.DataFrame(het_list)
+
+    if ignore:
+        df = df.replace(0.02, np.nan)  # replace all 1s with NaN
+
+    df = df.stack().rename_axis(('step', 'delete')).reset_index(name='het')
+    df = df.drop(columns=['delete'])
+
+    return df
 
 
 

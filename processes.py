@@ -545,4 +545,3 @@ def get_connected_edges(net: nx.Graph, connected_nodes: set) -> list:
 
     return connected_edges
 
-

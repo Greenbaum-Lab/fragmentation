@@ -47,8 +47,11 @@ with open(f'RGG, {frag}_ignore_False.pickle', 'rb') as file:
 # plot_nodes_all(data)
 
 ##### plot heterozygisuty vs. node centrality
-plot_node_centrality(rand,step=60,centrality='degree',log=False,frag=frag)
+# plot_node_centrality(rand,step=60,centrality='degree',log=False,frag=frag)
 
+### plot correlation between centrality and heterozygosity for all processes
+# results = compute_correlation_all(data,centrality='degree')
+# plot_mean_with_ci(results)
 
 
 ##plot fst-distance relationship

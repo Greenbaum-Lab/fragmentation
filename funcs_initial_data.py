@@ -318,3 +318,48 @@ def make_networks(n_nets: int, n_nodes: int, net_type) -> list:
             nets.append(net)
 
     return nets
+
+
+
+def spatial_sw(N, k, p, space_dim=2):
+    G = nx.Graph()
+    positions = {i: np.random.rand(space_dim) for i in range(N)}
+
+    # Add nodes with their positions
+    for i in range(N):
+        G.add_node(i, pos=positions[i])
+
+    # Ensure each node is connected to exactly k nearest neighbors
+    for i in range(N):
+        distances = np.array([np.linalg.norm(positions[i] - positions[j]) for j in range(N)])
+        nearest_neighbors = np.argsort(distances)[1:k + 1]  # Get the k nearest neighbors
+        for j in nearest_neighbors:
+            G.add_edge(i, j)
+
+    # Rewire edges with probability p
+    for i in range(N):
+        neighbors = list(G.neighbors(i))
+        for neighbor in neighbors:
+            if np.random.rand() < p:
+                non_neighbors = [node for node in range(N) if node not in neighbors and node != i]
+                if non_neighbors:
+                    new_neighbor = non_neighbors[np.random.randint(len(non_neighbors))]
+                    G.remove_edge(i, neighbor)
+                    G.add_edge(i, new_neighbor)
+
+    return G, positions
+def create_sw_networks(num_networks, N, k, p, space_dim=2):
+    networks = []
+    for _ in range(num_networks):
+        G, positions = spatial_sw(N, k, p, space_dim)
+        networks.append((G, positions))
+    return networks
+# Parameters
+
+
+N = 100  # Number of nodes
+k = 3  # Each node is initially connected to k nearest neighbors
+p = 0.1  # Probability of rewiring each edge
+num_networks = 5
+
+# x = create_multiple_networks(num_networks,N,k,p)
