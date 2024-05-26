@@ -210,12 +210,13 @@ def make_fragmentation(net: nx.Graph, frag_type: str, ignore: bool, replica: int
     het_dens['replica'] = replica
 
     het_stat = make_het_stat(het_dens)
+    het_stat['replica'] = replica
 
     # calculate fst
     fst_dens = make_fst_dist(genetics_fst, ignore=ignore)
     fst_dens['replica'] = replica
     fst_stat = make_fst_stat(fst_dens)
-
+    fst_stat['replica'] = replica
     return nets_number, migration, het_dens, het_stat, fst_dens, fst_stat, genetics_coal, genetics_fst
 
 
