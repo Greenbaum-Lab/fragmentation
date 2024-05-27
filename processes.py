@@ -8,70 +8,105 @@ from collections import OrderedDict
 
 from networkx.algorithms.community import girvan_newman
 
+import networkx as nx
+import random
 
 def remove_edge_random(net: nx.Graph) -> list:
     """
-    Remove a random edge from the input network in each iteration.
-    Keep track of all generated graphs in a list until only two nodes remain.
+    Iteratively removes a random edge from the input NetworkX graph until only two edges remain.
+    Keeps track of all intermediate graphs and returns them in a list.
 
-    :param net: initial networkx object
-    :return: list of networkx objects
+    Parameters:
+    net (nx.Graph): The initial NetworkX graph object.
+
+    Returns:
+    list: A list of NetworkX graph objects representing the state of the graph after each edge removal.
     """
+    # Copy the input graph to avoid modifying the original
     migration = net.copy()
-    migration_list = []  # initialize list with the original network
+    # Initialize a list to store the intermediate graphs
+    migration_list = [migration.copy()]
+    # Keep track of the number of edges to avoid recalculating in each iteration
+    edge_count = migration.number_of_edges()
 
-    while nx.number_of_edges(migration) > 2:  # stop when the network includes only two connected nodes
-        # choose a random edge and remove it
+    # Continue removing edges until only two remain
+    while edge_count > 2:
+        # Get the list of current edges in the graph
         edges = list(migration.edges())
+        # Select a random edge to remove
         edge = random.choice(edges)
+        # Remove the selected edge from the graph
         migration.remove_edge(*edge)
-
-        # add the resulting graph to the list
+        # Append a copy of the current state of the graph to the list
         migration_list.append(migration.copy())
+        # Decrement the edge count
+        edge_count -= 1
 
     return migration_list
 
 
 def remove_edge_intrusive(net: nx.Graph) -> list:
     """
-    Remove edges from specific nodes until there are no more
-    edges conneted to it. then choose anothe rrandom node ans islote him ...
-    Keep track of all generated graphs in a list until only two nodes remain.
+    Iteratively removes edges connected to a randomly chosen node until that node is isolated.
+    Continues the process by selecting new random nodes until only two edges remain.
+    Keeps track of all intermediate graphs and returns them in a list.
 
-    :param net: initial networkx object
-    :return: list of networkx objects
+    Parameters:
+    net (nx.Graph): The initial NetworkX graph object.
+
+    Returns:
+    list: A list of NetworkX graph objects representing the state of the graph after each edge removal.
     """
+    # Copy the input graph to avoid modifying the original
     migration = net.copy()
-    migration_list = []  # initialize list with the original network
+    # Initialize a list to store the intermediate graphs
+    migration_list = [migration.copy()]
+    # Get a list of all nodes in the graph
     nodes = list(migration.nodes)
+    # Keep track of the number of edges to avoid recalculating in each iteration
+    edge_count = migration.number_of_edges()
 
-    while nx.number_of_edges(migration) > 2:  # stop when the network includes only two connected nodes
-
-        # choose a random node
+    # Continue removing edges until only two remain
+    while edge_count > 2:
+        # Choose a random node
         node = random.choice(nodes)
-
-        # get all the edges of the corresponding node
+        # Get all edges connected to the chosen node
         edges = list(migration.edges(node))
 
-        #update nodes list
+        # Remove the node from the nodes list to avoid reselecting it
         nodes.remove(node)
 
-        for edge in range(len(edges)):
-            if nx.number_of_edges(migration) <= 1:
-                break
+        # Remove edges connected to the node until it's isolated
+        while edges and edge_count > 2:
             edge = random.choice(edges)
-
-            # update network and edges list
             migration.remove_edge(*edge)
             edges.remove(edge)
-
-            # add the resulting graph to the list
             migration_list.append(migration.copy())
+            edge_count -= 1
 
     return migration_list
 
-# mat=nx.barabasi_albert_graph(8,1)
-# print(remove_edge_intrusive(mat))
+
+net = nx.random_geometric_graph(10,0.5)
+pos=nx.spring_layout(net,seed=4)
+nx.draw_networkx(net,pos)
+plt.show()
+
+x=remove_edge_intrusive(net)
+
+nx.draw_networkx(x[5],pos)
+plt.show()
+
+nx.draw_networkx(x[10],pos)
+plt.show()
+
+nx.draw_networkx(x[15],pos)
+plt.show()
+
+nx.draw_networkx(x[18],pos)
+plt.show()
+nx.draw_networkx(x[22],pos)
+plt.show()
 
 def remove_edge_correlated(net: nx.Graph) -> list:
     """
