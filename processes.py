@@ -108,6 +108,7 @@ plt.show()
 nx.draw_networkx(x[22],pos)
 plt.show()
 
+
 def remove_edge_correlated(net: nx.Graph) -> list:
     """
     Remove a correlated edge from migration network of type networkx

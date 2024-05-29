@@ -47,12 +47,11 @@ def calculate_statistics(df, index):
     """Calculate mean and 95% confidence interval."""
     mean_values = df[index].groupby('step')['avg'].mean()
     sem = df[index].groupby('step')['avg'].sem()  # Standard error of the mean
-    print(df[index].groupby('step')['avg'])
     confidence_interval = 1.96 * sem  # 95% confidence interval
     return mean_values, confidence_interval
 
 
-def plot_data(data, index, ylabel, measure, save=False):
+def plot_data(data, index, ylabel, measure, save=True):
     """Plot data with mean and 95% confidence interval."""
     color_palette = plt.get_cmap('tab10')  # You can change 'tab10' to any other available palette
     plt.figure()
@@ -63,7 +62,6 @@ def plot_data(data, index, ylabel, measure, save=False):
         plt.plot(mean_values, label=frag_type.capitalize())
         plt.fill_between(mean_values.index, mean_values - confidence_interval, mean_values + confidence_interval,
                          alpha=0.2)
-
     # Add breaking points and other plot details
     for i, (frag_type, datasets) in enumerate(data.items()):
         breaking_point = mean(find_breakink_point_list(datasets[1]))
