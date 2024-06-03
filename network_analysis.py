@@ -13,8 +13,9 @@ import pandas as pd
 from scipy import stats
 import math
 from funcs_analysis import load_data, plot_fragmentation, plot_data, giant_component_replicates, compute_mean_std, \
-    plot_component_genetics, plot_centrality, plot_degree_distributions, plot_nodes_all, plot_het_central, get_distance_matrix,\
-    get_euclidean_matrix,plot_matrix_relationship, plot_node_centrality
+    plot_component_genetics, plot_centrality, plot_degree_distributions, plot_nodes_all, plot_het_central, \
+    get_distance_matrix, \
+    get_euclidean_matrix, plot_matrix_relationship, plot_node_centrality, plot_network_stacked, measure_network_metrics
 
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -47,7 +48,7 @@ with open(f'RGG, {frag}_ignore_False.pickle', 'rb') as file:
 # plot_nodes_all(data)
 
 ##### plot heterozygisuty vs. node centrality
-# plot_node_centrality(rand,step=60,centrality='degree',log=False,frag=frag)
+plot_node_centrality(rand,step=0,centrality='degree',log=False,frag=frag)
 
 ### plot correlation between centrality and heterozygosity for all processes
 # results = compute_correlation_all(data,centrality='degree')
@@ -55,12 +56,15 @@ with open(f'RGG, {frag}_ignore_False.pickle', 'rb') as file:
 
 
 ##plot fst-distance relationship
-# matrix = rand[7][0][150]
-# net = rand[1][0][150]
-# distance_matrix = get_euclidean_matrix(net)
+# matrix = rand[7][0][0]
+# net = rand[1][0][0]
+# # distance_matrix = get_euclidean_matrix(net)
 # distance_matrix = get_distance_matrix(net)
 # plot_matrix_relationship(distance_matrix=distance_matrix,fst_matrix=matrix)
 
+# make barchart to show the proprtion of strcutures in the network
+# x = measure_network_metrics(rand)
+# plot_network_stacked(x,frag=frag)
 
 
 

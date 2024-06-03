@@ -4,3 +4,7 @@
 *.txt
 *.jpg
 *.pickle
+*.xml
+*.eps
+*.R
+

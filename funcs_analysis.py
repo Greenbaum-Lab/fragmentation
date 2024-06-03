@@ -204,14 +204,139 @@ def plot_fragmentation(data):
     plt.show()
 
 
-def measure_giant_component(network: nx.Graph):
+def measure_giant_component(network: nx.Graph, min_size: int = 4):
     """
     measure the no. of nodes in the giant component
     :param network:
     :return: length of giant components
     """
     largest_component = max(nx.connected_components(network), key=len)
+    if len(largest_component) <= min_size:
+        return 0
     return len(largest_component) / len(network)
+
+
+def measure_isolated_nodes(network: nx.Graph) -> int:
+    """
+    Measure the number of isolated nodes in the network.
+    :param network: NetworkX graph
+    :return: Number of isolated nodes
+    """
+    isolated_nodes = list(nx.isolates(network))
+    return len(isolated_nodes) / len(network)
+
+def measure_components(network: nx.Graph, min_size: int = 4) -> int:
+    """
+    Measure the number of components with a size greater than or equal to a given threshold,
+    excluding the giant component.
+    :param network: NetworkX graph
+    :param min_size: Minimum size of components to be counted
+    :return: Number of nodes in large components excluding the giant component
+    """
+    largest_component = max(nx.connected_components(network), key=len)
+
+    components = [
+        comp for comp in nx.connected_components(network)
+        if (comp != largest_component or len(comp) == min_size) and len(comp) >= min_size
+    ]
+
+    return sum(len(comp) for comp in components) / len(network)
+
+
+def measure_waste(network: nx.Graph, max_size: int = 3, min_size: int = 2) -> int:
+    """
+    Measure the number of components with a size greater than or equal to a given threshold,
+    excluding the giant component.
+    :param network: NetworkX graph
+    :param min_size: Minimum size of components to be counted
+    :return: Number of nodes in large components excluding the giant component
+    """
+    components = [comp for comp in nx.connected_components(network) if min_size <= len(comp) <= max_size]
+    num_nodes_in_medium_components = sum(len(comp) for comp in components)
+    return num_nodes_in_medium_components / len(network)
+
+
+def measure_network_metrics(networks: list) -> pd.DataFrame:
+    """
+    Measure various metrics of the networks and return them as a DataFrame:
+    - Size of the giant component
+    - Number of isolated nodes
+    - Number of components with 4 or more nodes excluding the giant component
+    :param networks: List of NetworkX graphs
+    :return: DataFrame with metrics for each network
+    """
+    metrics = []
+
+    for step, network in enumerate(networks):
+        giant_component= measure_giant_component(network)
+        isolated_nodes = measure_isolated_nodes(network)
+        components = measure_components(network)
+        waste = measure_waste(network)
+
+        scaled_metrics = {
+            "step": step,
+            "giant": giant_component ,
+            "isolated": isolated_nodes,
+            "components": components,
+            "waste": waste,
+        }
+        total = giant_component+isolated_nodes+components+waste
+
+        if total != 1:
+            print(f"sum of values higher than it should be in {step}")
+
+        metrics.append(scaled_metrics)
+
+    return pd.DataFrame(metrics)
+
+
+
+def measure_network_metrics_replicas(replicas: list) -> pd.DataFrame:
+    """
+    Measure metrics for a list of lists of networks (replicas) and return a DataFrame
+    including a column for the replica index.
+    :param replicas: List of lists of NetworkX graphs
+    :return: DataFrame with metrics for each network and replica
+    """
+    all_metrics = []
+
+    for replica_index, networks in enumerate(replicas):
+        replica_metrics = measure_network_metrics(networks)
+        replica_metrics['replica'] = replica_index
+        all_metrics.append(replica_metrics)
+
+    return pd.concat(all_metrics, ignore_index=True)
+
+
+def plot_network_stacked(df: pd.DataFrame,frag):
+    """
+    Plot the metrics as stacked bar charts.
+    :param df: DataFrame containing the metrics to plot
+    """
+    # Ensure the DataFrame is sorted by 'step'
+    df = df.sort_values(by='step')
+
+    # Plot stacked bar chart
+    fig, ax = plt.subplots(figsize=(10, 6))
+    bottom = np.zeros(len(df))
+
+    # Columns to plot
+    columns = ['waste', 'isolated', 'components', 'giant']
+
+    # Use a color palette from matplotlib
+    colors = plt.cm.Dark2.colors[:len(columns)]
+
+    for col, color in zip(columns, colors):
+        ax.bar(df['step'], df[col], bottom=bottom, label=col, color=color)
+        bottom += df[col]
+
+    ax.set_xlabel('Step')
+    ax.set_ylabel('Proportion of the network (%)')
+    ax.set_title(frag)
+    ax.legend()
+    plt.savefig(f'./figs/stack_proportion_{frag}.jpg')
+    plt.show()
+
 
 
 def giant_component_replicates(all_nets: list) -> pd.DataFrame:
@@ -917,9 +1042,9 @@ ignore = False
 
 
 
-frag = 'rand'
-with open(f'RGG, {frag}_ignore_False.pickle', 'rb') as file:
-    rand = pickle.load(file)
+# frag = 'rand'
+# with open(f'RGG, {frag}_ignore_False.pickle', 'rb') as file:
+#     rand = pickle.load(file)
 
 
 
@@ -1011,7 +1136,6 @@ def plot_matrix_relationship(distance_matrix, fst_matrix, method='pearson', perm
     # Add labels and title
     plt.xlabel('Euclidean distance')
     plt.ylabel('Fst')
-    plt.title('Random fragmentation in the 150th step')
 
     # Add a line of best fit
     m, b = np.polyfit(flat_matrix1, flat_matrix2, 1)
@@ -1021,6 +1145,7 @@ def plot_matrix_relationship(distance_matrix, fst_matrix, method='pearson', perm
     # p = np.poly1d(coeffs)  # Create polynomial function
     # t = np.linspace(min(flat_matrix1), max(flat_matrix1), 500)
     # plt.plot(t, p(t), color='red')
+    plt.savefig(f'./figs/distance_fst.jpg', format="jpg")
 
     plt.show()
 
