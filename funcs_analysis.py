@@ -433,9 +433,9 @@ def calculate_centrality(all_nets: list,
              and the other with the standard deviations of these values.
     """
     data = []
-    for i, nets in enumerate(all_nets):
+    for replica, nets in enumerate(all_nets):
         for step, net in enumerate(nets):
-            record = {'replicate': i, 'step': step}
+            record = {'replicate': replica, 'step': step}
 
             if 'clustering' in measure:
                 record['clustering'] = nx.average_clustering(net)
@@ -464,7 +464,7 @@ def calculate_centrality(all_nets: list,
             data.append(record)
 
     df = pd.DataFrame(data)
-
+    print(df)
     # Calculate the means and standard deviations for the specified centrality measures
     mean_centrality = df.groupby('step').mean().drop(columns='replicate')
     std_centrality = df.groupby('step').std().drop(columns='replicate')
@@ -634,29 +634,6 @@ def extract_selected_nodes(df):
     return selected_rows_across_replicas
 
 
-# def plot_nodes(df, frag_type):
-#     """
-#     Plots the heterozygosity ('het') values for each node across steps using a pivot table approach.
-#
-#     :param df: DataFrame with 'het' values, 'step', 'node_number', and 'replica'.
-#     """
-#     # Create a unique identifier for each node across replicas
-#     df['node_replica_id'] = df['node_number'].astype(str) + '_replica_' + df['replica'].astype(str)
-#
-#     # Pivot the DataFrame
-#     pivot_df = df.pivot_table(index='step', columns='node_replica_id', values='het')
-#
-#     plt.figure(figsize=(10, 6))
-#     # Plotting each column in the pivot table
-#     for column in pivot_df.columns:
-#         plt.plot(pivot_df.index, pivot_df[column], color='grey', alpha=0.2)
-#
-#     plt.xlabel('Step', fontsize=18)
-#     plt.ylabel('Heterozygosity', fontsize=18)
-#     plt.title(f'{frag_type} fragmentation', fontsize=20)
-#     plt.tick_params(axis='both', which='major', labelsize=18)  # Increase tick labels font size
-#     plt.tight_layout()
-#     plt.show()
 
 def plot_nodes(df, frag_type):
     """
@@ -705,7 +682,7 @@ def plot_het_central(data: dict, measure: str, save=bool):
         plt.plot(het, central, label=frag_type.capitalize())
 
     plt.xlabel('Heterozygosity', fontsize=16)
-    plt.ylabel('Transitivity', fontsize=16)
+    plt.ylabel('Modularity', fontsize=16)
     plt.legend()
     plt.gca().invert_xaxis()
 
@@ -1170,3 +1147,26 @@ def get_euclidean_matrix(net):
 
 
 
+
+# # Generate a high modularity network using the stochastic block model
+# sizes = [10, 10, 10, 10, 10]  # 5 communities of 10 nodes each
+# p_intra = 0.8  # high probability of intra-community edges
+# p_inter = 0.01  # low probability of inter-community edges
+# high_modularity_net = nx.stochastic_block_model(sizes, p_intra * np.identity(len(sizes)) + p_inter * (np.ones((len(sizes), len(sizes))) - np.identity(len(sizes))))
+#
+# # Generate a low modularity network using the Erdős-Rényi model
+# p = nx.density(high_modularity_net)  # ensure the same number of edges
+# low_modularity_net = nx.erdos_renyi_graph(50, p)
+#
+# # Compute modularity for both networks
+# high_modularity = compute_modularity(high_modularity_net)
+# low_modularity = compute_modularity(low_modularity_net)
+#
+# print("High Modularity Network Modularity:", high_modularity)
+# print("Low Modularity Network Modularity:", low_modularity)
+#
+# nx.draw_networkx(low_modularity_net)
+# plt.show()
+#
+# nx.draw_networkx(high_modularity_net)
+# plt.show()
