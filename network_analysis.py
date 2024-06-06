@@ -116,6 +116,8 @@ def plot_het_central(data: dict, measure: str, save=bool):
 # frag = 'div'
 # with open(f'RGG, {frag}_ignore_False.pickle', 'rb') as file:
 #     rand = pickle.load(file)
+
+
 ############## plot snapshots of networks along steps of fragmentation
 # plot_fragmentation(data)
 
