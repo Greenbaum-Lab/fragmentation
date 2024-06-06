@@ -919,24 +919,6 @@ def make_het_dist(het_list: list, ignore: bool=False) -> pd.DataFrame:
 
 
 
-
-
-
-
-
-
-
-
-# get df of het of a single node
-# rand = rand[2]
-# df = extract_selected_nodes(rand)
-# df = df[df['replica'] == 1]
-# df = df['het']
-# df = pd.DataFrame(df).reset_index(drop=True)
-# print(df)
-# df.to_csv('df.csv')
-
-
 def get_distance_matrix(net, default_distance=50):
     nodes = list(net.nodes())
     n = len(nodes)
