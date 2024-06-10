@@ -882,18 +882,6 @@ def plot_mean_with_ci(data_list):
     plt.show()
 
 
-fragmentation_types = ['rand', 'cor', 'int', 'dist', 'reg', 'div', 'opt']
-# fragmentation_types = ['rand', 'cor']
-
-net = 'RGG'
-ignore = False
-# data = load_data(fragmentation_types, net, ignore)
-
-
-
-
-
-
 
 def make_het_dist(het_list: list, ignore: bool=False) -> pd.DataFrame:
     """
@@ -1020,3 +1008,78 @@ def get_euclidean_matrix(net):
 #
 # nx.draw_networkx(high_modularity_net)
 # plt.show()
+
+
+
+
+
+
+def filter_intervals(df, interval_percentage=25):
+    """
+    Filter the DataFrame to include only specific intervals of steps.
+
+    Args:
+    df (pd.DataFrame): The original DataFrame with 'step' and 'replica' columns.
+    interval_percentage (int): The percentage interval for filtering steps.
+
+    Returns:
+    pd.DataFrame: Filtered DataFrame.
+    """
+    # Determine the maximum step value
+    max_step = df['step'].max()
+
+    # Calculate interval step based on the percentage
+    interval_step = max_step * interval_percentage // 100
+
+    # Create a list of steps to include
+    steps_to_include = list(range(0, max_step, interval_step))
+    steps_to_include = steps_to_include[:4]
+
+    # Filter the DataFrame to include only these steps
+    filtered_df = df[df['step'].isin(steps_to_include)]
+    return filtered_df
+
+
+fragmentation_types = ['rand', 'cor', 'int', 'dist', 'reg', 'div', 'opt']
+fragmentation_types = ['opt']
+
+net = 'RGG'
+ignore = False
+data = load_data(fragmentation_types, net, ignore)
+
+
+df = filter_intervals(data['opt'][2])
+
+
+
+def plot_distribution(df):
+    # Create a figure and axes
+    fig, ax = plt.subplots()
+    name='opt'
+    # Get unique steps
+    unique_steps = df['step'].unique()
+
+    # Generate reversed color gradient
+    colors = plt.cm.YlOrRd(np.linspace(0.3, 1, len(unique_steps)))[::-1]
+
+    # Plot histogram for each step with increasing alpha
+    for i, step in enumerate(unique_steps):
+        het_values = df[df['step'] == step]['het']
+        ax.hist(het_values, bins=40, alpha=0.7, label=f'Step {step}', density=True,
+                color=colors[i], edgecolor='black')
+
+    # Set titles and labels
+    ax.set_xlabel('Heterozygosity')
+    ax.set_ylabel('Density (%) ')
+    ax.legend()
+
+    # Optional: set x and y limits
+    # ax.set_xlim(0, 1.4)
+    ax.set_ylim(0, 20)
+
+    # Show the plot
+    plt.savefig(f'./figs/genetics_dist_{name}.jpg', format="jpg")
+    plt.show()
+
+
+plot_distribution(df)

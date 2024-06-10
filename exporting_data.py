@@ -6,8 +6,8 @@ from matplotlib import pyplot as plt
 
 from funcs_analysis import extract_selected_nodes
 
-frag = 'dist'
-with open(f'RGG, {frag}_ignore_False.pickle', 'rb') as file:
+frag = 'rand'
+with open(f'RGG, {frag}_ignore_False_full.pickle', 'rb') as file:
     rand = pickle.load(file)
 
 print('finish')
@@ -116,17 +116,6 @@ def extract_steps_for_nodes(df, max_het_nodes):
 
 
 
-# df = assign_node_numbers(rand)
-# df = df[(df['replica'] == 69) & (df['node_number'] == 5)]
-# plt.plot(df['step'], df['het'])
-# plt.show()
-#
-# last_nodes = get_max_het_node(df)
-# last_survivors = extract_steps_for_nodes(df, last_nodes)
-# last_survivors = last_survivors[last_survivors['replica'] == 8]
-# plt.plot(last_survivors['step'], last_survivors['het'])
-# plt.show()
-
 
 def export_het_csv(data, frag: str):
     """
@@ -139,14 +128,21 @@ def export_het_csv(data, frag: str):
     surviving_nodes = get_max_het_node(data)
     final_df = extract_steps_for_nodes(data, surviving_nodes)
     final_df.to_csv(f'{frag}_het.csv')
+    print('File saved successfully')
     return final_df
 
 
 
 export_het_csv(rand, frag)
-# print(df)
-# df = df[df['replica'] == 1]
-# df = df['het']
-# df = pd.DataFrame(df).reset_index(drop=True)
-# print(df)
-# df.to_csv('df.csv')
+
+
+# df = assign_node_numbers(rand)
+# df = df[(df['replica'] == 69) & (df['node_number'] == 5)]
+# plt.plot(df['step'], df['het'])
+# plt.show()
+#
+# last_nodes = get_max_het_node(df)
+# last_survivors = extract_steps_for_nodes(df, last_nodes)
+# last_survivors = last_survivors[last_survivors['replica'] == 8]
+# plt.plot(last_survivors['step'], last_survivors['het'])
+# plt.show()
