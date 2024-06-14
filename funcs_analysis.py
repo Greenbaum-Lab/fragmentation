@@ -51,7 +51,7 @@ def calculate_statistics(df, index):
     return mean_values, confidence_interval
 
 
-def plot_data(data, index, ylabel, measure, save=True):
+def plot_data(data, index, ylabel, measure):
     """Plot data with mean and 95% confidence interval."""
     color_palette = plt.get_cmap('tab10')  # You can change 'tab10' to any other available palette
     plt.figure()
@@ -70,8 +70,7 @@ def plot_data(data, index, ylabel, measure, save=True):
     plt.xlabel('Fragmentation step', fontsize=16)
     plt.ylabel(ylabel, fontsize=16)
     plt.legend()
-    if save:
-        plt.savefig(f'./figs/genetics_general_{measure}.jpg', format="jpg")
+    plt.savefig(f'./figs/genetics_general_{measure}.jpg', format="jpg")
     plt.show()
 
 
@@ -202,141 +201,6 @@ def plot_fragmentation(data):
     plt.savefig("./figs/fragmentation processes.png")
     plt.tight_layout()
     plt.show()
-
-
-def measure_giant_component(network: nx.Graph, min_size: int = 4):
-    """
-    measure the no. of nodes in the giant component
-    :param network:
-    :return: length of giant components
-    """
-    largest_component = max(nx.connected_components(network), key=len)
-    if len(largest_component) <= min_size:
-        return 0
-    return len(largest_component) / len(network)
-
-
-def measure_isolated_nodes(network: nx.Graph) -> int:
-    """
-    Measure the number of isolated nodes in the network.
-    :param network: NetworkX graph
-    :return: Number of isolated nodes
-    """
-    isolated_nodes = list(nx.isolates(network))
-    return len(isolated_nodes) / len(network)
-
-def measure_components(network: nx.Graph, min_size: int = 4) -> int:
-    """
-    Measure the number of components with a size greater than or equal to a given threshold,
-    excluding the giant component.
-    :param network: NetworkX graph
-    :param min_size: Minimum size of components to be counted
-    :return: Number of nodes in large components excluding the giant component
-    """
-    largest_component = max(nx.connected_components(network), key=len)
-
-    components = [
-        comp for comp in nx.connected_components(network)
-        if (comp != largest_component or len(comp) == min_size) and len(comp) >= min_size
-    ]
-
-    return sum(len(comp) for comp in components) / len(network)
-
-
-def measure_waste(network: nx.Graph, max_size: int = 3, min_size: int = 2) -> int:
-    """
-    Measure the number of components with a size greater than or equal to a given threshold,
-    excluding the giant component.
-    :param network: NetworkX graph
-    :param min_size: Minimum size of components to be counted
-    :return: Number of nodes in large components excluding the giant component
-    """
-    components = [comp for comp in nx.connected_components(network) if min_size <= len(comp) <= max_size]
-    num_nodes_in_medium_components = sum(len(comp) for comp in components)
-    return num_nodes_in_medium_components / len(network)
-
-
-def measure_network_metrics(networks: list) -> pd.DataFrame:
-    """
-    Measure various metrics of the networks and return them as a DataFrame:
-    - Size of the giant component
-    - Number of isolated nodes
-    - Number of components with 4 or more nodes excluding the giant component
-    :param networks: List of NetworkX graphs
-    :return: DataFrame with metrics for each network
-    """
-    metrics = []
-
-    for step, network in enumerate(networks):
-        giant_component= measure_giant_component(network)
-        isolated_nodes = measure_isolated_nodes(network)
-        components = measure_components(network)
-        waste = measure_waste(network)
-
-        scaled_metrics = {
-            "step": step,
-            "giant": giant_component ,
-            "isolated": isolated_nodes,
-            "components": components,
-            "waste": waste,
-        }
-        total = giant_component+isolated_nodes+components+waste
-
-        if total != 1:
-            print(f"sum of values higher than it should be in {step}")
-
-        metrics.append(scaled_metrics)
-
-    return pd.DataFrame(metrics)
-
-
-
-def measure_network_metrics_replicas(replicas: list) -> pd.DataFrame:
-    """
-    Measure metrics for a list of lists of networks (replicas) and return a DataFrame
-    including a column for the replica index.
-    :param replicas: List of lists of NetworkX graphs
-    :return: DataFrame with metrics for each network and replica
-    """
-    all_metrics = []
-
-    for replica_index, networks in enumerate(replicas):
-        replica_metrics = measure_network_metrics(networks)
-        replica_metrics['replica'] = replica_index
-        all_metrics.append(replica_metrics)
-
-    return pd.concat(all_metrics, ignore_index=True)
-
-
-def plot_network_stacked(df: pd.DataFrame,frag):
-    """
-    Plot the metrics as stacked bar charts.
-    :param df: DataFrame containing the metrics to plot
-    """
-    # Ensure the DataFrame is sorted by 'step'
-    df = df.sort_values(by='step')
-
-    # Plot stacked bar chart
-    fig, ax = plt.subplots(figsize=(10, 6))
-    bottom = np.zeros(len(df))
-
-    # Columns to plot
-    columns = ['waste', 'isolated', 'components', 'giant']
-
-    # Use a color palette from matplotlib
-    colors = plt.cm.Dark2.colors[:len(columns)]
-
-    for col, color in zip(columns, colors):
-        ax.bar(df['step'], df[col], bottom=bottom, label=col, color=color)
-        bottom += df[col]
-
-    ax.set_xlabel('Step')
-    ax.set_ylabel('Proportion of the network (%)')
-    ax.set_title(frag)
-    ax.legend()
-    plt.savefig(f'./figs/stack_proportion_{frag}.jpg')
-    plt.show()
-
 
 
 def giant_component_replicates(all_nets: list) -> pd.DataFrame:
@@ -1012,74 +876,3 @@ def get_euclidean_matrix(net):
 
 
 
-
-
-def filter_intervals(df, interval_percentage=25):
-    """
-    Filter the DataFrame to include only specific intervals of steps.
-
-    Args:
-    df (pd.DataFrame): The original DataFrame with 'step' and 'replica' columns.
-    interval_percentage (int): The percentage interval for filtering steps.
-
-    Returns:
-    pd.DataFrame: Filtered DataFrame.
-    """
-    # Determine the maximum step value
-    max_step = df['step'].max()
-
-    # Calculate interval step based on the percentage
-    interval_step = max_step * interval_percentage // 100
-
-    # Create a list of steps to include
-    steps_to_include = list(range(0, max_step, interval_step))
-    steps_to_include = steps_to_include[:4]
-
-    # Filter the DataFrame to include only these steps
-    filtered_df = df[df['step'].isin(steps_to_include)]
-    return filtered_df
-
-
-fragmentation_types = ['rand', 'cor', 'int', 'dist', 'reg', 'div', 'opt']
-fragmentation_types = ['opt']
-
-net = 'RGG'
-ignore = False
-data = load_data(fragmentation_types, net, ignore)
-
-
-df = filter_intervals(data['opt'][2])
-
-
-
-def plot_distribution(df):
-    # Create a figure and axes
-    fig, ax = plt.subplots()
-    name='opt'
-    # Get unique steps
-    unique_steps = df['step'].unique()
-
-    # Generate reversed color gradient
-    colors = plt.cm.YlOrRd(np.linspace(0.3, 1, len(unique_steps)))[::-1]
-
-    # Plot histogram for each step with increasing alpha
-    for i, step in enumerate(unique_steps):
-        het_values = df[df['step'] == step]['het']
-        ax.hist(het_values, bins=40, alpha=0.7, label=f'Step {step}', density=True,
-                color=colors[i], edgecolor='black')
-
-    # Set titles and labels
-    ax.set_xlabel('Heterozygosity')
-    ax.set_ylabel('Density (%) ')
-    ax.legend()
-
-    # Optional: set x and y limits
-    # ax.set_xlim(0, 1.4)
-    ax.set_ylim(0, 20)
-
-    # Show the plot
-    plt.savefig(f'./figs/genetics_dist_{name}.jpg', format="jpg")
-    plt.show()
-
-
-plot_distribution(df)
