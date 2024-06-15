@@ -184,10 +184,10 @@ def measure_network_metrics(networks: list) -> pd.DataFrame:
     metrics = []
 
     for step, network in enumerate(networks):
-        giant_component= measure_giant_component(network)
-        isolated_nodes = measure_isolated_nodes(network)
-        components = measure_components(network)
-        waste = measure_waste(network)
+        giant_component= round(measure_giant_component(network),2)
+        isolated_nodes = round(measure_isolated_nodes(network),2)
+        components = round(measure_components(network),2)
+        waste = round(measure_waste(network),2)
 
         scaled_metrics = {
             "step": step,
@@ -198,8 +198,8 @@ def measure_network_metrics(networks: list) -> pd.DataFrame:
         }
         total = giant_component+isolated_nodes+components+waste
 
-        if total != 1:
-            print(f"sum of values higher than it should be in {step}")
+        # if total != 1:
+        #     print(f"sum of values higher than it should be in {step}")
 
         metrics.append(scaled_metrics)
 
@@ -224,38 +224,6 @@ def measure_network_metrics_replicas(replicas: list) -> pd.DataFrame:
     return pd.concat(all_metrics, ignore_index=True)
 
 
-def plot_network_stacked(df: pd.DataFrame, frag):
-    """
-    Plot the metrics as stacked bar charts with error bars.
-    :param df: DataFrame containing the metrics to plot
-    """
-    # Ensure the DataFrame is sorted by 'step'
-    df = df.sort_values(by='step')
-
-    # Plot stacked bar chart
-    fig, ax = plt.subplots(figsize=(40, 30))
-    bottom = np.zeros(len(df))
-
-    # Columns to plot (without '_ci' suffix)
-    columns = ['waste', 'isolated', 'components', 'giant']
-
-    # Use a color palette from matplotlib
-    colors = plt.cm.Dark2.colors[:len(columns)]
-
-    for col, color in zip(columns, colors):
-        mean_values = df[col].values
-        ax.bar(df['step'], mean_values, bottom=bottom, label=col,
-               color=color, edgecolor='black',linewidth=0)
-        bottom += mean_values
-
-    ax.set_xlabel('Step', fontsize=24)
-    ax.set_ylabel('Proportion of the network (%)', fontsize=24)
-    plt.yticks(fontsize=24)
-    plt.xticks(fontsize=24)
-    ax.set_title(frag)
-    plt.savefig(f'./figs/stack_proportion_{frag}.jpg')
-    plt.show()
-
 
 def calculate_statistics(df):
     """Calculate mean and 95% confidence interval for all columns in the dataframe."""
@@ -265,7 +233,7 @@ def calculate_statistics(df):
     columns_to_analyze = df.columns.difference(['step', 'replica'])
 
     for column in columns_to_analyze:
-        mean_values = df.groupby('step')[column].mean()
+        mean_values = round(df.groupby('step')[column].mean(),2)
         sem = df.groupby('step')[column].sem()  # Standard error of the mean
         confidence_interval = 1.96 * sem  # 95% confidence interval
 
@@ -290,7 +258,48 @@ def calculate_statistics(df):
 
     return result_df
 
+
+def plot_network_stacked_area(df: pd.DataFrame, frag: str):
+    """
+    Plot the metrics as stacked area charts.
+    :param df: DataFrame containing the metrics to plot
+    :param frag: Fragmentation type
+    """
+    # Ensure the DataFrame is sorted by 'step'
+    df = df.sort_values(by='step')
+
+    # Create a new figure and axes with a specific size
+    fig, ax = plt.subplots(figsize=(40, 30))
+
+    # Define the columns to plot and the colors to use
+    columns = ['waste', 'isolated', 'components', 'giant']
+    colors = plt.cm.Dark2.colors[:len(columns)]
+
+    # Prepare the data for the stackplot
+    x_values = df['step'].values
+    y_values = [df[col].values for col in columns]
+    print(y_values)
+    # Create the stackplot
+    ax.stackplot(x_values, y_values, labels=columns, colors=colors, alpha=0.8)
+
+    # Set the labels and title
+    ax.set_xlabel('Step', fontsize=24)
+    ax.set_ylabel('Proportion of the network (%)', fontsize=24)
+    ax.set_title(frag)
+
+    # Add a legend
+    plt.legend(loc='upper left')
+
+    # Save the figure
+    plt.savefig(f'./figs/stack_proportion_{frag}.jpg')
+
+    # Display the plot
+    plt.show()
+
+
+
 pd.set_option('display.max_rows', None)
+pd.set_option('display.max_columns', None)
 
 # make barchart to show the proprtion of strcutures in the network
 data = data[frag]
@@ -301,30 +310,18 @@ def last_step(df):
     last_steps = x.groupby('replica')['step'].max()
     last_step = last_steps.median()
     return last_step
-last_steps = x.groupby('replica')['step'].max()
-print(last_steps.mean(), last_steps.median())
-
-# Plot the distribution of the last steps
-plt.hist(last_steps, bins=range(min(last_steps), max(last_steps) + 2), edgecolor='black')
-plt.xlabel('Step')
-plt.ylabel('Frequency')
-plt.title('Distribution of Last Steps in Each Replica')
-plt.xticks(range(min(last_steps), max(last_steps) + 1))  # Set x-ticks to be integer steps
-plt.show()
-print(x)
 
 
-na_percentage = x.groupby('step')['het'].apply(lambda x: x.isna().mean() * 100)
-print(na_percentage)
-# networks = data[1]
-# matrices = measure_network_metrics_replicas(networks)
-# print(matrices)
-# stats = calculate_statistics(matrices)
-# print(stats)
-#
-#
-# plot_network_stacked(matrices,frag=frag)
-# #
+
+networks = data[1]
+matrices = measure_network_metrics_replicas(networks)
+matrices = matrices[matrices['step'] <= last_step(x)]
+matrices = matrices[matrices['step'] <= 10]
+
+stats = calculate_statistics(matrices)
+print(stats)
+plot_network_stacked_area(matrices,frag=frag)
+
 
 
 
