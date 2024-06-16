@@ -198,13 +198,52 @@ def measure_network_metrics(networks: list) -> pd.DataFrame:
         }
         total = giant_component+isolated_nodes+components+waste
 
-        # if total != 1:
-        #     print(f"sum of values higher than it should be in {step}")
+        if total != 1:
+            print(f"sum of values higher than it should be in {step}")
 
         metrics.append(scaled_metrics)
 
     return pd.DataFrame(metrics)
 
+
+def measure_network_metrics(networks: list) -> pd.DataFrame:
+    """
+    Measure various metrics of the networks and return them as a DataFrame:
+    - Size of the giant component
+    - Number of isolated nodes
+    - Number of components with 4 or more nodes excluding the giant component
+    :param networks: List of NetworkX graphs
+    :return: DataFrame with metrics for each network
+    """
+    metrics = []
+
+    for step, network in enumerate(networks):
+        giant_component = measure_giant_component(network)
+        isolated_nodes = measure_isolated_nodes(network)
+        components = measure_components(network)
+        waste = measure_waste(network)
+
+        total = giant_component + isolated_nodes + components + waste
+
+        # Round the first three metrics
+        giant = round(giant_component / total, 2)
+        isolated = round(isolated_nodes / total, 2)
+        components = round(components / total, 2)
+
+        # Adjust the last metric so the total sums up to 1
+        waste = 1 - giant - isolated - components
+
+        scaled_metrics = {
+            "step": step,
+            "giant": giant,
+            "isolated": isolated,
+            "components": components,
+            "waste": waste,
+        }
+
+        metrics.append(scaled_metrics)
+
+    return pd.DataFrame(metrics)
 
 
 def measure_network_metrics_replicas(replicas: list) -> pd.DataFrame:
@@ -234,14 +273,14 @@ def calculate_statistics(df):
 
     for column in columns_to_analyze:
         mean_values = round(df.groupby('step')[column].mean(),2)
-        sem = df.groupby('step')[column].sem()  # Standard error of the mean
-        confidence_interval = 1.96 * sem  # 95% confidence interval
+        # sem = df.groupby('step')[column].sem()  # Standard error of the mean
+        # confidence_interval = 1.96 * sem  # 95% confidence interval
 
         # Create a DataFrame for this column's statistics
         column_stats = pd.DataFrame({
             'step': mean_values.index,
             f'{column}': mean_values.values,
-            f'{column}_ci': confidence_interval.values
+            # f'{column}_ci': confidence_interval.values
         })
 
         result.append(column_stats)
@@ -251,10 +290,11 @@ def calculate_statistics(df):
 
     # Remove duplicate 'step' columns
     result_df = result_df.loc[:, ~result_df.columns.duplicated()]
+    result_df['waste'] = 1 - result_df['giant'] - result_df['isolated'] - result_df['components']
 
     # Fill NaN values in confidence intervals with zeros
-    for column in columns_to_analyze:
-        result_df[f'{column}_ci'] = result_df[f'{column}_ci'].fillna(0)
+    # for column in columns_to_analyze:
+    #     result_df[f'{column}_ci'] = result_df[f'{column}_ci'].fillna(0)
 
     return result_df
 
@@ -269,7 +309,7 @@ def plot_network_stacked_area(df: pd.DataFrame, frag: str):
     df = df.sort_values(by='step')
 
     # Create a new figure and axes with a specific size
-    fig, ax = plt.subplots(figsize=(40, 30))
+    fig, ax = plt.subplots(figsize=(10, 6))
 
     # Define the columns to plot and the colors to use
     columns = ['waste', 'isolated', 'components', 'giant']
@@ -278,7 +318,7 @@ def plot_network_stacked_area(df: pd.DataFrame, frag: str):
     # Prepare the data for the stackplot
     x_values = df['step'].values
     y_values = [df[col].values for col in columns]
-    print(y_values)
+
     # Create the stackplot
     ax.stackplot(x_values, y_values, labels=columns, colors=colors, alpha=0.8)
 
@@ -316,11 +356,11 @@ def last_step(df):
 networks = data[1]
 matrices = measure_network_metrics_replicas(networks)
 matrices = matrices[matrices['step'] <= last_step(x)]
-matrices = matrices[matrices['step'] <= 10]
+matrices = matrices[matrices['step'] <= 256]
 
 stats = calculate_statistics(matrices)
-print(stats)
-plot_network_stacked_area(matrices,frag=frag)
+# print(stats)
+plot_network_stacked_area(stats,frag=frag)
 
 
 
