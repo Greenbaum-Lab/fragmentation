@@ -1,101 +1,107 @@
 from statistics import mean
-import pickle
-import pandas as pd
-from joypy import joyplot
+
+import networkx as nx
+import numpy as np
 from matplotlib import pyplot as plt
 
-from funcs_analysis import load_data, plot_data, filter_intervals, plot_all_distributions, plot_distribution
-
-# from funcs_initial_data import make_networks, make_replicates_new
-
-# pd.set_option('display.max_rows',None)
-
-
-########## run pipeline
-# print("here i start!")
-# n = 50  # no. of nodes
-# n_rep = 100  # no. of replicates
-# net = "RGG"
-# ignore = False
-# #
-# # # # create list off nets
-# nets = make_networks(n_nets=n_rep, n_nodes=n, net_type=net)
-#
-# # run the pipeline for all fragmentation types
-# rand = make_replicates_new(nets=nets, frag_type='rand', ignore=ignore)
-# print("1")
-# cor = make_replicates_new(nets=nets, frag_type='cor', ignore=ignore)
-# print("2")
-# int = make_replicates_new(nets=nets, frag_type='int', ignore=ignore)
-# print("3")
-# reg = make_replicates_new(nets=nets, frag_type='reg', ignore=ignore)
-# print("4")
-# div = make_replicates_new(nets=nets, frag_type='div', ignore=ignore)
-# print("5")
-# dist = make_replicates_new(nets=nets, frag_type='dist', ignore=ignore)
-# print("6")
-# opt = make_replicates_new(nets=nets, frag_type='opt', ignore=ignore)
-# print("7")
-# opt2 = make_replicates_new(nets=nets, frag_type='opt2', ignore=ignore)
-# print("8")
-# wrst = make_replicates_new(nets=nets, frag_type='wrst', ignore=ignore)
-# print("9")
-#
-#
-#
-# # save files as tuple
-# pickle_filename = f'{net}, rand_ignore_{ignore}.pickle'
-# with open(pickle_filename, 'wb') as file:
-#     pickle.dump(rand, file)
-#
-# pickle_filename = f'{net}, cor_ignore_{ignore}.pickle'
-# with open(pickle_filename, 'wb') as file:
-#     pickle.dump(cor, file)
-#
-# pickle_filename = f'{net}, int_ignore_{ignore}.pickle'
-# with open(pickle_filename, 'wb') as file:
-#     pickle.dump(int, file)
-#
-# pickle_filename = f'{net}, reg_ignore_{ignore}.pickle'
-# with open(pickle_filename, 'wb') as file:
-#     pickle.dump(reg, file)
-#
-# pickle_filename = f'{net}, div_ignore_{ignore}.pickle'
-# with open(pickle_filename, 'wb') as file:
-#     pickle.dump(div, file)
-#
-# pickle_filename = f'{net}, dist_ignore_{ignore}.pickle'
-# with open(pickle_filename, 'wb') as file:
-#     pickle.dump(dist, file)
-#
-# pickle_filename = f'{net}, opt_ignore_{ignore}.pickle'
-# with open(pickle_filename, 'wb') as file:
-#     pickle.dump(opt, file)
-#
-# pickle_filename = f'{net}, opt2_ignore_{ignore}.pickle'
-# with open(pickle_filename, 'wb') as file:
-#     pickle.dump(opt2, file)
-#
-# pickle_filename = f'{net}, wrst_ignore_{ignore}.pickle'
-# with open(pickle_filename, 'wb') as file:
-#     pickle.dump(wrst, file)
-# ########## finish pipeline
+from funcs_analysis import load_data
 
 
 
-fragmentation_types = ['rand', 'cor', 'int', 'dist', 'reg', 'div', 'opt']
-# fragmentation_types = ['int']
-net = 'RGG'
-ignore = False
-data = load_data(fragmentation_types, net, ignore)
+def make_networks(n_nets: int, n_nodes: int, net_type) -> list:
+    """
+    create a list of networks
+    :param n_nets: number of networks
+    :param n_nodes: number of nodes
+    :param connectivity: degree of connectivity
+    :param net_type: type of network: ER, RGG, or SF
+    :return: list of networks
+    """
+    nets = []
+    for net in range(n_nets):
+
+        if net_type == 'ER':
+            net = nx.erdos_renyi_graph(n=n_nodes, p=0.2)
+            nets.append(net)
+        if net_type == 'RGG':
+            net = nx.random_geometric_graph(n=n_nodes, radius=0.3)
+            nets.append(net)
+        if net_type == 'AB':
+            net = nx.barabasi_albert_graph(n=n_nodes, m=5)
+            nets.append(net)
+        if net_type == 'SW':
+            net = nx.watts_strogatz_graph(n=n_nodes,k=9, p=0.1)
+            nets.append(net)
+
+    return nets
 
 
-# Plot fst and het along fragmentation
-plot_data(data, 5, 'Pairwise Fst',measure='fst')
-plot_data(data, 3, 'Heterozygosity',measure='heterozygosity')
+
+# Generate 100 RGG networks with exactly 250 edges each
+networks = make_rgg(n_nets=100, n_nodes=50, target_edges=250)
 
 
-##############plot distributions
+num_edges = [net.number_of_edges() for net in networks]
+print(num_edges)
+# Plot the histogram of the number of edges
+plt.figure(figsize=(10, 6))
+plt.hist(num_edges, bins=100, edgecolor='black')
+plt.title('Distribution of Number of Edges in 100 RGG Networks')
+plt.xlabel('Number of Edges')
+plt.ylabel('Frequency')
+plt.show()
+
+
+def find_breaking_point(networks):
+    """
+    find the index of the list where the network is no longer connected
+    """
+    for index, network in enumerate(networks):
+        if not nx.is_connected(network):
+            return index
+    return None
+
+
+def find_breakink_point_list(networks: list):
+    breaking_point = []
+    for net in networks:
+        x = find_breaking_point(net)
+        breaking_point.append(x)
+    return breaking_point
+
+def calculate_statistics(df, index):
+    """Calculate mean and 95% confidence interval."""
+    mean_values = df[index].groupby('step')['avg'].mean()
+    sem = df[index].groupby('step')['avg'].sem()  # Standard error of the mean
+    confidence_interval = 1.96 * sem  # 95% confidence interval
+    return mean_values, confidence_interval
+
+
+def plot_data(data, index, ylabel, measure):
+    """Plot data with mean and 95% confidence interval."""
+    color_palette = plt.get_cmap('tab10')  # You can change 'tab10' to any other available palette
+    plt.figure()
+    # last_step = last_step(data['rand'][2])
+    print(f"Last step for : {last_step}")
+
+    # Plot each dataset's mean and confidence interval
+    for frag_type, datasets in data.items():
+        mean_values, confidence_interval = calculate_statistics(datasets, index)
+        plt.plot(mean_values, label=frag_type.capitalize())
+        plt.fill_between(mean_values.index, mean_values - confidence_interval, mean_values + confidence_interval,
+                         alpha=0.2)
+    # Add breaking points and other plot details
+    for i, (frag_type, datasets) in enumerate(data.items()):
+        breaking_point = mean(find_breakink_point_list(datasets[1]))
+        plt.axvline(x=breaking_point, color=color_palette(i), ymax=0.1)
+
+
+    plt.xlabel('Fragmentation step', fontsize=16)
+    plt.ylabel(ylabel, fontsize=16)
+    # plt.xlim(None,265)
+    plt.legend()
+    plt.savefig(f'./figs/genetics_general_{measure}.jpg', format="jpg")
+    plt.show()
 
 
 
@@ -161,15 +167,29 @@ def plot_distribution(df, measure='het' or 'fst',type=str):
     plt.show()
 
 
-fragmentation_types = ['rand', 'cor', 'int', 'dist', 'reg', 'div', 'opt']
 
-frag='div'
-fragmentation_types = [frag]
+#######################
+####################### plot data
+fragmentation_types = ['rand', 'cor', 'int', 'dist', 'reg', 'div', 'opt', 'opt2', 'wrst']
+# fragmentation_types = ['int']
 net = 'RGG'
 ignore = False
 data = load_data(fragmentation_types, net, ignore)
 
 
-df = filter_intervals(data[frag][2])
+# Plot fst and het along fragmentation
+plot_data(data, 5, 'Pairwise Fst',measure='fst')
+plot_data(data, 3, 'Heterozygosity',measure='heterozygosity')
 
-plot_distribution(df,measure='het',type=frag)
+
+
+##############plot distributions
+##### one frag type each time
+fragmentation_types = ['int']
+net = 'RGG'
+ignore = False
+data = load_data(fragmentation_types, net, ignore)
+
+
+df = filter_intervals(data[fragmentation_types][2])
+plot_distribution(df,measure='het',type=fragmentation_types)

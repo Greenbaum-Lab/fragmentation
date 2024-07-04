@@ -322,6 +322,28 @@ def make_networks(n_nets: int, n_nodes: int, net_type) -> list:
 
 
 
+def make_rgg(n_nets: int, n_nodes: int, target_edges: int) -> list:
+    """
+    Create a list of networks with a target number of edges.
+    :param n_nets: number of networks
+    :param n_nodes: number of nodes
+    :param net_type: type of network: ER, RGG, or SF
+    :param target_edges: target number of edges
+    :return: list of networks
+    """
+    nets = []
+    for _ in range(n_nets):
+        while True:
+            net = nx.random_geometric_graph(n=n_nodes, radius=0.3)
+            print(net.number_of_edges())
+
+            if net.number_of_edges() == target_edges:
+                nets.append(net)
+                break
+    return nets
+
+
+
 def spatial_sw(N, k, p, space_dim=2):
     G = nx.Graph()
     positions = {i: np.random.rand(space_dim) for i in range(N)}
@@ -355,7 +377,7 @@ def create_sw_networks(num_networks, N, k, p, space_dim=2):
         G, positions = spatial_sw(N, k, p, space_dim)
         networks.append((G, positions))
     return networks
-# Parameters
+
 
 
 N = 100  # Number of nodes
