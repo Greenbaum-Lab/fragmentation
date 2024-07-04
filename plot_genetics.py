@@ -2,10 +2,10 @@ from statistics import mean
 
 import networkx as nx
 import numpy as np
+import pandas as pd
 from matplotlib import pyplot as plt
 
 from funcs_analysis import load_data
-
 
 
 def make_networks(n_nets: int, n_nodes: int, net_type) -> list:
@@ -30,11 +30,10 @@ def make_networks(n_nets: int, n_nodes: int, net_type) -> list:
             net = nx.barabasi_albert_graph(n=n_nodes, m=5)
             nets.append(net)
         if net_type == 'SW':
-            net = nx.watts_strogatz_graph(n=n_nodes,k=9, p=0.1)
+            net = nx.watts_strogatz_graph(n=n_nodes, k=9, p=0.1)
             nets.append(net)
 
     return nets
-
 
 
 def find_breaking_point(networks):
@@ -54,20 +53,11 @@ def find_breakink_point_list(networks: list):
         breaking_point.append(x)
     return breaking_point
 
-def calculate_statistics(df, index):
-    """Calculate mean and 95% confidence interval."""
-    mean_values = df[index].groupby('step')['avg'].mean()
-    sem = df[index].groupby('step')['avg'].sem()  # Standard error of the mean
-    confidence_interval = 1.96 * sem  # 95% confidence interval
-    return mean_values, confidence_interval
-
 
 def plot_data(data, index, ylabel, measure):
     """Plot data with mean and 95% confidence interval."""
     color_palette = plt.get_cmap('tab10')  # You can change 'tab10' to any other available palette
     plt.figure()
-    # last_step = last_step(data['rand'][2])
-    print(f"Last step for : {last_step}")
 
     # Plot each dataset's mean and confidence interval
     for frag_type, datasets in data.items():
@@ -80,7 +70,6 @@ def plot_data(data, index, ylabel, measure):
         breaking_point = mean(find_breakink_point_list(datasets[1]))
         plt.axvline(x=breaking_point, color=color_palette(i), ymax=0.1)
 
-
     plt.xlabel('Fragmentation step', fontsize=16)
     plt.ylabel(ylabel, fontsize=16)
     # plt.xlim(None,265)
@@ -89,7 +78,7 @@ def plot_data(data, index, ylabel, measure):
     plt.show()
 
 
-
+################### distribution ####################
 def filter_intervals(df, interval_percentage=25):
     """
     Filter the DataFrame to include only specific intervals of steps.
@@ -116,9 +105,7 @@ def filter_intervals(df, interval_percentage=25):
     return filtered_df
 
 
-
-
-def plot_distribution(df, measure='het' or 'fst',type=str):
+def plot_distribution(df, measure='het' or 'fst', type=str):
     """ Plot the distribution of a given measure across different steps.
     """
     # Create a figure and axes
@@ -152,7 +139,7 @@ def plot_distribution(df, measure='het' or 'fst',type=str):
     plt.show()
 
 
-
+############### individual nodes ####################
 def select_nodes(df, num_nodes=1):
     """
     Selects a specified number of random node indices for each replica.
@@ -191,7 +178,6 @@ def extract_selected_nodes(df):
     return selected_rows_across_replicas
 
 
-
 def plot_nodes(df, frag_type):
     """
     Plots the heterozygosity ('het') values for each node across steps using a pivot table approach.
@@ -227,34 +213,28 @@ def plot_nodes_all(data):
         plot_nodes(het_nodes, frag_type)
 
 
-
-
 #######################
 ####################### plot data
 fragmentation_types = ['rand', 'cor', 'int', 'dist', 'reg', 'div', 'opt', 'opt2', 'wrst']
-# fragmentation_types = ['int']
+fragmentation_types = ['rand']
 net = 'RGG'
 ignore = False
 data = load_data(fragmentation_types, net, ignore)
 
-
 # Plot fst and het along fragmentation
-plot_data(data, 5, 'Pairwise Fst',measure='fst')
-plot_data(data, 3, 'Heterozygosity',measure='heterozygosity')
-
+plot_data(data, 5, 'Pairwise Fst', measure='fst')
+# plot_data(data, 3, 'Heterozygosity',measure='heterozygosity')
 
 
 ##############plot distributions
 ##### one frag type each time
-fragmentation_types = ['int']
-net = 'RGG'
-ignore = False
-data = load_data(fragmentation_types, net, ignore)
-
-
-df = filter_intervals(data[fragmentation_types][2])
-plot_distribution(df,measure='het',type=fragmentation_types)
-
+# fragmentation_types = ['int']
+# net = 'RGG'
+# ignore = False
+# data = load_data(fragmentation_types, net, ignore)
+#
+# df = filter_intervals(data[fragmentation_types][2])
+# plot_distribution(df,measure='het',type=fragmentation_types)
 
 
 ####################### plot individual nodes

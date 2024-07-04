@@ -180,7 +180,7 @@ from processes import remove_edge_regressive
 function_mapping = {
     'rand': remove_edge_random,
     'cor': remove_edge_correlated,
-    'int': remove_edge_intrusive,
+    'intr': remove_edge_intrusive,
     'reg': remove_edge_regressive,
     'div': remove_edge_divisive,
     'dist': remove_edge_distance,
