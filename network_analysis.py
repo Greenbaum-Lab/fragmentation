@@ -12,10 +12,7 @@ from matplotlib import pyplot as plt
 import pandas as pd
 from scipy import stats
 import math
-from funcs_analysis import load_data, plot_fragmentation, plot_data, giant_component_replicates, compute_mean_std, \
-    plot_component_genetics, plot_centrality, plot_degree_distributions, plot_nodes_all, plot_het_central, \
-    get_distance_matrix, \
-    get_euclidean_matrix, plot_matrix_relationship, calculate_centrality, compute_modularity
+from funcs import load_data, calculate_statistics
 
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -23,7 +20,9 @@ from scipy import stats
 import pickle
 
 fragmentation_types = ['rand', 'cor', 'int', 'dist', 'reg', 'div', 'opt']
-frag = 'dist'
+fragmentation_types = ['rand', 'cor']
+
+frag = 'div'
 
 fragmentation_types = [frag]
 net = 'RGG'
@@ -93,29 +92,33 @@ def plot_het_central(data: dict, measure: str, save=bool):
         merged = pd.merge(het, central, how='outer')
         merged = merged[merged[measure] != 0]
 
-        sns.regplot(x='component', y='avg', data=merged, fit_reg=True, order=2,
+        if measure == 'component':
+            sns.regplot(x='component', y='avg', data=merged, fit_reg=True, order=2,
+                        truncate=True, scatter_kws={'s': 50, 'alpha': 0.01, 'color': color_palette(i)},
+                        line_kws={'lw': 2, 'label': frag_type})
+
+            max_val = max(plt.gca().get_xlim()[1], plt.gca().get_ylim()[1])
+            min_val = min(plt.gca().get_xlim()[1], plt.gca().get_ylim()[1])
+            plt.plot([0.05, max_val], [0, max_val], linestyle='--', color='black')
+            plt.xlabel('Fraction of nodes in the largest component', fontsize=16)
+
+
+    if measure == 'modularity':
+        sns.regplot(x='modularity', y='avg', data=merged, fit_reg=True, order=2,
                     truncate=True, scatter_kws={'s': 50, 'alpha': 0.01, 'color': color_palette(i)},
                     line_kws={'lw': 2, 'label': frag_type})
 
-    if measure == 'modularity':
         plt.gca().invert_xaxis()
         plt.ylim(-0.1, 1.1)
+        plt.xlabel('Community structure', fontsize=16)
 
-    if measure == 'component':
-        max_val = max(plt.gca().get_xlim()[1], plt.gca().get_ylim()[1])
-        min_val = min(plt.gca().get_xlim()[1], plt.gca().get_ylim()[1])
-        plt.plot([0.05, max_val], [0, max_val], linestyle='--', color='black')
 
-    plt.xlabel('Fraction of nodes in the largest component', fontsize=16)
     plt.ylabel('Heterozygosity', fontsize=16)
     plt.legend()
 
     if save:
         plt.savefig(f'./figs/het_{measure}.jpg', format="jpg")
     plt.show()
-
-####plot centrality vs heterozygosity
-# plot_het_central(data, measure='component', save=True)
 
 
 ################################
@@ -170,40 +173,6 @@ def measure_waste(network: nx.Graph, max_size: int = 3, min_size: int = 2) -> in
     components = [comp for comp in nx.connected_components(network) if min_size <= len(comp) <= max_size]
     num_nodes_in_medium_components = sum(len(comp) for comp in components)
     return num_nodes_in_medium_components / len(network)
-
-
-def measure_network_metrics(networks: list) -> pd.DataFrame:
-    """
-    Measure various metrics of the networks and return them as a DataFrame:
-    - Size of the giant component
-    - Number of isolated nodes
-    - Number of components with 4 or more nodes excluding the giant component
-    :param networks: List of NetworkX graphs
-    :return: DataFrame with metrics for each network
-    """
-    metrics = []
-
-    for step, network in enumerate(networks):
-        giant_component= round(measure_giant_component(network),2)
-        isolated_nodes = round(measure_isolated_nodes(network),2)
-        components = round(measure_components(network),2)
-        waste = round(measure_waste(network),2)
-
-        scaled_metrics = {
-            "step": step,
-            "giant": giant_component ,
-            "isolated": isolated_nodes,
-            "components": components,
-            "waste": waste,
-        }
-        total = giant_component+isolated_nodes+components+waste
-
-        if total != 1:
-            print(f"sum of values higher than it should be in {step}")
-
-        metrics.append(scaled_metrics)
-
-    return pd.DataFrame(metrics)
 
 
 def measure_network_metrics(networks: list) -> pd.DataFrame:
@@ -326,9 +295,9 @@ def plot_network_stacked_area(df: pd.DataFrame, frag: str):
     ax.set_xlabel('Step', fontsize=24)
     ax.set_ylabel('Proportion of the network (%)', fontsize=24)
     ax.set_title(frag)
-
+    plt.ylim(0, 1)
     # Add a legend
-    plt.legend(loc='upper left')
+    # plt.legend(loc='upper left')
 
     # Save the figure
     plt.savefig(f'./figs/stack_proportion_{frag}.jpg')
@@ -337,64 +306,147 @@ def plot_network_stacked_area(df: pd.DataFrame, frag: str):
     plt.show()
 
 
-
-pd.set_option('display.max_rows', None)
-pd.set_option('display.max_columns', None)
-
-# make barchart to show the proprtion of strcutures in the network
-data = data[frag]
-x= data[2]
-# print(max(x['step']))
-
-def last_step(df):
-    last_steps = x.groupby('replica')['step'].max()
-    last_step = last_steps.median()
-    return last_step
+#####plot stacks
+# networks = data[1]
+# matrices = measure_network_metrics_replicas(networks)
+# stats = calculate_statistics(matrices)
+# plot_network_stacked_area(stats,frag=frag)
 
 
 
-networks = data[1]
-matrices = measure_network_metrics_replicas(networks)
-matrices = matrices[matrices['step'] <= last_step(x)]
-matrices = matrices[matrices['step'] <= 256]
+####plot centrality vs heterozygosity
+# plot_het_central(data, measure='modularity', save=True)
 
-stats = calculate_statistics(matrices)
-# print(stats)
-plot_network_stacked_area(stats,frag=frag)
-
-
-
-
-
-
-
-
-
-
-############## plot snapshots of networks along steps of fragmentation
-# plot_fragmentation(data)
 
 ####plot centrality vs fragmnetation
-# plot_centrality(data,centrality='degree')
-
-####plot degree distribution of fragemtation types
-# plot_degree_distributions(data)
-
-###### plot individual nodes
-# plot_nodes_all(data)
-
-##### plot heterozygisuty vs. node centrality
-# plot_node_centrality(rand,step=0,centrality='degree',log=False,frag=frag)
-
-### plot correlation between centrality and heterozygosity for all processes
-# results = compute_correlation_all(data,centrality='degree')
-# plot_mean_with_ci(results)
+# plot_centrality(data,centrality='connectivity')
 
 
 ##plot fst-distance relationship
-# matrix = rand[7][0][0]
-# net = rand[1][0][0]
-# # distance_matrix = get_euclidean_matrix(net)
+# data = data[frag]
+# matrix = data[7][0][20]
+# net = data[1][0][20]
+# distance_matrix = get_euclidean_matrix(net)
+# perform_mantel_test(matrix,distance_matrix)
+
 # distance_matrix = get_distance_matrix(net)
 # plot_matrix_relationship(distance_matrix=distance_matrix,fst_matrix=matrix)
+
+def calculate_mantel_correlation(data):
+    # Initialize a list to store the results
+    mantel_results = []
+
+    # Get the number of replicas
+    num_replicas = len(data[7])
+
+    # Loop over all replicas
+    for rep in range(num_replicas):
+        # Get the number of steps for the current replica
+        num_steps = len(data[7][rep])
+        num_steps = 10
+
+        # Loop over all steps
+        for step in range(num_steps):
+            # Get the FST matrix and network for the current step
+            matrix = data[7][rep][step]
+            net = data[1][rep][step]
+
+            distance_matrix = get_euclidean_matrix(net)
+
+            correlation = perform_mantel_test(matrix, distance_matrix, perms=999,
+                                              method='pearson',print=False)[0]
+
+            mantel_results.append({
+                'replica': rep,
+                'step': step,
+                'correlation': correlation
+            })
+
+    return pd.DataFrame(mantel_results)
+
+
+def plot_step_vs_correlation(df):
+    plt.figure(figsize=(10, 6))
+    plt.plot(df['step'], df['correlation'])
+    plt.xlabel('Step')
+    plt.ylabel('Correlation')
+    plt.show()
+
+
+from scipy import stats
+
+def calculate_statistics(df):
+    # Group the data by 'step'
+    grouped = df.groupby('step')
+
+    # Calculate the mean correlation for each step
+    mean_correlation = grouped['correlation'].mean()
+
+    # Calculate the standard error of the mean for each step
+    sem_correlation = grouped['correlation'].sem()
+
+    ci_correlation = 1.96 * sem_correlation  # 95% confidence interval
+
+    # Create a new DataFrame for the results
+    results = pd.DataFrame({
+        'step': mean_correlation.index,
+        'correlation_mean': mean_correlation.values,
+        'correlation_ci': ci_correlation.values
+    })
+
+    return results
+
+def plot_correlation_with_ci(df):
+    plt.figure(figsize=(10, 6))
+    sns.lineplot(x='step', y='correlation_mean', data=df)
+    plt.fill_between(df['step'], df['correlation_mean'] - df['correlation_ci'], df['correlation_mean'] + df['correlation_ci'], color='b', alpha=0.1)
+    plt.xlabel('Step')
+    plt.ylabel('Correlation')
+    plt.show()
+
+
+def plot_correlation_with_ci(df, fragmentation_types):
+    plt.figure(figsize=(10, 6))
+
+    # If a single fragmentation type is provided, convert it to a list
+    if isinstance(fragmentation_types, str):
+        fragmentation_types = [fragmentation_types]
+
+    # Loop over all fragmentation types
+    for frag_type in fragmentation_types:
+        # Filter the data for the current fragmentation type
+        df_filtered = df[df['fragmentation_type'] == frag_type]
+
+        # Plot the data for the current fragmentation type
+        sns.lineplot(x='step', y='correlation_mean', data=df_filtered, label=frag_type)
+        plt.fill_between(df_filtered['step'], df_filtered['correlation_mean'] - df_filtered['correlation_ci'], df_filtered['correlation_mean'] + df_filtered['correlation_ci'], alpha=0.1)
+
+    plt.xlabel('Step')
+    plt.ylabel('Correlation')
+    plt.legend()
+    plt.show()
+
+
+def process_multiple_fragmentation_types(data, fragmentation_types):
+    for frag_type in fragmentation_types:
+        frag_data = data[frag_type]
+        correlations = calculate_mantel_correlation(frag_data)
+        stats = calculate_statistics(correlations)
+        plot_correlation_with_ci(stats,fragmentation_types=frag_type)
+
+
+# x=calculate_mantel_correlation(data)
+# print(x)
+# stats= calculate_statistics(x)
+# print(stats)
+# plot_correlation_with_ci(stats, fragmentation_types)
+
+
+
+# fragmentation_types = ['rand', 'cor', 'int', 'dist', 'reg', 'div', 'opt']
+# fragmentation_types = ['rand', 'cor']
+#
+# net = 'RGG'
+# ignore = False
+# data = load_data(fragmentation_types, net, ignore)
 

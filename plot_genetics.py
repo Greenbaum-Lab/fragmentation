@@ -37,21 +37,6 @@ def make_networks(n_nets: int, n_nodes: int, net_type) -> list:
 
 
 
-# Generate 100 RGG networks with exactly 250 edges each
-networks = make_rgg(n_nets=100, n_nodes=50, target_edges=250)
-
-
-num_edges = [net.number_of_edges() for net in networks]
-print(num_edges)
-# Plot the histogram of the number of edges
-plt.figure(figsize=(10, 6))
-plt.hist(num_edges, bins=100, edgecolor='black')
-plt.title('Distribution of Number of Edges in 100 RGG Networks')
-plt.xlabel('Number of Edges')
-plt.ylabel('Frequency')
-plt.show()
-
-
 def find_breaking_point(networks):
     """
     find the index of the list where the network is no longer connected
@@ -168,6 +153,82 @@ def plot_distribution(df, measure='het' or 'fst',type=str):
 
 
 
+def select_nodes(df, num_nodes=1):
+    """
+    Selects a specified number of random node indices for each replica.
+
+    :param df: DataFrame containing the heterozygosity data (dat[2]).
+    :param num_nodes: Number of nodes to select per replica.
+    :return: A dictionary with replicas as keys and lists of selected node indices as values.
+    """
+    selection_dict = {}
+    for replica in df['replica'].unique():
+        df_replica = df[df['replica'] == replica]
+        nodes_per_replica = np.argmax(df_replica['step'].to_numpy()[1:] != df_replica['step'].to_numpy()[:-1]) + 1
+        random_indices = np.random.choice(nodes_per_replica, min(num_nodes, nodes_per_replica), replace=False)
+        selection_dict[replica] = random_indices
+    return selection_dict
+
+
+def extract_selected_nodes(df):
+    """
+    Extracts rows for the selected nodes across all steps for each replica.
+
+    :param df: DataFrame containing heterozygosity data.
+    :param selection_dict: A dictionary with replicas as keys and lists of selected node indices as values.
+    :return: DataFrame with the extracted rows, including a node_number column.
+    """
+
+    selection_dict = select_nodes(df, num_nodes=1)
+    selected_rows_across_replicas = pd.DataFrame()
+    for replica, indices in selection_dict.items():
+        df_replica = df[df['replica'] == replica]
+        nodes_per_replica = np.argmax(df_replica['step'].to_numpy()[1:] != df_replica['step'].to_numpy()[:-1]) + 1
+        for index in indices:
+            node_rows = df_replica.iloc[index::nodes_per_replica].copy()
+            node_rows['node_number'] = index + 1  # Assign node number
+            selected_rows_across_replicas = pd.concat([selected_rows_across_replicas, node_rows], ignore_index=True)
+    return selected_rows_across_replicas
+
+
+
+def plot_nodes(df, frag_type):
+    """
+    Plots the heterozygosity ('het') values for each node across steps using a pivot table approach.
+
+    :param df: DataFrame with 'het' values, 'step', 'node_number', and 'replica'.
+    """
+    # Create a unique identifier for each node across replicas
+    df['node_replica_id'] = df['node_number'].astype(str) + '_replica_' + df['replica'].astype(str)
+
+    # Pivot the DataFrame
+    pivot_df = df.pivot_table(index='step', columns='node_replica_id', values='het')
+
+    plt.figure(figsize=(10, 6))
+    # Plotting each column in the pivot table
+    for column in pivot_df.columns:
+        plt.plot(pivot_df.index, pivot_df[column], color='grey', alpha=0.2)
+
+    plt.xlabel('Step', fontsize=18)
+    plt.ylabel('Heterozygosity', fontsize=18)
+    plt.title(f'{frag_type} fragmentation', fontsize=20)
+    plt.tick_params(axis='both', which='major', labelsize=18)
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_nodes_all(data):
+    fragmentation_types = list(data.keys())
+
+    for frag_type in fragmentation_types:
+        het = data[frag_type][2]
+        het_nodes = extract_selected_nodes(het)
+
+        plot_nodes(het_nodes, frag_type)
+
+
+
+
 #######################
 ####################### plot data
 fragmentation_types = ['rand', 'cor', 'int', 'dist', 'reg', 'div', 'opt', 'opt2', 'wrst']
@@ -193,3 +254,9 @@ data = load_data(fragmentation_types, net, ignore)
 
 df = filter_intervals(data[fragmentation_types][2])
 plot_distribution(df,measure='het',type=fragmentation_types)
+
+
+
+####################### plot individual nodes
+################
+# plot_nodes_all(data)

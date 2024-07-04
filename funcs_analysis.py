@@ -13,194 +13,12 @@ from mantel import test
 from scipy.stats import pearsonr
 from scipy.stats import norm
 
+from funcs import calculate_statistics, load_data
+from network_analysis import measure_giant_component
+from nodes_matrices import calculate_node_centrality
+
 
 # pd.set_option('display.max_rows', None)
-
-def load_data(fragmentation_types, net, ignore):
-    data = {}
-    for frag_type in fragmentation_types:
-        filename = f'RGG, {frag_type}_ignore_{ignore}.pickle'
-        with open(filename, 'rb') as file:
-            data[frag_type] = pickle.load(file)
-    print("I finished loading!")
-    return data
-
-
-def find_breaking_point(networks):
-    """
-    find the index of the list where the network is no longer connected
-    """
-    for index, network in enumerate(networks):
-        if not nx.is_connected(network):
-            return index
-    return None
-
-
-def find_breakink_point_list(networks: list):
-    breaking_point = []
-    for net in networks:
-        x = find_breaking_point(net)
-        breaking_point.append(x)
-    return breaking_point
-
-def calculate_statistics(df, index):
-    """Calculate mean and 95% confidence interval."""
-    mean_values = df[index].groupby('step')['avg'].mean()
-    sem = df[index].groupby('step')['avg'].sem()  # Standard error of the mean
-    confidence_interval = 1.96 * sem  # 95% confidence interval
-    return mean_values, confidence_interval
-
-
-def plot_data(data, index, ylabel, measure):
-    """Plot data with mean and 95% confidence interval."""
-    color_palette = plt.get_cmap('tab10')  # You can change 'tab10' to any other available palette
-    plt.figure()
-
-    # Plot each dataset's mean and confidence interval
-    for frag_type, datasets in data.items():
-        mean_values, confidence_interval = calculate_statistics(datasets, index)
-        plt.plot(mean_values, label=frag_type.capitalize())
-        plt.fill_between(mean_values.index, mean_values - confidence_interval, mean_values + confidence_interval,
-                         alpha=0.2)
-    # Add breaking points and other plot details
-    for i, (frag_type, datasets) in enumerate(data.items()):
-        breaking_point = mean(find_breakink_point_list(datasets[1]))
-        plt.axvline(x=breaking_point, color=color_palette(i), ymax=0.1)
-
-    plt.xlabel('Fragmentation step', fontsize=16)
-    plt.ylabel(ylabel, fontsize=16)
-    plt.legend()
-    plt.savefig(f'./figs/genetics_general_{measure}.jpg', format="jpg")
-    plt.show()
-
-
-def filter_intervals(df, interval_percentage=15):
-    """
-    Filter the DataFrame to include only specific intervals of steps.
-
-    Args:
-    df (pd.DataFrame): The original DataFrame with 'step' and 'replica' columns.
-    interval_percentage (int): The percentage interval for filtering steps.
-
-    Returns:
-    pd.DataFrame: Filtered DataFrame.
-    """
-    # Determine the maximum step value
-    max_step = df['step'].max()
-
-    # Calculate interval step based on the percentage
-    interval_step = max_step * interval_percentage // 100
-
-    # Create a list of steps to include
-    steps_to_include = list(range(0, max_step - 50, interval_step))
-
-    # Filter the DataFrame to include only these steps
-    filtered_df = df[df['step'].isin(steps_to_include)]
-    return filtered_df
-
-
-def intervals(lst):
-    """
-    take snapshots of the process
-    :param lst:
-    :return:
-    """
-    if len(lst) <= 50:
-        return lst
-    n = 19  # number of bins (-1)
-    interval = max((len(lst) - 1) // n, 1)
-    return lst[:n * interval:interval] + [lst[-1]]
-
-
-
-def plot_distribution(df, name, type):
-    """
-    Histogram ridgeline plots for 'fst' or 'het' data.
-    :param df: DataFrame containing the data to plot.
-    :param name: Name of the value to plot ('fst' or 'het').
-    :param type: The type of analysis or data grouping.
-    """
-
-    plt.figure(figsize=(12, 12))
-    # Using joyplot to create histograms
-    fig, axes = joyplot(
-        data=df[[name, 'step']],
-        by='step',
-        hist=True,
-        bins=100,
-        overlap=0.2,
-        colormap=plt.cm.viridis,
-        fade=False,
-        range_style='all',
-        linecolor="black",
-        linewidth=0.1,
-        normalize=True
-    )
-
-    # Set plot title
-    title = f'{name.capitalize()} - {type} fragmentation'
-    fig.suptitle(title, fontsize=18)
-    plt.ylabel('Step', fontsize=18)
-    plt.xlabel(name, fontsize=18)
-
-    for ax in axes:
-        ax.tick_params(axis='both', which='major', labelsize=16)
-        ax.set_xlim(-0.1, 1.3)  # Set appropriate limits
-
-    plt.savefig('./figs/''dist' + '_' + name + '_' + type + '.png')
-    plt.show()
-
-
-def plot_all_distributions(data, types=['fst', 'het']):
-    """
-    Plots distributions for all fragmentation types and data types ('fst', 'het').
-
-    :param data: Dictionary containing loaded data for each fragmentation type.
-    :param types: List of data types to plot ('fst', 'het').
-    """
-    for frag_type in data:
-        for data_type in types:
-            df_index = 4 if data_type == 'fst' else 2
-            df = filter_intervals(data[frag_type][df_index])
-
-            plot_distribution(df, data_type, frag_type)
-
-            print(f"Plot generated for {frag_type} - {data_type}")
-
-
-#
-
-
-def plot_fragmentation(data):
-    """
-    Plots network snapshot across fragmentation processes.
-    each fragmentation in its own row.
-
-    :param data: A dictionary of loaded network data, keyed by fragmentation type.
-    """
-    steps = [0, 50, 100, 150, 200, 250]
-    fragmentation_types = list(data.keys())
-    pos = nx.spring_layout(data['rand'][1][10][0], k=0.2, iterations=20, seed=50)
-    num_rows = len(fragmentation_types)
-    num_cols = len(steps)
-    fig, axes = plt.subplots(num_rows, num_cols, figsize=(20, 4 * num_rows))
-
-    for row_idx, frag_type in enumerate(fragmentation_types):
-        net_data = data[frag_type]
-
-        for col_idx, step in enumerate(steps):
-            net = net_data[1][10][step]
-
-            ax = axes[row_idx, col_idx] if num_rows > 1 else axes[col_idx]
-            nx.draw_networkx(net, pos=pos, ax=ax, node_size=20, with_labels=False)
-            ax.set_title(f"{step}" if row_idx == 0 else "", fontsize=22)  # Only set step number for the first column
-            if col_idx == 0:
-                # Label the rows with the fragmentation type
-                ax.set_ylabel(frag_type, fontsize=36)
-
-    plt.savefig("./figs/fragmentation processes.png")
-    plt.tight_layout()
-    plt.show()
 
 
 def giant_component_replicates(all_nets: list) -> pd.DataFrame:
@@ -218,14 +36,6 @@ def giant_component_replicates(all_nets: list) -> pd.DataFrame:
     df = pd.DataFrame(data)
     return df
 
-
-def compute_mean_std(data):
-    """
-    Helper function to compute mean and standard deviation for given data.
-    """
-    mean = data.groupby('step')['avg'].mean()
-    confidence = data.groupby('step')['avg'].std()
-    return mean, confidence
 
 
 def plot_component_genetics(data):
@@ -246,8 +56,8 @@ def plot_component_genetics(data):
         data_frag = data[frag_type]
 
         giant_component = giant_component_replicates(data_frag[1])
-        mean_gc_rand, conf_gc_rand = compute_mean_std(giant_component)
-        mean_het_rand, conf_het_rand = compute_mean_std(data_frag[3])
+        mean_gc_rand, conf_gc_rand = calculate_statistics(giant_component)
+        mean_het_rand, conf_het_rand = calculate_statistics(data_frag[3])
 
         ax = axes[idx]
 
@@ -278,8 +88,6 @@ def compute_modularity(net):
     im.run()
 
     return im.codelength
-
-
 
 
 def calculate_centrality(all_nets: list,
@@ -328,7 +136,6 @@ def calculate_centrality(all_nets: list,
             data.append(record)
 
     df = pd.DataFrame(data)
-    print(df)
     # Calculate the means and standard deviations for the specified centrality measures
     mean_centrality = df.groupby('step').mean().drop(columns='replicate')
     std_centrality = df.groupby('step').std().drop(columns='replicate')
@@ -404,143 +211,13 @@ def weighted_algebraic_connectivity1(net):
     return weighted_connectivity
 
 
-def compute_degree_distributions(data, frag_type, step):
-    """
-    Computes pooled degree distribution for a specified step across all iterations for a given fragmentation type.
-
-    :param data: Dictionary containing the loaded network data, keyed by fragmentation type.
-    :param frag_type: The fragmentation type to analyze.
-    :param step: Fragmentation step to analyze.
-    :return: A tuple containing the degrees and their counts.
-    """
-    all_degrees = []  # List to collect all degrees across all iterations at the specified step
-
-    for iteration_networks in data[frag_type][1]:
-        # Check if the current iteration has the specified step
-        if step < len(iteration_networks):
-            # Access the network at the specified step within this iteration
-            network_at_step = iteration_networks[step]
-            # Extend the collected degrees with degrees from this network
-            all_degrees.extend([deg for _, deg in network_at_step.degree()])
-
-    # Compute the degree distribution from the pooled degrees
-    degree_counts = np.bincount(all_degrees)
-    deg = np.arange(len(degree_counts))
-
-    return deg, degree_counts
-
-
-def plot_degree_distributions(data):
-    """
-    Plots degree distributions across fragmentation processes for specified steps,
-    with each fragmentation type in its own row.
-    """
-    steps = [0, 50, 100, 150, 200, 250]
-    fragmentation_types = list(data.keys())
-    num_rows = len(fragmentation_types)
-    num_cols = len(steps)
-    fig, axes = plt.subplots(num_rows, num_cols, figsize=(20, 4 * num_rows), constrained_layout=True)
-
-    for row_idx, frag_type in enumerate(fragmentation_types):
-        for col_idx, step in enumerate(steps):
-            deg, degree_counts = compute_degree_distributions(data, frag_type, step)
-            ax = axes[row_idx, col_idx]
-            ax.bar(deg, degree_counts, color='grey', alpha=0.7)
-            ax.set_title(f"Step {step}" if row_idx == 0 else "", fontsize=18)
-            ax.set_xlabel('Degree', fontsize=14)
-            ax.set_ylabel('Count', fontsize=14)
-            ax.set_xlim(0, max(deg) + 1)
-            plt.tick_params(axis='both', which='major', labelsize=22)  # Increase tick labels font size
-
-            if col_idx == 0:
-                ax.set_ylabel('')
-                # Label the rows with the fragmentation type
-                ax.text(-0.1, 0.5, frag_type, fontsize=18, ha='right', va='center', transform=ax.transAxes, rotation=90)
-    plt.savefig("./figs/degree_distributions.png")
-    plt.show()
-
-
-def select_nodes(df, num_nodes=1):
-    """
-    Selects a specified number of random node indices for each replica.
-
-    :param df: DataFrame containing the heterozygosity data (dat[2]).
-    :param num_nodes: Number of nodes to select per replica.
-    :return: A dictionary with replicas as keys and lists of selected node indices as values.
-    """
-    selection_dict = {}
-    for replica in df['replica'].unique():
-        df_replica = df[df['replica'] == replica]
-        nodes_per_replica = np.argmax(df_replica['step'].to_numpy()[1:] != df_replica['step'].to_numpy()[:-1]) + 1
-        random_indices = np.random.choice(nodes_per_replica, min(num_nodes, nodes_per_replica), replace=False)
-        selection_dict[replica] = random_indices
-    return selection_dict
-
-
-def extract_selected_nodes(df):
-    """
-    Extracts rows for the selected nodes across all steps for each replica.
-
-    :param df: DataFrame containing heterozygosity data.
-    :param selection_dict: A dictionary with replicas as keys and lists of selected node indices as values.
-    :return: DataFrame with the extracted rows, including a node_number column.
-    """
-
-    selection_dict = select_nodes(df, num_nodes=1)
-    selected_rows_across_replicas = pd.DataFrame()
-    for replica, indices in selection_dict.items():
-        df_replica = df[df['replica'] == replica]
-        nodes_per_replica = np.argmax(df_replica['step'].to_numpy()[1:] != df_replica['step'].to_numpy()[:-1]) + 1
-        for index in indices:
-            node_rows = df_replica.iloc[index::nodes_per_replica].copy()
-            node_rows['node_number'] = index + 1  # Assign node number
-            selected_rows_across_replicas = pd.concat([selected_rows_across_replicas, node_rows], ignore_index=True)
-    return selected_rows_across_replicas
-
-
-
-def plot_nodes(df, frag_type):
-    """
-    Plots the heterozygosity ('het') values for each node across steps using a pivot table approach.
-
-    :param df: DataFrame with 'het' values, 'step', 'node_number', and 'replica'.
-    """
-    # Create a unique identifier for each node across replicas
-    df['node_replica_id'] = df['node_number'].astype(str) + '_replica_' + df['replica'].astype(str)
-
-    # Pivot the DataFrame
-    pivot_df = df.pivot_table(index='step', columns='node_replica_id', values='het')
-
-    plt.figure(figsize=(10, 6))
-    # Plotting each column in the pivot table
-    for column in pivot_df.columns:
-        plt.plot(pivot_df.index, pivot_df[column], color='grey', alpha=0.2)
-
-    plt.xlabel('Step', fontsize=18)
-    plt.ylabel('Heterozygosity', fontsize=18)
-    plt.title(f'{frag_type} fragmentation', fontsize=20)
-    plt.tick_params(axis='both', which='major', labelsize=18)
-    plt.tight_layout()
-    plt.show()
-
-
-def plot_nodes_all(data):
-    fragmentation_types = list(data.keys())
-
-    for frag_type in fragmentation_types:
-        het = data[frag_type][2]
-        het_nodes = extract_selected_nodes(het)
-
-        plot_nodes(het_nodes, frag_type)
-
-
 def plot_het_central(data: dict, measure: str, save=bool):
     fragmentation_types = list(data.keys())
 
     plt.figure()
 
     for frag_type in fragmentation_types:
-        het = compute_mean_std(data[frag_type][3])[0]
+        het = calculate_statistics(data[frag_type][3])[0]
         central = calculate_centrality(data[frag_type][1], measure=measure)[0]
 
         plt.plot(het, central, label=frag_type.capitalize())
@@ -554,220 +231,6 @@ def plot_het_central(data: dict, measure: str, save=bool):
         plt.savefig(f'./figs/het_{measure}.jpg', format="jpg")
     plt.show()
 
-
-def prepare_het_df(dat, step: int):
-    """
-    Process the input DataFrame to add a 'node' column for each replica,
-    considering up to the first 50 rows for each replica.
-
-    Parameters:
-    - df: pandas.DataFrame with columns ['replica', 'step', 'het']
-
-    Returns:
-    - het_df: pandas.DataFrame, the processed DataFrame with an additional 'node' column
-    """
-    all_het = []
-    nodes = 50
-    df = dat[2]
-
-    # Iterate over each unique replica
-    for replica in df['replica'].unique():
-        # Select rows based on the 'step' value and up to the first 50 rows for the current replica
-        replica_net = df[(df['replica'] == replica) & (df['step'] == step)].head(nodes)
-        # Generate a sequence for the 'node' column within each replica slice
-        replica_net['node'] = range(replica_net.shape[0])
-
-        all_het.append(replica_net)
-
-    # Concatenate all processed slices into a single DataFrame and reset the index
-    het_df = pd.concat(all_het).reset_index(drop=True)
-
-    return het_df
-
-
-def calculate_node_centrality(dat, step: int, centrality: str):
-    """
-    Calculates the specified centrality for the first network in each replica
-    and organizes the results into a DataFrame, ensuring that the specified step
-    index is available to avoid IndexError.
-
-    Parameters:
-    - dat: A nested list where dat[1] contains replicas, and each replica contains networks.
-    - step: The step index to look for in each replica.
-    - centrality: The type of centrality to calculate ('betweenness' or 'degree').
-
-    Returns:
-    - central_df: A DataFrame with columns 'replica', 'node', and 'central' for the specified centrality.
-    """
-    central_dict = {}
-
-    # Iterate over each replica in dat[1]
-    for rep_index in range(len(dat[1])):
-        # Ensure the step index is within the bounds of the list for this replica
-        if step > len(dat[1][rep_index]):
-            print(f"Skipping replica {rep_index}: step {step} is out of range.")
-            continue
-
-        # Safely get the network at the given step
-        net = dat[1][rep_index][step]
-
-        if centrality == 'betweenness':
-            central = nx.betweenness_centrality(net)
-        elif centrality == 'degree':
-            central = nx.degree_centrality(net)
-        else:
-            raise ValueError("Unsupported centrality type. Use 'betweenness' or 'degree'.")
-
-        central_dict[rep_index] = central
-
-    # Convert the dictionary to a DataFrame
-    central_df = pd.DataFrame([
-        {'replica': rep, 'node': node, 'central': centrality}
-        for rep, centrality_dict in central_dict.items()
-        for node, centrality in centrality_dict.items()
-    ])
-
-    return central_df
-
-
-
-
-
-#
-# def merge_het_central(dat, step: int, centrality: str, frag: str, log=bool):
-#     """
-#     Merge heterogeneity and centrality data, removing rows with zero centrality.
-#     If only one row remains after removing zero centrality rows, discard the entire DataFrame.
-#
-#     Parameters:
-#     - dat: Input data.
-#     - step: The step index to process.
-#     - centrality: The type of centrality to calculate ('betweenness' or 'degree').
-#     - frag: Fragmentation strategy or other parameter.
-#     - log: Whether to apply log transformation to the centrality values.
-#
-#     Returns:
-#     - final_df: The merged DataFrame after processing.
-#     """
-#     het = prepare_het_df(dat, step)
-#     central = calculate_node_centrality(dat, step, centrality)
-#
-#     # Remove zero values
-#     central = central[central['central'] != 0]
-#
-#     if log:
-#         central['central'] = np.log10(central['central'])
-#
-#     final_df = pd.merge(het, central, on='node')  # Assuming 'node' is the common column for merging
-#     return final_df
-#
-
-
-
-
-
-
-
-
-
-def calculate_statistics_cor(correlation_df,frag_type):
-    """
-    Calculate the mean and 95% confidence interval for each step across all replicas for a single frag_type.
-
-    Parameters:
-        correlation_df (pd.DataFrame): DataFrame containing the correlation results with columns 'step', 'replica', and 'cor'.
-
-    Returns:
-        pd.DataFrame: DataFrame with columns 'step', 'mean_cor', 'ci_lower', 'ci_upper', containing the mean correlation and confidence interval bounds for each step.
-    """
-    # Initialize a list to store the statistics
-    statistics = []
-
-    # Group by 'step'
-    grouped = correlation_df.groupby('step')
-
-    # Iterate over each group
-    for step, group in grouped:
-        # Calculate mean correlation
-        mean_cor = group['cor'].mean()
-
-        # Calculate standard error
-        se = group['cor'].std() / np.sqrt(len(group['cor']))
-
-        # Calculate the 95% confidence interval
-        ci_lower, ci_upper = norm.interval(0.95, loc=mean_cor, scale=se)
-
-        # Append the results
-        statistics.append({
-            'step': step,
-            'mean_cor': mean_cor,
-            'ci_lower': ci_lower,
-            'ci_upper': ci_upper,
-            'frag': frag_type
-        })
-
-    # Convert the statistics list to a DataFrame
-    statistics_df = pd.DataFrame(statistics)
-
-    return statistics_df
-
-
-def compute_correlation_all(data, centrality:str):
-
-    all_correlations = []
-    for frag_type, dataset in data.items():
-        cor_frag = compute_correlation(dataset, centrality, frag_type)
-        cor_frag = calculate_statistics_cor(cor_frag,frag_type)
-        all_correlations.append(cor_frag)
-
-    return all_correlations
-
-
-
-def plot_mean_with_ci(data_list):
-    """
-    Plot the mean correlation with shaded 95% confidence intervals for each 'frag' type.
-
-    Parameters:
-        data_list (list): List of DataFrames, each containing 'step', 'mean_cor', 'ci_lower', 'ci_upper', and 'frag' columns.
-    """
-
-    # Iterate over the list of DataFrames
-    for df in data_list:
-        # Extract the frag type (assuming it's the same for all rows in the df)
-        frag = df['frag'].iloc[0]
-        plt.plot(df['step'], df['mean_cor'], label=frag)
-        plt.fill_between(df['step'], df['ci_lower'], df['ci_upper'], alpha=0.2)
-
-    plt.xlabel('Step', fontsize=20)
-    plt.ylabel('Correlation (r)', fontsize=20)
-    plt.legend(title='Fragmentation Type')
-    plt.savefig(f'./figs/cor_central.jpg', format="jpg")
-    plt.show()
-
-
-
-def make_het_dist(het_list: list, ignore: bool=False) -> pd.DataFrame:
-    """
-    Takes a list of heterozygosity values and returns a DataFrame.
-    If ignore_ones is set to True, it will ignore all values of 1.
-
-    Args:
-    het_list : List of heterozygosity vectors
-    ignore_ones : If True, ignores all values of 1
-
-    Returns:
-    DataFrame with a column of all the heterozygosity values and the corresponding fragmentation step.
-    """
-    df = pd.DataFrame(het_list)
-
-    if ignore:
-        df = df.replace(0.02, np.nan)  # replace all 1s with NaN
-
-    df = df.stack().rename_axis(('step', 'delete')).reset_index(name='het')
-    df = df.drop(columns=['delete'])
-
-    return df
 
 
 
@@ -790,16 +253,8 @@ def get_distance_matrix(net, default_distance=50):
 
 
 def plot_matrix_relationship(distance_matrix, fst_matrix, method='pearson', perms=999):
-    # Convert all zeros to NaN in both matrices
-    #convert 50 to NaN. 50 is the defeault value for isolated nodes
-    distance_matrix = np.where((distance_matrix == 0) | (distance_matrix == 50), np.nan, distance_matrix)
-    fst_matrix = np.where(fst_matrix == 0, np.nan, fst_matrix)
-
-    # Perform Mantel test, expecting a dictionary as a return value
-    result = test(fst_matrix, distance_matrix, perms=perms, method=method, ignore_nans=True)
-    print(f"Correlation: {result[0]}")
-    print(f"P-value: {result[1]}")
-
+    #calculate the mantel test correlation
+    perform_mantel_test(distance_matrix, fst_matrix, perms, method)
     # Flatten the matrices for plotting, ignoring NaN values
     flat_matrix1 = distance_matrix.flatten()
     flat_matrix2 = fst_matrix.flatten()
@@ -842,37 +297,25 @@ def get_euclidean_matrix(net):
 
     return distance_matrix
 
+def perform_mantel_test(distance_matrix, fst_matrix, perms, method,print=bool):
+    # Convert all zeros to NaN in both matrices
+    # Convert 50 to NaN. 50 is the default value for isolated nodes
+    distance_matrix = np.where((distance_matrix == 0) | (distance_matrix == 50), np.nan, distance_matrix)
+    fst_matrix = np.where(fst_matrix == 0, np.nan, fst_matrix)
+
+    # Perform Mantel test, expecting a dictionary as a return value
+    result = test(fst_matrix, distance_matrix, perms=perms, method=method, ignore_nans=True)
+
+    if print:
+        print(f"Correlation: {result[0]}")
+        print(f"P-value: {result[1]}")
+
+    return result[0], result[1]
+
+
+
 
 # [1-all networks][replica no.][step number]
 # [2-all heterozygosity][replica no.][step number]
-
-
-
-
-
-# # Generate a high modularity network using the stochastic block model
-# sizes = [10, 10, 10, 10, 10]  # 5 communities of 10 nodes each
-# p_intra = 0.8  # high probability of intra-community edges
-# p_inter = 0.01  # low probability of inter-community edges
-# high_modularity_net = nx.stochastic_block_model(sizes, p_intra * np.identity(len(sizes)) + p_inter * (np.ones((len(sizes), len(sizes))) - np.identity(len(sizes))))
-#
-# # Generate a low modularity network using the Erdős-Rényi model
-# p = nx.density(high_modularity_net)  # ensure the same number of edges
-# low_modularity_net = nx.erdos_renyi_graph(50, p)
-#
-# # Compute modularity for both networks
-# high_modularity = compute_modularity(high_modularity_net)
-# low_modularity = compute_modularity(low_modularity_net)
-#
-# print("High Modularity Network Modularity:", high_modularity)
-# print("Low Modularity Network Modularity:", low_modularity)
-#
-# nx.draw_networkx(low_modularity_net)
-# plt.show()
-#
-# nx.draw_networkx(high_modularity_net)
-# plt.show()
-
-
 
 
