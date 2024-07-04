@@ -1,26 +1,9 @@
 
 Networks fragmentation analysis
 
-Code for creating multiple population networks and evaluate the genetic diversity and genetic differentiation of populations
+Code for evaluating the genetic diversity and genetic differentiation of populations during fragmentation
 
-1. create a well-connected network: ER, RGG
-2. create fragmentation processes (random, correlated, distance-dependent)
-    plot first and last network
-    stop when network is no longer connected
-3. create a list of migration networks
-4. calculate the pairwise Fst for all populations for each step along the fragmentation
-    excluding the diagonal
-5. calculate the coalescence time for all populations for each step along the fragmentation
-    heterozygosity is the diagonal
-6. calculate betweenes and clustering average for each step
-7. transform list of lists to dataframe of results
-8. plot distributions of fst and heterozygosity
-9. plot average, median across steps
-10. plot average, median across centrality measures
 
-run multiple iteration to get distributions
-continue with broken network and track giant component until all network is broken
-normalize heterozygosity so that all rows have equal sum
 
 
 

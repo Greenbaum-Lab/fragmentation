@@ -6,12 +6,6 @@ from matplotlib import pyplot as plt
 
 from funcs_analysis import extract_selected_nodes
 
-frag = 'rand'
-with open(f'RGG, {frag}_ignore_False_full.pickle', 'rb') as file:
-    rand = pickle.load(file)
-
-print('finish')
-
 
 def access_het_dist(frag_data:list):
     return frag_data[2]
@@ -115,8 +109,6 @@ def extract_steps_for_nodes(df, max_het_nodes):
     return extracted_rows
 
 
-
-
 def export_het_csv(data, frag: str):
     """
     Export the heterozygosity data to a CSV file.
@@ -133,16 +125,23 @@ def export_het_csv(data, frag: str):
 
 
 
+frag = 'int'
+with open(f'RGG, {frag}_ignore_False_long.pickle', 'rb') as file:
+    rand = pickle.load(file)
+
+print('finish')
+
 export_het_csv(rand, frag)
 
+#plot het for a specific node
+df = assign_node_numbers(rand)
+df = df[(df['replica'] == 69) & (df['node_number'] == 5)]
+plt.plot(df['step'], df['het'])
+plt.show()
 
-# df = assign_node_numbers(rand)
-# df = df[(df['replica'] == 69) & (df['node_number'] == 5)]
-# plt.plot(df['step'], df['het'])
-# plt.show()
-#
-# last_nodes = get_max_het_node(df)
-# last_survivors = extract_steps_for_nodes(df, last_nodes)
-# last_survivors = last_survivors[last_survivors['replica'] == 8]
-# plt.plot(last_survivors['step'], last_survivors['het'])
-# plt.show()
+#plot het for the last surviving nodes
+last_nodes = get_max_het_node(df)
+last_survivors = extract_steps_for_nodes(df, last_nodes)
+last_survivors = last_survivors[last_survivors['replica'] == 8]
+plt.plot(last_survivors['step'], last_survivors['het'])
+plt.show()
