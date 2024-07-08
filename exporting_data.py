@@ -7,9 +7,6 @@ from matplotlib import pyplot as plt
 from funcs_analysis import extract_selected_nodes
 
 
-def access_het_dist(frag_data:list):
-    return frag_data[2]
-
 def select_nodes(df, num_nodes=1):
     """
     Selects a specified number of random node indices for each replica.

@@ -320,6 +320,18 @@ def make_networks(n_nets: int, n_nodes: int, net_type) -> list:
 
     return nets
 
+nets = make_networks(100, 50, 'RGG')
+
+num_edges = [net.number_of_edges() for net in nets]
+
+# Create a histogram of the number of edges
+plt.hist(num_edges, bins='auto')
+
+plt.title('Distribution of Number of Edges')
+plt.xlabel('Number of Edges')
+plt.ylabel('Frequency')
+
+plt.show()
 
 
 def make_rgg(n_nets: int, n_nodes: int, target_edges: int) -> list:

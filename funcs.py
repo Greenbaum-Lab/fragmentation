@@ -24,7 +24,11 @@ def calculate_statistics(df, index):
     confidence_interval = 1.96 * sem  # 95% confidence interval
     return mean_values, confidence_interval
 
+def access_het_dist(frag_data:list):
+    return frag_data[2]
 
+def access_fst_dist(frag_data:list):
+    return frag_data[4]
 
 
 
