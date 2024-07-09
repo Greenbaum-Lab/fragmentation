@@ -192,6 +192,7 @@ def plot_distribution(df, measure='het' or 'fst', type=str):
     plt.savefig(f'./figs/dist_{measure}_{type}.jpg', format="jpg")
     plt.show()
 
+pd.set_option('display.max_rows', None)
 def plot_distribution_het(df, type=str):
     """ Plot the distribution of heterozygosity across different steps as a ridgeline plot. """
     # Create a figure and axes
@@ -213,8 +214,8 @@ def plot_distribution_het(df, type=str):
                 rect.set_y(rect.get_y() + 6)  # Adjust this value to change the vertical spacing between histograms
                 ax.axhline(y=rect.get_y(), color='black', linewidth=0.5)  # Add a line below the histogram
 
-            else:
-                rect.set_y(0)
+        else:
+            rect.set_y(0)
 
     ax.set_xlabel('Heterozygosity', fontsize=20)
     ax.set_ylabel('Density', fontsize=20)
@@ -228,13 +229,10 @@ def plot_distribution_het(df, type=str):
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     ax.spines['left'].set_visible(False)
+    plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.12)
 
     plt.savefig(f'./figs/dist_het_{type}.jpg', format="jpg")
     plt.show()
-
-
-
-
 
 def plot_distribution_fst(df, type=str):
     """ Plot the distribution of heterozygosity across different steps as a ridgeline plot. """
@@ -256,16 +254,18 @@ def plot_distribution_fst(df, type=str):
             for rect in ax.patches:
                 rect.set_y(rect.get_y() + 6)  # Adjust this value to change the vertical spacing between histograms
                 ax.axhline(y=rect.get_y(), color='black', linewidth=0.5)  # Add a line below the histogram
-            else:
-                ax.axhline(y=rect.get_y(), color='black', linewidth=0.5)  # Add a line below the histogram
+        else:
+            ax.axhline(y=rect.get_y(), color='black', linewidth=0.5)  # Add a line below the histogram
 
     ax.set_xlabel('Fst', fontsize=20)
     ax.set_ylabel('Density', fontsize=20)
     ax.set_yticks([])
     ax.legend()
 
-    ax.set_ylim(0, (4 + len(unique_steps) * 6)) # Adjust this value to match the vertical spacing between histograms
+    ax.set_ylim(0, (4 + len(unique_steps) * 6 + 4))  # vertical spacing between histograms
+    plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.12)
 
+    # Remove the box (rectangle) around the plot
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     ax.spines['left'].set_visible(False)
@@ -366,7 +366,7 @@ def plot_nodes_all(data):
 ##############plot distributions
 ##### one frag type each time
 # fragmentation_types = ['rand', 'cor', 'intr', 'dist', 'reg', 'div', 'opt']
-fragmentation_types = ['div']
+fragmentation_types = ['opt']
 frag_type = fragmentation_types[0]
 
 net = 'RGG'
