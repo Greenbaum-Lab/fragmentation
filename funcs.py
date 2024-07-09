@@ -2,6 +2,8 @@ import pickle
 
 import networkx as nx
 import numpy as np
+import pandas as pd
+from infomap import Infomap
 from matplotlib import pyplot as plt
 
 
@@ -31,10 +33,105 @@ def access_fst_dist(frag_data:list):
     return frag_data[4]
 
 
+def normalize_steps(data):
+    """
+    Normalize the step index of a Pandas Series or the 'step' column of a DataFrame
+    to a percentage scale from 0 to 100.
 
+    Parameters:
+    data (pd.Series or pd.DataFrame): A Pandas Series with step indices or a DataFrame with a 'step' column.
 
+    Returns:
+    pd.Series or pd.DataFrame: A new Pandas Series with normalized step indices or a DataFrame with a normalized 'step' column.
+    """
+    if isinstance(data, pd.Series):
+        # Normalize step values to percentage for Series
+        normalized_index = (data.index / data.index.max()) * 100
+        normalized_series = pd.Series(data.values, index=normalized_index)
+        return normalized_series
 
+    elif isinstance(data, pd.DataFrame) and 'step' in data.columns:
+        # Normalize step values to percentage for DataFrame
+        data['step'] = (data['step'] / data['step'].max()) * 100
+        return data
+    else:
+        raise ValueError("Input must be a Pandas Series or a DataFrame with a 'step' column.")
 
+def compute_modularity(net):
+
+    im = Infomap(silent=True, markov_time=1, variable_markov_time=True,flow_model='undirected',num_trials=10)
+
+    # Add edges to the Infomap instance
+    for edge in net.edges():
+        im.add_link(*edge)
+    im.run()
+
+    return im.codelength
+
+def measure_giant_component(network: nx.Graph, min_size: int = 4):
+    """
+    measure the no. of nodes in the giant component
+    :param network:
+    :return: length of giant components
+    """
+    largest_component = max(nx.connected_components(network), key=len)
+    if len(largest_component) <= min_size:
+        return 0
+    return len(largest_component) / len(network)
+
+def calculate_centrality(all_nets: list,
+                         measure: list = ['clustering', 'degree', 'component',
+                                          'modularity', 'transitivity',
+                                          'connectivity', 'connect']) -> (
+        pd.DataFrame, pd.DataFrame):
+    """
+    Calculate specified centrality measures of networks over multiple replicates.
+
+    :param all_nets: list of lists of migration networks
+    :param measures: list of centrality measures to compute ('clustering', 'path', 'degree' or any combination)
+
+    :return: two dataframes - one with the average values for the specified centrality measures at each step
+             and the other with the standard deviations of these values.
+    """
+    data = []
+    for replica, nets in enumerate(all_nets):
+        for step, net in enumerate(nets):
+            record = {'replica': replica, 'step': step}
+
+            if 'clustering' in measure:
+                record['clustering'] = nx.average_clustering(net)
+
+            if 'transitivity' in measure:
+                record['transitivity'] = nx.transitivity(net)
+
+            if 'degree' in measure:
+                degree = sum(nx.degree_centrality(net).values()) / len(net.nodes)
+                record['degree'] = degree
+
+            if 'connect' in measure:
+                record['connect'] = nx.average_node_connectivity(net)
+
+            if 'modularity' in measure:
+                # partition = community_louvain.best_partition(net, resolution=1)
+
+                record['modularity'] = compute_modularity(net)
+
+            # if 'connectivity' in measure:
+            #     record['connectivity'] = weighted_algebraic_connectivity(net)
+
+            if 'component' in measure:
+                record['component'] = measure_giant_component(net)
+
+            data.append(record)
+
+    df = pd.DataFrame(data)
+    return df
+
+# # Calculate the means and standard deviations for the specified centrality measures
+# mean_centrality = df.groupby('step').mean().drop(columns='replicate')
+# std_centrality = df.groupby('step').std().drop(columns='replicate')
+#
+# return mean_centrality, std_centrality
 
 
 

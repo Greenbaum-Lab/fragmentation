@@ -13,7 +13,7 @@ from processes import (
     remove_edge_intrusive, remove_edge_divisive, remove_edge_regressive,
     remove_edge_optimal, remove_edge_optimal_no_update, remove_edge_worst
 )
-from funcs_analysis import find_breakink_point_list
+from supp import find_breakink_point_list
 # from Transformation import transform_matrix
 
 

@@ -5,8 +5,8 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
-from funcs import calculate_statistics, access_het_dist, access_fst_dist
-from funcs_analysis import load_data
+from funcs import calculate_statistics, access_het_dist, access_fst_dist, normalize_steps
+from supp import load_data
 
 
 #
@@ -76,30 +76,6 @@ def find_breakink_point_list(networks_list: list):
     return breaking_point
 
 
-
-def normalize_steps(data):
-    """
-    Normalize the step index of a Pandas Series or the 'step' column of a DataFrame
-    to a percentage scale from 0 to 100.
-
-    Parameters:
-    data (pd.Series or pd.DataFrame): A Pandas Series with step indices or a DataFrame with a 'step' column.
-
-    Returns:
-    pd.Series or pd.DataFrame: A new Pandas Series with normalized step indices or a DataFrame with a normalized 'step' column.
-    """
-    if isinstance(data, pd.Series):
-        # Normalize step values to percentage for Series
-        normalized_index = (data.index / data.index.max()) * 100
-        normalized_series = pd.Series(data.values, index=normalized_index)
-        return normalized_series
-
-    elif isinstance(data, pd.DataFrame) and 'step' in data.columns:
-        # Normalize step values to percentage for DataFrame
-        data['step'] = (data['step'] / data['step'].max()) * 100
-        return data
-    else:
-        raise ValueError("Input must be a Pandas Series or a DataFrame with a 'step' column.")
 
 def plot_data(data, index, ylabel, measure):
     """Plot data with mean and 95% confidence interval."""
@@ -366,7 +342,7 @@ def plot_nodes_all(data):
 ##############plot distributions
 ##### one frag type each time
 # fragmentation_types = ['rand', 'cor', 'intr', 'dist', 'reg', 'div', 'opt']
-fragmentation_types = ['opt']
+fragmentation_types = ['div']
 frag_type = fragmentation_types[0]
 
 net = 'RGG'

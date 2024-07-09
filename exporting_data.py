@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
-from funcs_analysis import extract_selected_nodes
+from funcs import access_het_dist
 
 
 def select_nodes(df, num_nodes=1):
@@ -121,14 +121,10 @@ def export_het_csv(data, frag: str):
     return final_df
 
 
-
-frag = 'int'
-with open(f'RGG, {frag}_ignore_False_long.pickle', 'rb') as file:
+frag = 'rand'
+with open(f'RGG, {frag}_ignore_False_d06.pickle', 'rb') as file:
     rand = pickle.load(file)
-
 print('finish')
-
-export_het_csv(rand, frag)
 
 #plot het for a specific node
 df = assign_node_numbers(rand)
@@ -136,9 +132,6 @@ df = df[(df['replica'] == 69) & (df['node_number'] == 5)]
 plt.plot(df['step'], df['het'])
 plt.show()
 
-#plot het for the last surviving nodes
-last_nodes = get_max_het_node(df)
-last_survivors = extract_steps_for_nodes(df, last_nodes)
-last_survivors = last_survivors[last_survivors['replica'] == 8]
-plt.plot(last_survivors['step'], last_survivors['het'])
-plt.show()
+export_het_csv(rand, frag)
+
+
