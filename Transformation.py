@@ -4,11 +4,12 @@ import numpy as np
 import math
 from collections import deque
 
+import scipy as sp
 
-lib = ctypes.cdll.LoadLibrary('./libmigration.so')
-
-lib.coefficient_matrix_from_migration.restype = ctypes.POINTER(ctypes.c_double)
-lib.coefficient_matrix_from_migration.argtypes = [ctypes.POINTER(ctypes.c_double), ctypes.c_int]
+# lib = ctypes.cdll.LoadLibrary('./libmigration.so')
+#
+# lib.coefficient_matrix_from_migration.restype = ctypes.POINTER(ctypes.c_double)
+# lib.coefficient_matrix_from_migration.argtypes = [ctypes.POINTER(ctypes.c_double), ctypes.c_int]
 
 def coefficient_matrix_from_migration_wrapper(migration_matrix):
     n = migration_matrix.shape[0]
@@ -19,8 +20,8 @@ def coefficient_matrix_from_migration_wrapper(migration_matrix):
 
     return result
 
-lib.coalescence_from_migration.restype = ctypes.POINTER(ctypes.c_double)
-lib.coalescence_from_migration.argtypes = [ctypes.POINTER(ctypes.c_double), ctypes.c_int]
+# lib.coalescence_from_migration.restype = ctypes.POINTER(ctypes.c_double)
+# lib.coalescence_from_migration.argtypes = [ctypes.POINTER(ctypes.c_double), ctypes.c_int]
 
 
 
@@ -256,7 +257,7 @@ def split_migration_matrix(migration_matrix: np.ndarray, connected_components: l
     :param migration_matrix: A valid migration matrix.
     :param connected_components: list of lists, where each list represents a connected component's vertices
     (populations).
-    :return: A list of sub-matrices, where each sun-matrix is the migration matrix of a connected component. Note that
+    :return: A list of sub-matrices, where each sub-matrix is the migration matrix of a connected component. Note that
     in order to interpret which populations are described in each sub matrix the connected components list is needed.
     """
     sub_matrices = []
@@ -269,7 +270,7 @@ def split_migration_matrix(migration_matrix: np.ndarray, connected_components: l
 
 def split_migration(migration_matrix: np.ndarray) -> tuple:
     """
-    Finds a migration matrix connected components, and splits the matrix to it's connected components.
+    Finds a migration matrix connected components, and splits the matrix to its connected components.
     :param migration_matrix: A valid migration matrix.
     :return: A tuple (sub_matrices, components). Sub matrices is a list of numpy arrays, where each array is a
     component's migration matrix. components is a list of lists, where each list represents a component vertices
@@ -314,7 +315,7 @@ def m_to_f(m: np.ndarray) -> np.ndarray:
 def m_to_t(m: np.ndarray) -> np.ndarray:
     """
        Receives a migration matrix(a squared, positive matrix with zeroes on the diagonal) with any number
-       of connected components, and returns it's corresponding Coalescent times (T) matrix according to
+       of connected components, and returns its corresponding Coalescent times (T) matrix according to
        Wilkinson-Herbot's equations.
        :param m: Migration matrix- squared, positive, with zeroes on the diagonal.
        :return: Corresponding T matrix according to Wilkinson-Herbot's equations. If there is no solution,
@@ -370,63 +371,88 @@ def transform_matrix(m: np.ndarray) -> tuple:
 
 
 
-#
-# def normalize(matrix: np.array) -> np.array:
-#
-#     # # Convert to numpy array in case it's a list
-#     matrix = nx.attr_matrix(matrix)[0]
-#
-#     # Calculate row sums
-#     row_sums = matrix.sum(axis=1)
-#
-#     # Find the minimum non-zero row sum
-#     min_row_sum = np.min(row_sums[row_sums > 0])
-#
-#     # Initialize normalized matrix as a copy of the original
-#     normalized_matrix = matrix.copy()
-#
-#     # Get indices of non-zero rows
-#     non_zero_rows = row_sums > 0
-#
-#     # Normalize only non-zero rows
-#     normalized_matrix[non_zero_rows] = matrix[non_zero_rows] / row_sums[non_zero_rows, None] * min_row_sum
-#
-#     return normalized_matrix
-#
-#
-# def normalize_list(migration_list: list):
-#     new_list = list(map(lambda x: normalize(x), migration_list))
-#     return new_list
-#
-#
-# def calculate_genetics(migration_list: list) -> tuple:
-#     fst_list = []
-#     het_list = []
-#
-#     for i in range(len(migration_list)):
-#         M = migration_list[i]
-#         # M = nx.attr_matrix(M)[0]
-#         M = normalize(M)
-#         # print(M)
-#         T = transform_matrix(M)[0]  # migration to coalescence
-#         het = np.diag(T)  # take diagonal values (within pop coalesence time=heterozygosity)
-#         het = het/len(het)
-#         het = np.ndarray.tolist(het)
-#         het_list.append(het.copy())  # add another network step to the list
-#
-#         F = transform_matrix(M)[1]  # migration to fst function
-#         fst_list.append(F.copy())  # add another network step to the list
-#
-#     return het_list, fst_list
+def check_conservative(m: np.ndarray):
+    """
+    checks if a given migration matrix is conservative.
+    :param m: A migration matrix
+    :return: True if m is conservative, False otherwise.
+    """
+    for i in range(m.shape[0]):
+        if np.sum(m[i, :]).round(2) != np.sum(m[:, i]).round(2):
+            return False
+    return True
 
-# import matplotlib as plt
-# import networkx as nx
-# matrix1=nx.erdos_renyi_graph(5,0.8,seed=5)
-# matrix2=nx.erdos_renyi_graph(5,0.8,seed=6)
-#
-#
-# matrices = [matrix1,matrix2]
-# # matrices = normalize_list(matrices)
-# print(nx.attr_matrix(matrices[0]))
-# new=calculate_genetics(matrices)
-# print((new[0]))
+def conservative_migration_from_binary_matrix(binary_m: np.ndarray, bounds: tuple = (0, 2), lls=False) -> np.ndarray:
+    """
+    Given a binary matrix, generate a conservative migration matrix with the same structure,
+    but with values in bounds. This function uses a linear least squares / numeric solution approach to generate
+    the conservative matrix.
+    :param binary_m: binary migration matrix.
+    :param bounds: bounds for each variable in the migration matrix
+    :param lls: whether to use linear least squares to generate the conservative matrix. if False,
+                scipy.optimize.minimize is used.
+    :return: conservative migration matrix with the same structure as m, but with values in bounds.
+             Same structure means the returned matrix would have values > 0 where m has values > 0 (1), and 0
+             where m has 0. Conservative means that for each i = 1, ..., n, the sum of the ith row of
+             the returned matrix is equal to the sum of the ith column of the returned matrix.
+    :error: if the matrix is not binary, ValueError is raised.
+    """
+    # if m is not binary, raise an error
+    if not np.array_equal(binary_m, binary_m.astype(bool)):
+        raise ValueError("Matrix is not binary.")
+    # get the indices of the non-zero elements of m
+    non_zero_indices = np.argwhere(binary_m)
+    num_unknowns = non_zero_indices.shape[0]
+    result_matrix = np.zeros(binary_m.shape)
+    solution = None
+    # build the matrix A and the vector b
+    A = np.zeros((binary_m.shape[0], num_unknowns))
+    b = np.zeros(binary_m.shape[0])
+    for i in range(binary_m.shape[0]):
+        for j in range(non_zero_indices.shape[0]):
+            if non_zero_indices[j, 0] == i:
+                A[i, j] = 1
+            elif non_zero_indices[j, 1] == i:
+                A[i, j] = -1
+    if lls:
+        ls_sol = sp.optimize.lsq_linear(A, b, bounds=bounds)
+        solution = ls_sol.x
+
+    else:
+        def obj_func(x):
+            return np.linalg.norm(np.dot(A, x) - b)
+
+        while True:
+            x0 = np.random.uniform(bounds[0], bounds[1], num_unknowns)
+            minimize_sol = sp.optimize.minimize(obj_func, x0=x0, bounds=[bounds] * num_unknowns)
+            solution = minimize_sol.x
+            result_matrix[non_zero_indices[:, 0], non_zero_indices[:, 1]] = solution
+            if not np.any(solution <= 0) and check_conservative(result_matrix):
+                break
+    # put the values of x in result_matrix according to the non_zero_indices
+    result_matrix[non_zero_indices[:, 0], non_zero_indices[:, 1]] = solution
+    return result_matrix
+
+import networkx as nx
+import matplotlib.pyplot as plt
+net = nx.random_geometric_graph(20, 0.8)
+pos = nx.spring_layout(net)
+weights = nx.get_edge_attributes(net, "weight")
+edge_widths = [2 * v for v in weights.values()]
+nx.draw(net, with_labels=True, width=edge_widths)
+plt.show()
+
+net = nx.attr_matrix(net)[0]
+print(net)
+
+
+cons = conservative_migration_from_binary_matrix(net)
+print(cons)
+print(check_conservative(cons))
+cons = nx.from_numpy_array(cons)
+
+weights = nx.get_edge_attributes(cons, "weight")
+edge_widths = [2 * v for v in weights.values()]
+nx.draw(cons, with_labels=True, width=edge_widths)
+plt.show()
+
