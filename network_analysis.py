@@ -1,4 +1,5 @@
 import networkx as nx
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -16,20 +17,23 @@ def plot_het_central(data: dict, measure: str):
         central = calculate_centrality(data[frag_type][1], measure=measure)
         merged = pd.merge(het, central, how='outer')
         merged = merged[merged[measure] != 0]
-
+        print(merged)
+        # merged['modularity'] = np.log10(merged['modularity'])
+        # merged['avg'] = np.log10(merged['avg'])
         if measure == 'component':
             sns.regplot(x='component', y='avg', data=merged, fit_reg=True, order=2,
-                        truncate=True, scatter_kws={'s': 50, 'alpha': 0.01, 'color': color_palette(i)},
+                        truncate=True, scatter_kws={'rasterized': True, 's': 50, 'alpha': 0.01, 'color': color_palette(i)},
                         line_kws={'lw': 2, 'label': frag_type})
 
             # add a diagonal line
-            plt.plot([0.05, 1], [0.05, 1], linestyle='--', color='black',linewidth=1)
+            # plt.plot([0.05, 1], [0.05, 1], linestyle='--', color='black',linewidth=1)
+            plt.plot([-1, 0], [-1.5, 0], linestyle='--', color='black',linewidth=1)
             plt.xlabel('Fraction of nodes in the largest component', fontsize=16)
 
 
         if measure == 'modularity':
-            sns.regplot(x='modularity', y='avg', data=merged, fit_reg=True, order=3,
-                        truncate=True, scatter_kws={'s': 50, 'alpha': 0.01, 'color': color_palette(i)},
+            sns.regplot(x='modularity', y='avg', data=merged, fit_reg=True, order=2,
+                        truncate=True, scatter_kws={'rasterized': True, 's': 50, 'alpha': 0.01, 'color': color_palette(i)},
                         line_kws={'lw': 2, 'label': frag_type})
 
             plt.gca().invert_xaxis()
@@ -37,9 +41,11 @@ def plot_het_central(data: dict, measure: str):
             plt.xlabel('Modularity', fontsize=16)
 
     plt.ylabel('Heterozygosity', fontsize=16)
+    plt.tick_params(axis='both', labelsize=16)
+
     plt.legend()
 
-    plt.savefig(f'./figs/het_{measure}.jpg', format="jpg")
+    plt.savefig(f'./figs/het_{measure}.svg', format="svg", dpi=300)
     plt.show()
 
 
@@ -315,14 +321,14 @@ def plot_network_stacked_area(df: pd.DataFrame, frag: str):
 ###########################################@@#####################
 ###############################  analysis  #######################
 
-# fragmentation_types = ['rand', 'cor', 'intr', 'dist', 'reg', 'div', 'opt']
-# fragmentation_types = ['opt']
-# net = 'RGG'
-# ignore = False
-# data = load_data(fragmentation_types, net, ignore)
+fragmentation_types = ['rand', 'cor', 'intr', 'dist', 'reg', 'div', 'opt']
+# fragmentation_types = ['div']
+net = 'RGG'
+ignore = False
+data = load_data(fragmentation_types, net, ignore)
 
-#########################plot centrality vs heterozygosity
-# plot_het_central(data, measure='modularity')
+########################plot centrality vs heterozygosity
+plot_het_central(data, measure='modularity')
 
 
 ##############################plot stacks
