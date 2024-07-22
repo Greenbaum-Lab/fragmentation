@@ -1,10 +1,6 @@
-*.png
-*.csv
-*.svg
-*.txt
-*.jpg
-*.pickle
-*.xml
-*.eps
-*.R
+# Ignore all files
+*
 
+# But not these files...
+!.gitignore
+!*.py

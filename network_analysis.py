@@ -315,21 +315,21 @@ def plot_network_stacked_area(df: pd.DataFrame, frag: str):
 ###########################################@@#####################
 ###############################  analysis  #######################
 
-fragmentation_types = ['rand', 'cor', 'intr', 'dist', 'reg', 'div', 'opt']
-fragmentation_types = ['opt']
-net = 'RGG'
-ignore = False
-data = load_data(fragmentation_types, net, ignore)
+# fragmentation_types = ['rand', 'cor', 'intr', 'dist', 'reg', 'div', 'opt']
+# fragmentation_types = ['opt']
+# net = 'RGG'
+# ignore = False
+# data = load_data(fragmentation_types, net, ignore)
 
 #########################plot centrality vs heterozygosity
 # plot_het_central(data, measure='modularity')
 
 
 ##############################plot stacks
-networks = data[fragmentation_types[0]][1]
-matrices = measure_network_metrics_replicas(networks)
-stats = calculate_statistics(matrices)
-plot_network_stacked_area(stats,frag=fragmentation_types[0])
+# networks = data[fragmentation_types[0]][1]
+# matrices = measure_network_metrics_replicas(networks)
+# stats = calculate_statistics(matrices)
+# plot_network_stacked_area(stats,frag=fragmentation_types[0])
 
 ##############################plot centrality vs fragmnetation
 # plot_centrality(data,centrality='connectivity')

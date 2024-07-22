@@ -165,7 +165,7 @@ def plot_distribution(df, measure='het' or 'fst', type=str):
     ax.set_ylim(0, 15)
 
     # Show the plot
-    plt.savefig(f'./figs/dist_{measure}_{type}.jpg', format="jpg")
+    plt.savefig(f'./figs/dist_{measure}_{type}.svg', format="svg")
     plt.show()
 
 pd.set_option('display.max_rows', None)
@@ -182,7 +182,7 @@ def plot_distribution_het(df, type=str):
     # Plot histogram for each step with increasing alpha
     for i, step in enumerate(unique_steps):
         values = df[df['step'] == step]['het']
-        ax.hist(values, bins=40, alpha=0.4, label=f'Step {step}', color=colors[i], edgecolor='black', density=True)
+        ax.hist(values, bins=40, alpha=0.6, label=f'Step {step}', color=colors[i], edgecolor='black', density=True)
 
         if i < len(unique_steps) - 1:
         # Offset each step's histogram by a certain amount
@@ -200,6 +200,9 @@ def plot_distribution_het(df, type=str):
 
     ax.set_xlim(0, 1.4)
     ax.set_ylim(0, (4 + len(unique_steps) * 6)) # Adjust this value to match the vertical spacing between histograms
+    # Increase tick labels size
+    ax.tick_params(axis='x', labelsize=16)  # Increase x-axis tick labels size
+    ax.tick_params(axis='y', labelsize=16)  # Increase y-axis tick labels size
 
     # Remove the box (rectangle) around the plot
     ax.spines['top'].set_visible(False)
@@ -207,7 +210,7 @@ def plot_distribution_het(df, type=str):
     ax.spines['left'].set_visible(False)
     plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.12)
 
-    plt.savefig(f'./figs/dist_het_{type}.jpg', format="jpg")
+    plt.savefig(f'./figs/dist_het_{type}.svg', format="svg")
     plt.show()
 
 def plot_distribution_fst(df, type=str):
@@ -218,12 +221,12 @@ def plot_distribution_fst(df, type=str):
     unique_steps = df['step'].unique()
 
     # Generate reversed color gradient
-    colors = plt.cm.YlGnBu(np.linspace(0, 1, len(unique_steps)))[::-1]
+    colors = plt.cm.YlOrRd(np.linspace(0, 1, len(unique_steps)))[::-1]
 
     # Plot histogram for each step with increasing alpha
     for i, step in enumerate(unique_steps):
         values = df[df['step'] == step]['fst']
-        ax.hist(values, bins=40, alpha=0.4, label=f'Step {step}', color=colors[i], edgecolor='black', density=True)
+        ax.hist(values, bins=40, alpha=0.8, label=f'Step {step}', color=colors[i], edgecolor='black', density=True)
 
         if i < len(unique_steps) - 1:
         # Offset each step's histogram by a certain amount
@@ -240,16 +243,16 @@ def plot_distribution_fst(df, type=str):
 
     ax.set_ylim(0, (4 + len(unique_steps) * 6 + 4))  # vertical spacing between histograms
     plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.12)
+    # Increase tick labels size
+    ax.tick_params(axis='x', labelsize=16)  # Increase x-axis tick labels size
+    ax.tick_params(axis='y', labelsize=16)  # Increase y-axis tick labels size
 
     # Remove the box (rectangle) around the plot
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     ax.spines['left'].set_visible(False)
-    plt.savefig(f'./figs/dist_fst_{type}.jpg', format="jpg")
+    plt.savefig(f'./figs/dist_fst_{type}.svg', format="svg")
     plt.show()
-
-
-
 
 
 ############### individual nodes ####################
@@ -342,7 +345,7 @@ def plot_nodes_all(data):
 ##############plot distributions
 ##### one frag type each time
 # fragmentation_types = ['rand', 'cor', 'intr', 'dist', 'reg', 'div', 'opt']
-fragmentation_types = ['div']
+fragmentation_types = ['dist']
 frag_type = fragmentation_types[0]
 
 net = 'RGG'
