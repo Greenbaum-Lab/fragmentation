@@ -170,6 +170,7 @@ def merge_het_central(dat, step: int, centrality: str, frag: str, log=bool):
     # If log is True, transform the centrality values using the log10 function
     if log == True:
         central['central'] = np.log10(central['central'])
+        het['het'] = np.log10(het['het'])
 
     # Merge the heterozygosity and centrality data into a single DataFrame
     final_df = pd.merge(het, central)
@@ -180,11 +181,11 @@ def merge_het_central(dat, step: int, centrality: str, frag: str, log=bool):
 def plot_node_centrality(dat, step: int, centrality: str, frag: str, log=bool):
 
     final_df = merge_het_central(dat, step, centrality, frag, log)
-    sns.regplot(x='central', y='het', data=final_df, fit_reg=False, order=2,
-                scatter_kws={'s': 50, 'alpha': 0.1, 'color': 'grey'})
-    plt.ylabel("Heterozygosity", fontsize=18)
-    plt.xlabel(centrality.capitalize(), fontsize=18)
-    plt.ylim(0, 1.8)
+    sns.regplot(x='central', y='het', data=final_df, fit_reg=True, order=2,line_kws={'color': 'red'},
+                scatter_kws={'s': 50, 'alpha': 0.1, 'color': 'blue'})
+    plt.ylabel("Heterozygosity (log10)", fontsize=18)
+    plt.xlabel(f"{centrality.capitalize()} (log10)", fontsize=18)
+    # plt.ylim(0, 1.8)
     plt.savefig(f'./figs/node_{centrality}_{step}_{frag}.jpg', format="jpg")
     plt.show()
 
@@ -281,7 +282,7 @@ def calculate_node_centrality(dat, step: int, centrality: str):
                 central = nx.betweenness_centrality(net)
 
             if centrality == 'degree':
-                central = nx.degree_centrality(net)
+                central = dict(nx.degree(net))
 
             central_dict[rep_index] = central
 
@@ -384,14 +385,15 @@ def plot_mean_with_ci(data_list):
 
 ##### plot heterozygisuty vs. node centrality
 
+
 fragmentation_types = ['rand']
 net = 'RGG'
 ignore = False
 data = load_data(fragmentation_types, net, ignore)
 
 
-
-# plot_node_centrality(data['rand'],step=100,centrality='degree',log=False,frag=fragmentation_types)
+#### plot snapshot of hetrozygosity- centrality correlation
+plot_node_centrality(data['rand'],step=0,centrality='degree',log=True,frag=fragmentation_types)
 
 ### plot correlation between centrality and heterozygosity for all processes
 # results = compute_correlation_all(data,centrality='degree')

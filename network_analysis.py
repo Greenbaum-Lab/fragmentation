@@ -17,9 +17,9 @@ def plot_het_central(data: dict, measure: str):
         central = calculate_centrality(data[frag_type][1], measure=measure)
         merged = pd.merge(het, central, how='outer')
         merged = merged[merged[measure] != 0]
-        print(merged)
-        # merged['modularity'] = np.log10(merged['modularity'])
-        # merged['avg'] = np.log10(merged['avg'])
+
+        merged['modularity'] = np.log10(merged['modularity'])
+        merged['avg'] = np.log10(merged['avg'])
         if measure == 'component':
             sns.regplot(x='component', y='avg', data=merged, fit_reg=True, order=2,
                         truncate=True, scatter_kws={'rasterized': True, 's': 50, 'alpha': 0.01, 'color': color_palette(i)},
@@ -37,7 +37,7 @@ def plot_het_central(data: dict, measure: str):
                         line_kws={'lw': 2, 'label': frag_type})
 
             plt.gca().invert_xaxis()
-            plt.ylim(-0.05, 1.05)
+            # plt.ylim(-0.05, 1.05)
             plt.xlabel('Modularity', fontsize=16)
 
     plt.ylabel('Heterozygosity', fontsize=16)
