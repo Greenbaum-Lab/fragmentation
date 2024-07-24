@@ -13,7 +13,7 @@ from mantel import test
 from scipy.stats import pearsonr
 from scipy.stats import norm
 
-from funcs import calculate_statistics, load_data
+from funcs import calculate_statistics, load_data, calculate_centrality
 from network_analysis import measure_giant_component
 from nodes_matrices import calculate_node_centrality
 
@@ -35,7 +35,6 @@ def giant_component_replicates(all_nets: list) -> pd.DataFrame:
 
     df = pd.DataFrame(data)
     return df
-
 
 
 def plot_component_genetics(data):
@@ -78,7 +77,6 @@ def plot_component_genetics(data):
     plt.show()
 
 
-
 def plot_centrality(data, centrality='modularity'):
     """
     Plots centrality measures and their confidence
@@ -114,6 +112,17 @@ def plot_centrality(data, centrality='modularity'):
     plt.tight_layout()
     plt.savefig(f'./figs/{centrality}.jpg')
     plt.show()
+
+
+######## plot centrality along fragmentation
+
+fragmentation_types = ['rand', 'cor', 'intr', 'dist', 'reg', 'div', 'opt']
+fragmentation_types = ['rand']
+net = 'RGG'
+ignore = False
+data = load_data(fragmentation_types, net, ignore)
+
+plot_centrality(data, centrality='modularity')
 
 
 def weighted_algebraic_connectivity(G):
@@ -168,8 +177,6 @@ def plot_het_central(data: dict, measure: str, save=bool):
     plt.show()
 
 
-
-
 def get_distance_matrix(net, default_distance=50):
     nodes = list(net.nodes())
     n = len(nodes)
@@ -185,7 +192,6 @@ def get_distance_matrix(net, default_distance=50):
             distance_matrix[node_index[i]][node_index[j]] = dist
 
     return distance_matrix
-
 
 
 def plot_matrix_relationship(distance_matrix, fst_matrix, method='pearson', perms=999):
@@ -233,7 +239,8 @@ def get_euclidean_matrix(net):
 
     return distance_matrix
 
-def perform_mantel_test(distance_matrix, fst_matrix, perms, method,print=bool):
+
+def perform_mantel_test(distance_matrix, fst_matrix, perms, method, print=bool):
     # Convert all zeros to NaN in both matrices
     # Convert 50 to NaN. 50 is the default value for isolated nodes
     distance_matrix = np.where((distance_matrix == 0) | (distance_matrix == 50), np.nan, distance_matrix)
@@ -248,10 +255,5 @@ def perform_mantel_test(distance_matrix, fst_matrix, perms, method,print=bool):
 
     return result[0], result[1]
 
-
-
-
 # [1-all networks][replica no.][step number]
 # [2-all heterozygosity][replica no.][step number]
-
-

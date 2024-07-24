@@ -138,16 +138,16 @@ def calculate_centrality(all_nets: list,
 
 
 ########### extra functions
-def plot_fragmentation(data):
+def plot_fragmentation(data, replica: int):
     """
     Plots network snapshot across fragmentation processes.
     each fragmentation in its own row.
 
     :param data: A dictionary of loaded network data, keyed by fragmentation type.
     """
-    steps = [0, 50, 100, 150, 200, 250]
+    steps = [50, 100, 150, 200]
     fragmentation_types = list(data.keys())
-    pos = nx.spring_layout(data['rand'][1][10][0], k=0.2, iterations=20, seed=50)
+    pos = nx.spring_layout(data['rand'][1][replica][0], k=0.2, iterations=20, seed=50)
     num_rows = len(fragmentation_types)
     num_cols = len(steps)
     fig, axes = plt.subplots(num_rows, num_cols, figsize=(20, 4 * num_rows))
@@ -156,7 +156,7 @@ def plot_fragmentation(data):
         net_data = data[frag_type]
 
         for col_idx, step in enumerate(steps):
-            net = net_data[1][10][step]
+            net = net_data[1][replica][step]
 
             ax = axes[row_idx, col_idx] if num_rows > 1 else axes[col_idx]
             nx.draw_networkx(net, pos=pos, ax=ax, node_size=20, with_labels=False)
@@ -165,10 +165,9 @@ def plot_fragmentation(data):
                 # Label the rows with the fragmentation type
                 ax.set_ylabel(frag_type, fontsize=36)
 
-    plt.savefig("./figs/fragmentation processes.png")
+    plt.savefig("./figs/fragmentation processes.svg")
     plt.tight_layout()
     plt.show()
-
 
 
 
@@ -227,3 +226,10 @@ def plot_degree_distributions(data):
     plt.savefig("./figs/degree_distributions.png")
     plt.show()
 
+
+######## plot fragmentaion snapshots
+# fragmentation_types = ['rand', 'cor', 'intr', 'dist', 'reg', 'div', 'opt']
+# net = 'RGG'
+# ignore = False
+# data = load_data(fragmentation_types, net, ignore)
+# # plot_fragmentation(data,replica=83)
