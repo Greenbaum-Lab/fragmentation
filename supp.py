@@ -77,7 +77,7 @@ def plot_component_genetics(data):
     plt.show()
 
 
-def plot_centrality(data, centrality='modularity'):
+def plot_centrality(data, fragmentation_types, centrality='modularity'):
     """
     Plots centrality measures and their confidence
     intervals against fragmentation steps.
@@ -85,32 +85,23 @@ def plot_centrality(data, centrality='modularity'):
     :param data: Dictionary containing network data for all fragmentation types.
     :param centrality: The centrality measure to plot.
     """
-    names = ['rand', 'cor', 'int', 'dist', 'reg', 'div', 'opt']
-    labels = ['Random', 'Correlated', 'Intrusive', 'Distance', 'Regressive', 'Divisive', 'Optimal']
 
     plt.figure(figsize=(10, 6))
 
-    for name, label in zip(names, labels):
+    for frag_type in fragmentation_types:
         # Calculate centrality and its standard deviation using your function
-        df = calculate_centrality(data[name][1], measure=[centrality])
-        mean_centrality, std_centrality = calculate_statistics(df)
-
+        df = calculate_centrality(data[frag_type][1], measure=[centrality])
+        mean_centrality, ci_centrality = calculate_statistics(df)
         steps = mean_centrality.index
 
-        # Plotting the centrality measure for the current fragmentation type
-        plt.plot(steps, mean_centrality[centrality], label=label)
-
-        lower_bound = mean_centrality[centrality] - std_centrality[centrality]
-        upper_bound = mean_centrality[centrality] + std_centrality[centrality]
-
-        # Plotting the confidence interval as a shaded area
+        plt.plot(steps, mean_centrality[centrality], label=frag_type)
+        lower_bound = mean_centrality[centrality] - ci_centrality[centrality]
+        upper_bound = mean_centrality[centrality] + ci_centrality[centrality]
         plt.fill_between(steps, lower_bound, upper_bound, alpha=0.2)
 
     plt.xlabel('Step', fontsize=22)
     plt.ylabel(centrality.capitalize(), fontsize=18)
-    plt.title(f'{centrality.capitalize()} along Fragmentation', fontsize=22)
     plt.legend()
-    plt.tight_layout()
     plt.savefig(f'./figs/{centrality}.jpg')
     plt.show()
 
@@ -118,12 +109,12 @@ def plot_centrality(data, centrality='modularity'):
 ######## plot centrality along fragmentation
 
 fragmentation_types = ['rand', 'cor', 'intr', 'dist', 'reg', 'div', 'opt']
-fragmentation_types = ['rand']
+# fragmentation_types = ['rand','div']
 net = 'RGG'
 ignore = False
 data = load_data(fragmentation_types, net, ignore)
 
-plot_centrality(data, centrality='component')
+plot_centrality(data, fragmentation_types, centrality='modularity')
 
 
 def weighted_algebraic_connectivity(G):

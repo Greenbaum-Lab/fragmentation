@@ -46,6 +46,7 @@ def process_data_for_single_type(frag_data, measure: str):
         df = access_het_mean(frag_data)
 
     mean_values, confidence_interval = calculate_statistics(df)
+    print(mean_values)
     mean_values = normalize_steps(mean_values)
     confidence_interval = normalize_steps(confidence_interval)
     breaking_point = mean(find_breakink_point_list(access_networks(frag_data)))
@@ -310,13 +311,13 @@ def plot_nodes_all(data):
 #######################
 ####################### plot data
 # fragmentation_types = ['rand', 'cor', 'intr', 'dist', 'reg', 'div', 'opt']
-fragmentation_types = ['rand']
-net = 'RGG'
-ignore = False
-data = load_data(fragmentation_types, net, ignore)
-
-plot_all_fragmentation_types(data, measure='fst')
-plot_all_fragmentation_types(data, measure='het')
+# # fragmentation_types = ['rand']
+# net = 'RGG'
+# ignore = False
+# data = load_data(fragmentation_types, net, ignore)
+#
+# plot_all_fragmentation_types(data, measure='fst')
+# plot_all_fragmentation_types(data, measure='het')
 
 
 ##############plot distributions

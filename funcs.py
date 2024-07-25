@@ -21,10 +21,11 @@ def load_data(fragmentation_types, net, ignore):
 
 def calculate_statistics(df):
     """Calculate mean and 95% confidence interval."""
-    columns_to_analyze = df.columns.values
-    print(columns_to_analyze)
-    mean_values = df.groupby('step')['avg'].mean()
-    sem = df.groupby('step')['avg'].sem()  # Standard error of the mean
+    column = df.columns.difference(['replica', 'step']).values.tolist()
+    if len(column) > 1:
+        column = column[0]
+    mean_values = df.groupby('step')[column].mean()
+    sem = df.groupby('step')[column].sem()  # Standard error of the mean
     confidence_interval = 1.96 * sem  # 95% confidence interval
     return mean_values, confidence_interval
 
@@ -136,8 +137,7 @@ def calculate_centrality(all_nets: list,
             data.append(record)
 
     df = pd.DataFrame(data)
-    print(df)
-    # df = calculate_statistics()
+
     return df
 
 # # Calculate the means and standard deviations for the specified centrality measures
