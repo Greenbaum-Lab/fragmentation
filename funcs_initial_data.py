@@ -392,9 +392,8 @@ def create_sw_networks(num_networks, N, k, p, space_dim=2):
 
 
 
-N = 100  # Number of nodes
-k = 3  # Each node is initially connected to k nearest neighbors
-p = 0.1  # Probability of rewiring each edge
-num_networks = 5
-
+# N = 100  # Number of nodes
+# k = 3  # Each node is initially connected to k nearest neighbors
+# p = 0.1  # Probability of rewiring each edge
+# num_networks = 5
 # x = create_multiple_networks(num_networks,N,k,p)

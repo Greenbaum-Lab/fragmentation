@@ -433,26 +433,3 @@ def conservative_migration_from_binary_matrix(binary_m: np.ndarray, bounds: tupl
     result_matrix[non_zero_indices[:, 0], non_zero_indices[:, 1]] = solution
     return result_matrix
 
-import networkx as nx
-import matplotlib.pyplot as plt
-net = nx.random_geometric_graph(20, 0.8)
-pos = nx.spring_layout(net)
-weights = nx.get_edge_attributes(net, "weight")
-edge_widths = [2 * v for v in weights.values()]
-nx.draw(net, with_labels=True, width=edge_widths)
-plt.show()
-
-net = nx.attr_matrix(net)[0]
-print(net)
-
-
-cons = conservative_migration_from_binary_matrix(net)
-print(cons)
-print(check_conservative(cons))
-cons = nx.from_numpy_array(cons)
-
-weights = nx.get_edge_attributes(cons, "weight")
-edge_widths = [2 * v for v in weights.values()]
-nx.draw(cons, with_labels=True, width=edge_widths)
-plt.show()
-

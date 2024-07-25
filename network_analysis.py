@@ -18,8 +18,8 @@ def plot_het_central(data: dict, measure: str):
         merged = pd.merge(het, central, how='outer')
         merged = merged[merged[measure] != 0]
 
-        merged['modularity'] = np.log10(merged['modularity'])
-        merged['avg'] = np.log10(merged['avg'])
+        # merged['modularity'] = np.log10(merged['modularity'])
+        # merged['avg'] = np.log10(merged['avg'])
         if measure == 'component':
             sns.regplot(x='component', y='avg', data=merged, fit_reg=True, order=2,
                         truncate=True, scatter_kws={'rasterized': True, 's': 50, 'alpha': 0.01, 'color': color_palette(i)},
@@ -307,13 +307,6 @@ def plot_network_stacked_area(df: pd.DataFrame, frag: str):
 #     plt.legend()
 #     plt.show()
 #
-#
-# def process_multiple_fragmentation_types(data, fragmentation_types):
-#     for frag_type in fragmentation_types:
-#         frag_data = data[frag_type]
-#         correlations = calculate_mantel_correlation(frag_data)
-#         stats = calculate_statistics(correlations)
-#         plot_correlation_with_ci(stats,fragmentation_types=frag_type)
 
 
 

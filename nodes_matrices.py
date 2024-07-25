@@ -386,14 +386,14 @@ def plot_mean_with_ci(data_list):
 ##### plot heterozygisuty vs. node centrality
 
 
-fragmentation_types = ['rand']
-net = 'RGG'
-ignore = False
-data = load_data(fragmentation_types, net, ignore)
-
-
-#### plot snapshot of hetrozygosity- centrality correlation
-plot_node_centrality(data['rand'],step=0,centrality='degree',log=True,frag=fragmentation_types)
+# fragmentation_types = ['rand']
+# net = 'RGG'
+# ignore = False
+# data = load_data(fragmentation_types, net, ignore)
+#
+#
+# #### plot snapshot of hetrozygosity- centrality correlation
+# plot_node_centrality(data['rand'],step=0,centrality='degree',log=True,frag=fragmentation_types)
 
 ### plot correlation between centrality and heterozygosity for all processes
 # results = compute_correlation_all(data,centrality='degree')

@@ -92,7 +92,8 @@ def plot_centrality(data, centrality='modularity'):
 
     for name, label in zip(names, labels):
         # Calculate centrality and its standard deviation using your function
-        mean_centrality, std_centrality = calculate_centrality(data[name][1], measure=[centrality])
+        df = calculate_centrality(data[name][1], measure=[centrality])
+        mean_centrality, std_centrality = calculate_statistics(df)
 
         steps = mean_centrality.index
 
@@ -122,7 +123,7 @@ net = 'RGG'
 ignore = False
 data = load_data(fragmentation_types, net, ignore)
 
-plot_centrality(data, centrality='modularity')
+plot_centrality(data, centrality='component')
 
 
 def weighted_algebraic_connectivity(G):

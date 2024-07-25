@@ -19,10 +19,12 @@ def load_data(fragmentation_types, net, ignore):
     return data
 
 
-def calculate_statistics(df, index):
+def calculate_statistics(df):
     """Calculate mean and 95% confidence interval."""
-    mean_values = df[index].groupby('step')['avg'].mean()
-    sem = df[index].groupby('step')['avg'].sem()  # Standard error of the mean
+    columns_to_analyze = df.columns.values
+    print(columns_to_analyze)
+    mean_values = df.groupby('step')['avg'].mean()
+    sem = df.groupby('step')['avg'].sem()  # Standard error of the mean
     confidence_interval = 1.96 * sem  # 95% confidence interval
     return mean_values, confidence_interval
 
@@ -31,6 +33,15 @@ def access_het_dist(frag_data:list):
 
 def access_fst_dist(frag_data:list):
     return frag_data[4]
+
+def access_het_mean(frag_data:list):
+    return frag_data[3]
+
+def access_fst_mean(frag_data:list):
+    return frag_data[5]
+
+def access_networks(frag_data:list):
+    return frag_data[1]
 
 
 def normalize_steps(data):
@@ -125,6 +136,8 @@ def calculate_centrality(all_nets: list,
             data.append(record)
 
     df = pd.DataFrame(data)
+    print(df)
+    # df = calculate_statistics()
     return df
 
 # # Calculate the means and standard deviations for the specified centrality measures

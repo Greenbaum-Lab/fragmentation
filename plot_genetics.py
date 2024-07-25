@@ -5,52 +5,8 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
-from funcs import calculate_statistics, access_het_dist, access_fst_dist, normalize_steps
-from supp import load_data
-
-
-#
-#
-#
-# def make_networks(n_nets: int, n_nodes: int, net_type) -> list:
-#     """
-#     create a list of networks
-#     :param n_nets: number of networks
-#     :param n_nodes: number of nodes
-#     :param connectivity: degree of connectivity
-#     :param net_type: type of network: ER, RGG, or SF
-#     :return: list of networks
-#     """
-#     nets = []
-#     for net in range(n_nets):
-#
-#         if net_type == 'ER':
-#             net = nx.erdos_renyi_graph(n=n_nodes, p=0.2)
-#             nets.append(net)
-#         if net_type == 'RGG':
-#             net = nx.random_geometric_graph(n=n_nodes, radius=0.3)
-#             nets.append(net)
-#         if net_type == 'AB':
-#             net = nx.barabasi_albert_graph(n=n_nodes, m=5)
-#             nets.append(net)
-#         if net_type == 'SW':
-#             net = nx.watts_strogatz_graph(n=n_nodes,k=9, p=0.1)
-#             nets.append(net)
-#
-#     return nets
-#
-# nets = make_networks(100, 50, 'RGG')
-#
-# num_edges = [net.number_of_edges() for net in nets]
-#
-# # Create a histogram of the number of edges
-# plt.hist(num_edges, bins=50)
-#
-# plt.title('Distribution of Number of Edges')
-# plt.xlabel('Number of Edges')
-# plt.ylabel('Frequency')
-#
-# plt.show()
+from funcs import calculate_statistics, access_het_dist, access_fst_dist, normalize_steps, load_data, access_fst_mean, \
+    access_het_mean, access_networks
 
 
 def find_breaking_point(networks):
@@ -76,30 +32,52 @@ def find_breakink_point_list(networks_list: list):
     return breaking_point
 
 
+# all data is a dictionary with keys as fragmentation types and values as lists of dataframes\lists
+def process_data_for_single_type(frag_data, measure: str):
+    """process data for plotting of single fragmentation type.
+     calculate the mean and 95% confidence interval and breaking point of a network.
+     Args:
+        frag_data: dictionary of all data, keyed by fragmentation type.
+        measure: The measure to plot ('fst' or 'het')."""
 
-def plot_data(data, index, ylabel, measure):
-    """Plot data with mean and 95% confidence interval."""
-    color_palette = plt.get_cmap('tab10')  # You can change 'tab10' to any other available palette
+    if measure == 'fst':
+        df = access_fst_mean(frag_data)
+    if measure == 'het':
+        df = access_het_mean(frag_data)
+
+    mean_values, confidence_interval = calculate_statistics(df)
+    mean_values = normalize_steps(mean_values)
+    confidence_interval = normalize_steps(confidence_interval)
+    breaking_point = mean(find_breakink_point_list(access_networks(frag_data)))
+
+    return mean_values, confidence_interval, breaking_point
+
+def plot_all_fragmentation_types(data, measure: str):
+    """Plot data for all fragmentation types with mean and 95% confidence interval and breaking point.
+    Args:
+        data: A dictionary of all data, keyed by fragmentation type.
+        measure: The measure to plot ('fst' or 'het')."""
+
+    color_palette = plt.get_cmap('tab10')
     plt.figure()
 
-    # Plot each dataset's mean and confidence interval
-    for frag_type, datasets in data.items():
-        mean_values, confidence_interval = calculate_statistics(datasets, index)
-        mean_values = normalize_steps(mean_values)
-        confidence_interval = normalize_steps(confidence_interval)
-        plt.plot(mean_values, label=frag_type.capitalize())
+    # i-index; frag_type-string of fragmentation type; df-dataframe of avg fst\het
+    for i, (frag_type, df) in enumerate(data.items()):
+
+        color = color_palette(i)
+
+        mean_values, confidence_interval, breaking_point = process_data_for_single_type(data[frag_type], measure)
+        plt.plot(mean_values, label=frag_type, color=color)
         plt.fill_between(mean_values.index, mean_values - confidence_interval, mean_values + confidence_interval,
                          alpha=0.2)
-    # Add breaking points and other plot details
-    for i, (frag_type, datasets) in enumerate(data.items()):
-        breaking_point = mean(find_breakink_point_list(datasets[1]))
-        plt.axvline(x=breaking_point, color=color_palette(i), ymax=0.05,linewidth=4)
+        plt.axvline(x=breaking_point, color=color, ymax=0.05, linewidth=4)
 
     plt.xlabel('Fragmentation (%)', fontsize=16)
-    plt.ylabel(ylabel, fontsize=16)
+    plt.ylabel(measure, fontsize=16)
     plt.legend()
     plt.savefig(f'./figs/genetics_general_{measure}.jpg', format="jpg")
     plt.show()
+
 
 
 ################### distribution ####################
@@ -332,30 +310,29 @@ def plot_nodes_all(data):
 #######################
 ####################### plot data
 # fragmentation_types = ['rand', 'cor', 'intr', 'dist', 'reg', 'div', 'opt']
-# # fragmentation_types = ['rand']
-# net = 'RGG'
-# ignore = False
-# data = load_data(fragmentation_types, net, ignore)
-#
-# # Plot fst and het along fragmentation
-# plot_data(data, 5, 'Pairwise Fst', measure='fst')
-# plot_data(data, 3, 'Heterozygosity',measure='heterozygosity')
-#
-
-##############plot distributions
-##### one frag type each time
-# fragmentation_types = ['rand', 'cor', 'intr', 'dist', 'reg', 'div', 'opt']
-fragmentation_types = ['dist']
-frag_type = fragmentation_types[0]
-
+fragmentation_types = ['rand']
 net = 'RGG'
 ignore = False
 data = load_data(fragmentation_types, net, ignore)
 
-df = filter_intervals(data[frag_type],measure='het')
-plot_distribution_het(df,type=frag_type)
-df = filter_intervals(data[frag_type],measure='fst')
-plot_distribution_fst(df,type=frag_type)
+plot_all_fragmentation_types(data, measure='fst')
+plot_all_fragmentation_types(data, measure='het')
+
+
+##############plot distributions
+##### one frag type each time
+# fragmentation_types = ['rand', 'cor', 'intr', 'dist', 'reg', 'div', 'opt']
+# fragmentation_types = ['dist']
+# frag_type = fragmentation_types[0]
+#
+# net = 'RGG'
+# ignore = False
+# data = load_data(fragmentation_types, net, ignore)
+#
+# df = filter_intervals(data[frag_type],measure='het')
+# plot_distribution_het(df,type=frag_type)
+# df = filter_intervals(data[frag_type],measure='fst')
+# plot_distribution_fst(df,type=frag_type)
 
 
 ####################### plot individual nodes
