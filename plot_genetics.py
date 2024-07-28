@@ -45,13 +45,12 @@ def process_data_for_single_type(frag_data, measure: str):
     if measure == 'het':
         df = access_het_mean(frag_data)
 
-    mean_values, confidence_interval = calculate_statistics(df)
-    print(mean_values)
-    mean_values = normalize_steps(mean_values)
-    confidence_interval = normalize_steps(confidence_interval)
+    df_stat = calculate_statistics(df)
+
+    df_res = normalize_steps(df_stat)
     breaking_point = mean(find_breakink_point_list(access_networks(frag_data)))
 
-    return mean_values, confidence_interval, breaking_point
+    return df_res, breaking_point
 
 def plot_all_fragmentation_types(data, measure: str):
     """Plot data for all fragmentation types with mean and 95% confidence interval and breaking point.
@@ -67,9 +66,10 @@ def plot_all_fragmentation_types(data, measure: str):
 
         color = color_palette(i)
 
-        mean_values, confidence_interval, breaking_point = process_data_for_single_type(data[frag_type], measure)
-        plt.plot(mean_values, label=frag_type, color=color)
-        plt.fill_between(mean_values.index, mean_values - confidence_interval, mean_values + confidence_interval,
+        df_stat, breaking_point = process_data_for_single_type(data[frag_type], measure)
+        print(df_stat)
+        plt.plot(df_stat['avg_mean'], label=frag_type, color=color)
+        plt.fill_between(df_stat.index, df_stat['avg_mean'] - df_stat['avg_ci'], df_stat['avg_mean'] + df_stat['avg_ci'],
                          alpha=0.2)
         plt.axvline(x=breaking_point, color=color, ymax=0.05, linewidth=4)
 
@@ -311,12 +311,12 @@ def plot_nodes_all(data):
 #######################
 ####################### plot data
 # fragmentation_types = ['rand', 'cor', 'intr', 'dist', 'reg', 'div', 'opt']
-# # fragmentation_types = ['rand']
-# net = 'RGG'
-# ignore = False
-# data = load_data(fragmentation_types, net, ignore)
+fragmentation_types = ['rand']
+net = 'RGG'
+ignore = False
+data = load_data(fragmentation_types, net, ignore)
 #
-# plot_all_fragmentation_types(data, measure='fst')
+plot_all_fragmentation_types(data, measure='fst')
 # plot_all_fragmentation_types(data, measure='het')
 
 

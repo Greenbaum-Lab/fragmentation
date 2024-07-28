@@ -27,7 +27,10 @@ def calculate_statistics(df):
     mean_values = df.groupby('step')[column].mean()
     sem = df.groupby('step')[column].sem()  # Standard error of the mean
     confidence_interval = 1.96 * sem  # 95% confidence interval
-    return mean_values, confidence_interval
+    combined = pd.merge(mean_values, confidence_interval, on='step',
+                        suffixes=('_mean', '_ci'))
+    print(combined)
+    return pd.DataFrame(combined)
 
 def access_het_dist(frag_data:list):
     return frag_data[2]
@@ -56,18 +59,8 @@ def normalize_steps(data):
     Returns:
     pd.Series or pd.DataFrame: A new Pandas Series with normalized step indices or a DataFrame with a normalized 'step' column.
     """
-    if isinstance(data, pd.Series):
-        # Normalize step values to percentage for Series
-        normalized_index = (data.index / data.index.max()) * 100
-        normalized_series = pd.Series(data.values, index=normalized_index)
-        return normalized_series
-
-    elif isinstance(data, pd.DataFrame) and 'step' in data.columns:
-        # Normalize step values to percentage for DataFrame
-        data['step'] = (data['step'] / data['step'].max()) * 100
-        return data
-    else:
-        raise ValueError("Input must be a Pandas Series or a DataFrame with a 'step' column.")
+    data.index = data.index / data.index.max() * 100
+    return data
 
 def compute_modularity(net):
 
