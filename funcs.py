@@ -29,7 +29,6 @@ def calculate_statistics(df):
     confidence_interval = 1.96 * sem  # 95% confidence interval
     combined = pd.merge(mean_values, confidence_interval, on='step',
                         suffixes=('_mean', '_ci'))
-    print(combined)
     return pd.DataFrame(combined)
 
 def access_het_dist(frag_data:list):
@@ -50,12 +49,10 @@ def access_networks(frag_data:list):
 
 def normalize_steps(data):
     """
-    Normalize the step index of a Pandas Series or the 'step' column of a DataFrame
-    to a percentage scale from 0 to 100.
-
+    Normalize the step index to a percentage scale from 0 to 100,
+     reflecting fragmnetation.
     Parameters:
-    data (pd.Series or pd.DataFrame): A Pandas Series with step indices or a DataFrame with a 'step' column.
-
+    data: A Pandas DataFrame with a 'step' column.
     Returns:
     pd.Series or pd.DataFrame: A new Pandas Series with normalized step indices or a DataFrame with a normalized 'step' column.
     """

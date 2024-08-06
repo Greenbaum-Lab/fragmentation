@@ -213,40 +213,40 @@ def plot_network_stacked_area(df: pd.DataFrame, frag: str):
 
     plt.savefig(f'./figs/stack_{frag}.jpg')
     plt.show()
-#
-#
-# def calculate_mantel_correlation(data):
-#     # Initialize a list to store the results
-#     mantel_results = []
-#
-#     # Get the number of replicas
-#     num_replicas = len(data[7])
-#
-#     # Loop over all replicas
-#     for rep in range(num_replicas):
-#         # Get the number of steps for the current replica
-#         num_steps = len(data[7][rep])
-#         num_steps = 10
-#
-#         # Loop over all steps
-#         for step in range(num_steps):
-#             # Get the FST matrix and network for the current step
-#             matrix = data[7][rep][step]
-#             net = data[1][rep][step]
-#
-#             distance_matrix = get_euclidean_matrix(net)
-#
-#             correlation = perform_mantel_test(matrix, distance_matrix, perms=999,
-#                                               method='pearson',print=False)[0]
-#
-#             mantel_results.append({
-#                 'replica': rep,
-#                 'step': step,
-#                 'correlation': correlation
-#             })
-#
-#     return pd.DataFrame(mantel_results)
-#
+
+
+def calculate_mantel_correlation(data):
+    # Initialize a list to store the results
+    mantel_results = []
+
+    # Get the number of replicas
+    num_replicas = len(data[7])
+
+    # Loop over all replicas
+    for rep in range(num_replicas):
+        # Get the number of steps for the current replica
+        num_steps = len(data[7][rep])
+        num_steps = 10
+
+        # Loop over all steps
+        for step in range(num_steps):
+            # Get the FST matrix and network for the current step
+            matrix = data[7][rep][step]
+            net = data[1][rep][step]
+
+            distance_matrix = get_euclidean_matrix(net)
+
+            correlation = perform_mantel_test(matrix, distance_matrix, perms=999,
+                                              method='pearson',print=False)[0]
+
+            mantel_results.append({
+                'replica': rep,
+                'step': step,
+                'correlation': correlation
+            })
+
+    return pd.DataFrame(mantel_results)
+
 #
 # def plot_step_vs_correlation(df):
 #     plt.figure(figsize=(10, 6))
@@ -339,14 +339,172 @@ def plot_network_stacked_area(df: pd.DataFrame, frag: str):
 # print(stats)
 # plot_correlation_with_ci(stats, fragmentation_types)
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ##plot fst-distance relationship
-# data = data[frag]
+from mantel import test
+
+# do it for a single component
+#     iterate over all componnentes in the net
+
+
+def get_shortest_path_matrix(net):
+    """
+    calculate the shortest path length between all pairs of nodes in the network.
+
+    :return: distance matrix of edges between nodes
+    """
+    n = nx.number_of_nodes(net)
+    distance_matrix = np.full((n, n), np.inf)
+    # use dijkstra algorithm to calculate the shortest path length
+    for source, paths in nx.shortest_path_length(net):
+        for target, length in paths.items():
+            distance_matrix[source, target] = length
+
+    return distance_matrix
+
+
+def get_euclidean_matrix(net):
+
+    # Extract node positions into a numpy array
+    positions = nx.get_node_attributes(net, 'pos')
+    print(positions)
+
+    pos_array = np.array([positions[node] for node in sorted(net.nodes())])
+    print(pos_array)
+    # Calculate the Euclidean distance matrix using broadcasting
+    diff = pos_array[:, np.newaxis, :] - pos_array[np.newaxis, :, :]
+    distance_matrix = np.sqrt(np.sum(diff**2, axis=-1))
+
+
+    return distance_matrix
+
+net = nx.random_geometric_graph(10, 0.6,seed=42)
+distance_matrix = get_euclidean_matrix(net)
+print(distance_matrix)
+
+def plot_matrix_relationship(distance_matrix, fst_matrix, method='pearson', perms=999):
+    #calculate the mantel test correlation
+    perform_mantel_test(distance_matrix, fst_matrix, perms, method)
+    # Flatten the matrices for plotting, ignoring NaN values
+    flat_matrix1 = distance_matrix.flatten()
+    flat_matrix2 = fst_matrix.flatten()
+
+    valid_indices = ~np.isnan(flat_matrix1) & ~np.isnan(flat_matrix2)
+    flat_matrix1 = flat_matrix1[valid_indices]
+    flat_matrix2 = flat_matrix2[valid_indices]
+
+    # Create scatter plot
+    plt.figure(figsize=(8, 6))
+    plt.scatter(flat_matrix1, flat_matrix2, color='blue', edgecolor='k', alpha=0.7)
+
+    # Add labels and title
+    plt.xlabel('Euclidean distance')
+    plt.ylabel('Fst')
+
+    # Add a line of best fit
+    m, b = np.polyfit(flat_matrix1, flat_matrix2, 1)
+    plt.plot(flat_matrix1, m * flat_matrix1 + b, color='red')
+    #
+    # coeffs = np.polyfit(flat_matrix1, flat_matrix2, 2)  # Quadratic fit
+    # p = np.poly1d(coeffs)  # Create polynomial function
+    # t = np.linspace(min(flat_matrix1), max(flat_matrix1), 500)
+    # plt.plot(t, p(t), color='red')
+    plt.savefig(f'./figs/distance_fst.jpg', format="jpg")
+
+    plt.show()
+
+
+
+
+def perform_mantel_test(distance_matrix, fst_matrix, perms=999,
+                        method='pearson', print=bool):
+    # Convert all zeros to NaN in both matrices
+    # Convert 50 to NaN. 50 is the default value for isolated nodes
+    distance_matrix = np.where((distance_matrix == 0) | (distance_matrix == 50), np.nan, distance_matrix)
+    fst_matrix = np.where(fst_matrix == 0, np.nan, fst_matrix)
+
+    # Perform Mantel test, expecting a dictionary as a return value
+    result = test(fst_matrix, distance_matrix, perms=perms, method=method, ignore_nans=True)
+
+    if print:
+        print(f"Correlation: {result[0]}")
+        print(f"P-value: {result[1]}")
+
+    return result[0], result[1]
+
+
+
+
+#
+# fragmentation_types = ['rand']
+# net = 'RGG'
+# ignore = False
+# data = load_data(fragmentation_types, net, ignore)
+#
+# data = data[fragmentation_types[0]]
 # matrix = data[7][0][20]
 # net = data[1][0][20]
 # distance_matrix = get_euclidean_matrix(net)
 # perform_mantel_test(matrix,distance_matrix)
-
+#
 # distance_matrix = get_distance_matrix(net)
 # plot_matrix_relationship(distance_matrix=distance_matrix,fst_matrix=matrix)
-
-
+#
+#

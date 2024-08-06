@@ -9,7 +9,6 @@ from infomap import Infomap
 from joypy import joyplot
 from matplotlib import pyplot as plt
 import seaborn as sns
-from mantel import test
 from scipy.stats import pearsonr
 from scipy.stats import norm
 
@@ -169,83 +168,7 @@ def plot_het_central(data: dict, measure: str, save=bool):
     plt.show()
 
 
-def get_distance_matrix(net, default_distance=50):
-    nodes = list(net.nodes())
-    n = len(nodes)
-    distance_matrix = np.full((n, n), default_distance)  # Initialize matrix with default distance
-    node_index = {node: idx for idx, node in enumerate(nodes)}  # Map nodes to indices
 
-    # Calculate shortest paths using Floyd-Warshall algorithm
-    # This considers all path lengths and sets distances for all connected pairs
-    path_lengths = dict(nx.all_pairs_dijkstra_path_length(net))
-
-    for i, distances in path_lengths.items():
-        for j, dist in distances.items():
-            distance_matrix[node_index[i]][node_index[j]] = dist
-
-    return distance_matrix
-
-
-def plot_matrix_relationship(distance_matrix, fst_matrix, method='pearson', perms=999):
-    #calculate the mantel test correlation
-    perform_mantel_test(distance_matrix, fst_matrix, perms, method)
-    # Flatten the matrices for plotting, ignoring NaN values
-    flat_matrix1 = distance_matrix.flatten()
-    flat_matrix2 = fst_matrix.flatten()
-
-    valid_indices = ~np.isnan(flat_matrix1) & ~np.isnan(flat_matrix2)
-    flat_matrix1 = flat_matrix1[valid_indices]
-    flat_matrix2 = flat_matrix2[valid_indices]
-
-    # Create scatter plot
-    plt.figure(figsize=(8, 6))
-    plt.scatter(flat_matrix1, flat_matrix2, color='blue', edgecolor='k', alpha=0.7)
-
-    # Add labels and title
-    plt.xlabel('Euclidean distance')
-    plt.ylabel('Fst')
-
-    # Add a line of best fit
-    m, b = np.polyfit(flat_matrix1, flat_matrix2, 1)
-    plt.plot(flat_matrix1, m * flat_matrix1 + b, color='red')
-    #
-    # coeffs = np.polyfit(flat_matrix1, flat_matrix2, 2)  # Quadratic fit
-    # p = np.poly1d(coeffs)  # Create polynomial function
-    # t = np.linspace(min(flat_matrix1), max(flat_matrix1), 500)
-    # plt.plot(t, p(t), color='red')
-    plt.savefig(f'./figs/distance_fst.jpg', format="jpg")
-
-    plt.show()
-
-
-def get_euclidean_matrix(net):
-    # Extract node positions into a numpy array
-    nodes = list(net.nodes())
-    positions = np.array([net.nodes[node]['pos'] for node in nodes])
-
-    # Calculate the difference matrix for each dimension
-    diff = positions[:, np.newaxis, :] - positions[np.newaxis, :, :]
-
-    # Compute the Euclidean distance matrix
-    distance_matrix = np.linalg.norm(diff, axis=-1)
-
-    return distance_matrix
-
-
-def perform_mantel_test(distance_matrix, fst_matrix, perms, method, print=bool):
-    # Convert all zeros to NaN in both matrices
-    # Convert 50 to NaN. 50 is the default value for isolated nodes
-    distance_matrix = np.where((distance_matrix == 0) | (distance_matrix == 50), np.nan, distance_matrix)
-    fst_matrix = np.where(fst_matrix == 0, np.nan, fst_matrix)
-
-    # Perform Mantel test, expecting a dictionary as a return value
-    result = test(fst_matrix, distance_matrix, perms=perms, method=method, ignore_nans=True)
-
-    if print:
-        print(f"Correlation: {result[0]}")
-        print(f"P-value: {result[1]}")
-
-    return result[0], result[1]
 
 # [1-all networks][replica no.][step number]
 # [2-all heterozygosity][replica no.][step number]
