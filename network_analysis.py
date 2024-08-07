@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-
+from itertools import combinations
 from funcs import load_data, normalize_steps, calculate_statistics, compute_modularity, calculate_centrality, measure_giant_component
 
 
@@ -411,7 +411,7 @@ def get_shortest_path_matrix(net):
     :return: distance matrix of edges between nodes
     """
     n = nx.number_of_nodes(net)
-    distance_matrix = np.full((n, n), np.inf)
+    distance_matrix = np.full((n, n), np.nan)
     # use dijkstra algorithm to calculate the shortest path length
     for source, paths in nx.shortest_path_length(net):
         for target, length in paths.items():
@@ -421,66 +421,76 @@ def get_shortest_path_matrix(net):
 
 
 def get_euclidean_matrix(net):
-
-    # Extract node positions into a numpy array
-    positions = nx.get_node_attributes(net, 'pos')
-    pos_array = np.array([positions[node] for node in sorted(net.nodes())])
-    print(pos_array[:, np.newaxis, :])
-    print(pos_array[np.newaxis, :, :])
-    # Calculate the Euclidean distance matrix using broadcasting
-    diff = pos_array[:, np.newaxis, :] - pos_array[np.newaxis, :, :]
-    distance_matrix = np.sqrt(np.sum(diff**2, axis=-1))
-
-
-    return distance_matrix
-
-net = nx.random_geometric_graph(10, 0.6,seed=42)
-distance_matrix = get_euclidean_matrix(net)
-print(distance_matrix)
-
-def plot_matrix_relationship(distance_matrix, fst_matrix, method='pearson', perms=999):
-    #calculate the mantel test correlation
-    perform_mantel_test(distance_matrix, fst_matrix, perms, method)
-    # Flatten the matrices for plotting, ignoring NaN values
-    flat_matrix1 = distance_matrix.flatten()
-    flat_matrix2 = fst_matrix.flatten()
-
-    valid_indices = ~np.isnan(flat_matrix1) & ~np.isnan(flat_matrix2)
-    flat_matrix1 = flat_matrix1[valid_indices]
-    flat_matrix2 = flat_matrix2[valid_indices]
-
-    # Create scatter plot
-    plt.figure(figsize=(8, 6))
-    plt.scatter(flat_matrix1, flat_matrix2, color='blue', edgecolor='k', alpha=0.7)
-
-    # Add labels and title
-    plt.xlabel('Euclidean distance')
-    plt.ylabel('Fst')
-
-    # Add a line of best fit
-    m, b = np.polyfit(flat_matrix1, flat_matrix2, 1)
-    plt.plot(flat_matrix1, m * flat_matrix1 + b, color='red')
-    #
-    # coeffs = np.polyfit(flat_matrix1, flat_matrix2, 2)  # Quadratic fit
-    # p = np.poly1d(coeffs)  # Create polynomial function
-    # t = np.linspace(min(flat_matrix1), max(flat_matrix1), 500)
-    # plt.plot(t, p(t), color='red')
-    plt.savefig(f'./figs/distance_fst.jpg', format="jpg")
-
-    plt.show()
+        n = range(nx.number_of_nodes(net))
+        # Extract node positions into a numpy array
+        positions = nx.get_node_attributes(net, 'pos')
+        pos_array = np.array([positions[node] for node in sorted(net.nodes())])
+        # Calculate the Euclidean distance matrix using broadcasting
+        diff = pos_array[:, np.newaxis, :] - pos_array[np.newaxis, :, :]
+        distance_matrix = np.sqrt(np.sum(diff**2, axis=-1))
+        if nx.is_connected(net):
+            # If the network is connected, return the distance matrix
+            return distance_matrix
+        else:
+            pairs = list(combinations(n, 2))
+            print(pairs)
+            # insert na for each pair of nodes that are not connected
+            for u, v in pairs:
+                if nx.is_path(G=net,path= [u, v]):
+                    distance_matrix[u, v] = np.nan
+            return distance_matrix
 
 
 
+def get_random_walk_matrix(net):
+    """
+    calculate the random walk distance between all pairs of nodes in the network.
 
-def perform_mantel_test(distance_matrix, fst_matrix, perms=999,
-                        method='pearson', print=bool):
+    :return: distance matrix of edges between nodes
+    """
+
+#
+# def plot_matrix_relationship(distance_matrix, fst_matrix, method='pearson', perms=999):
+#     #calculate the mantel test correlation
+#     perform_mantel_test(distance_matrix, fst_matrix, perms, method)
+#     # Flatten the matrices for plotting, ignoring NaN values
+#     flat_matrix1 = distance_matrix.flatten()
+#     flat_matrix2 = fst_matrix.flatten()
+#
+#     valid_indices = ~np.isnan(flat_matrix1) & ~np.isnan(flat_matrix2)
+#     flat_matrix1 = flat_matrix1[valid_indices]
+#     flat_matrix2 = flat_matrix2[valid_indices]
+#
+#     # Create scatter plot
+#     plt.figure(figsize=(8, 6))
+#     plt.scatter(flat_matrix1, flat_matrix2, color='blue', edgecolor='k', alpha=0.7)
+#
+#     # Add labels and title
+#     plt.xlabel('Euclidean distance')
+#     plt.ylabel('Fst')
+#
+#     # Add a line of best fit
+#     m, b = np.polyfit(flat_matrix1, flat_matrix2, 1)
+#     plt.plot(flat_matrix1, m * flat_matrix1 + b, color='red')
+#     #
+#     # coeffs = np.polyfit(flat_matrix1, flat_matrix2, 2)  # Quadratic fit
+#     # p = np.poly1d(coeffs)  # Create polynomial function
+#     # t = np.linspace(min(flat_matrix1), max(flat_matrix1), 500)
+#     # plt.plot(t, p(t), color='red')
+#     plt.savefig(f'./figs/distance_fst.jpg', format="jpg")
+#
+#     plt.show()
+
+
+
+def perform_mantel_test(distance_matrix, fst_matrix,print=bool):
     # Convert all zeros to NaN in both matrices
     # Convert 50 to NaN. 50 is the default value for isolated nodes
     distance_matrix = np.where((distance_matrix == 0) | (distance_matrix == 50), np.nan, distance_matrix)
     fst_matrix = np.where(fst_matrix == 0, np.nan, fst_matrix)
 
     # Perform Mantel test, expecting a dictionary as a return value
-    result = test(fst_matrix, distance_matrix, perms=perms, method=method, ignore_nans=True)
+    result = test(fst_matrix, distance_matrix, perms=999, method='pearson', ignore_nans=True)
 
     if print:
         print(f"Correlation: {result[0]}")
@@ -488,6 +498,19 @@ def perform_mantel_test(distance_matrix, fst_matrix, perms=999,
 
     return result[0], result[1]
 
+
+
+net = nx.random_geometric_graph(10, 0.2,seed=42)
+nx.draw_networkx(net)
+plt.show()
+x=np.array([[1,2,3,4,5],
+           [1,2,3,4,5],
+           [1,2,3,4,5],
+           [1,2,3,4,5],
+           [1,2,3,4,5]])
+
+distance_matrix = get_euclidean_matrix(net)
+print(distance_matrix)
 
 
 

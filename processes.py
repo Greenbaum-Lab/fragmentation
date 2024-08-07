@@ -546,8 +546,3 @@ def remove_edge_worst(net: nx.Graph) -> list:
 #
 #     return migration_list
 #
-
-
-
-
-# check for copy type if it overwrote the mutubale objects in fragmentatioon
