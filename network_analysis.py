@@ -424,10 +424,9 @@ def get_euclidean_matrix(net):
 
     # Extract node positions into a numpy array
     positions = nx.get_node_attributes(net, 'pos')
-    print(positions)
-
     pos_array = np.array([positions[node] for node in sorted(net.nodes())])
-    print(pos_array)
+    print(pos_array[:, np.newaxis, :])
+    print(pos_array[np.newaxis, :, :])
     # Calculate the Euclidean distance matrix using broadcasting
     diff = pos_array[:, np.newaxis, :] - pos_array[np.newaxis, :, :]
     distance_matrix = np.sqrt(np.sum(diff**2, axis=-1))

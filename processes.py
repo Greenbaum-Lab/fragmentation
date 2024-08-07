@@ -210,11 +210,10 @@ def remove_edge_distance(net: nx.Graph) -> list:
 
 
 def sort_edges(edges,nodes_order):
-    edge_dict = {}
+    """Sort edges based on the order of nodes."""
     result_edges = []
-    for edge in edges:
-        dict_key = nodes_order.index(edge[1])
-        edge_dict.update({dict_key: edge})
+    # Create a dictionary with the edges as values and the index of the second node as keys
+    edge_dict = {nodes_order.index(edge[1]): edge for edge in edges}
     # Sort the dictionary by keys
     sorted_keys = sorted(edge_dict.keys())
     # Loop through the sorted keys and append the corresponding tuples to the list
@@ -233,50 +232,38 @@ def remove_edge_regressive(net: nx.Graph) -> list:
     Returns:
     list: A list of networks after each edge removal - from initial network to isolated nodes.
     """
-
     migration = net.copy()
     pos = nx.get_node_attributes(migration, 'pos')
-    nodes = list(pos.keys())
-    migration_list = []
+    nodes_order = sorted(pos, key=lambda node: pos[node][0])
+    migration_list = [migration.copy()]
 
-    # Get the x coordinates for each node
-    distances = {}
-    for node in nodes:
-        dist = pos[node][0]
-        distances.update({node: dist})
-    # create a list of nodes ordered by distance from the edge
-    nodes_order = sorted(distances,key=distances.get)
-    nodes_list = sorted(distances,key=distances.get)
-    while nx.number_of_edges(migration):
-        #get the edges of the first node (the node at the edge)
-        edges = list(migration.edges(nodes_list[0]))
-        sorted_edges = sort_edges(edges=edges, nodes_order=nodes_order)
-        # Remove the node from nodes list if it has no edges
-        if not sorted_edges:
-            nodes_list.pop(0)
-            continue
-        # Remove the edge from network
-        migration.remove_edge(*sorted_edges[0])
-        # Remove the edge from the edges list
-        sorted_edges.pop(0)
-        # add the resulting graph to the list
-        migration_list.append(migration.copy())
+    while migration.number_of_edges():
+        for node in nodes_order:
+            edges = list(migration.edges(node))
+            if edges:
+                sorted_edges = sort_edges(edges, nodes_order)
+                migration.remove_edge(*sorted_edges[0])
+                migration_list.append(migration.copy())
+                break
+        else:
+            break
 
     return migration_list
 
 
-def find_intersection(x1, y1, x2, y2, x3, y3, x4, y4):
+def find_intersection(p1, p2, p3, p4):
     """
-    Find interesection between two line segments. if no interesection return None.
-    used in remove edge divisive.
+    Find intersection between two line segments. If no intersection, return None.
     """
+    x1, y1 = p1
+    x2, y2 = p2
+    x3, y3 = p3
+    x4, y4 = p4
 
-    # Calculate the denominators
     denominator = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4)
     if denominator == 0:
         return None  # The lines are parallel or coincident
 
-    # Calculate the intersection point
     t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denominator
     u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / denominator
 
@@ -313,51 +300,38 @@ def generate_divisive_line():
         coord_x = tuple(coords[:2])
         coord_y = tuple(coords[2:])
 
-        if coord_y == (1, 0) or coord_y == (0, 1) or coord_x == (1, 0) or coord_x == (0, 1):
-            continue
-
-        return [coord_x, coord_y]
+        if coord_y not in [(1, 0), (0, 1)] and coord_x not in [(1, 0), (0, 1)]:
+            return [coord_x, coord_y]
 
 
-def  remove_edge_divisive(net: nx.Graph) -> list:
+def remove_edge_divisive(net: nx.Graph) -> list:
     """
     Remove edges from a network based on a linear path crossing the network.
-    genrate random line and make all edges line segments.
-    find intersection between divisive line and edges.
-    if there is interesection, remove edges based on their x coorrdinates.
+    Generate a random line and make all edges line segments.
+    Find intersection between divisive line and edges.
+    If there is intersection, remove edges based on their x coordinates.
     :return: list of networks with edges removed
     """
-
     migration = net.copy()
     migration_list = []
 
-    edges_lines = make_edges_lines(migration)
-    intersections = {}
-    pos = nx.get_node_attributes(net, 'pos')
-
-    while edges_lines:
+    while migration.number_of_edges():
         div_line = generate_divisive_line()
-        for edge_nodes, edge in edges_lines.items():
-            intersect = find_intersection(x1=div_line[0][0], y1=div_line[0][1],
-                                          x2=div_line[1][0], y2=div_line[1][1],
-                                          x3=edge[0][0], y3=edge[0][1],
-                                          x4=edge[1][0], y4=edge[1][1])
-            if intersect:
-                intersections.update({edge_nodes:intersect})
+        edges_lines = make_edges_lines(migration)
+        intersections = {}
 
-        edges_to_remove = sorted(intersections,key=intersections.get)
+        for edge_nodes, edge in edges_lines.items():
+            intersect = find_intersection(p1=edge[0], p2=edge[1],
+                                          p3=div_line[0], p4=div_line[1])
+            if intersect:
+                intersections[edge_nodes] = intersect
+
+        edges_to_remove = sorted(intersections, key=intersections.get)
 
         for edge in edges_to_remove:
-            nx.draw_networkx(migration,pos=pos,with_labels=True)
-            plt.show()
-            # Remove the selected edge from the graph
             migration.remove_edge(*edge)
-            # Append a copy of the current network to the list
             migration_list.append(migration.copy())
-            # remove edge from edge dict
-            edges_lines.pop(edge)
 
-        intersections.clear()
     return migration_list
 
 
