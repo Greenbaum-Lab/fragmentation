@@ -346,7 +346,7 @@ def remove_edge_optimal(net: nx.Graph) -> list:
     migration = net.copy()
     migration_list = [migration.copy()]  # start with the original network
 
-    while nx.number_of_edges(migration) > 2:  # Adjust the condition as needed
+    while nx.number_of_edges(migration):  # Adjust the condition as needed
         # Compute edge betweenness centrality to determine the importance of edges
         centrality = nx.edge_betweenness_centrality(migration)
 
