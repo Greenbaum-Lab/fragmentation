@@ -310,14 +310,14 @@ def plot_nodes_all(data):
 
 #######################
 ####################### plot data
-# fragmentation_types = ['rand', 'cor', 'intr', 'dist', 'reg', 'div', 'opt']
-fragmentation_types = ['rand']
+fragmentation_types = ['rand', 'cor', 'intr', 'dist', 'reg', 'div', 'opt','wrst']
+# fragmentation_types = ['rand']
 net = 'RGG'
 ignore = False
-data = load_data(fragmentation_types, net, ignore)
+data = load_data(fragmentation_types)
 #
 plot_all_fragmentation_types(data, measure='fst')
-# plot_all_fragmentation_types(data, measure='het')
+plot_all_fragmentation_types(data, measure='het')
 
 
 ##############plot distributions

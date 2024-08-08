@@ -4,7 +4,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from itertools import combinations
-from funcs import load_data, normalize_steps, calculate_statistics, compute_modularity, calculate_centrality, measure_giant_component
+from funcs import load_data, normalize_steps, calculate_statistics, compute_modularity, calculate_centrality, \
+    measure_giant_component, access_networks, access_fst_matrices
 
 
 def plot_het_central(data: dict, measure: str):
@@ -470,7 +471,7 @@ def find_connected_components(net):
             indices.append(comp_nodes)
     return indices
 
-def perform_mantel_test(net, fst_matrix, dist_type='euclidean', perms=999):
+def calculate_mantel(net, fst_matrix, dist_type='euclidean', perms=999):
     """
     Perform a Mantel test for two distance matrices.
 
@@ -480,11 +481,12 @@ def perform_mantel_test(net, fst_matrix, dist_type='euclidean', perms=999):
     :param perms: Number of permutations for the Mantel test
     :return: Weighted mean of the correlation and p-value by component size
     """
+    # calculate the distance matrix based on network connectivity
     if dist_type == 'euclidean':
         distance_matrix = get_euclidean_matrix(net)
     else:
         distance_matrix = get_shortest_path_matrix(net)
-
+    # if the network is connected, calculate the mantel test directly
     if nx.is_connected(net):
         r, p, _ = test(X=distance_matrix, Y=fst_matrix, perms=perms, method='pearson', ignore_nans=True)
         print(f'r={r}, p={p}')
@@ -510,6 +512,18 @@ def perform_mantel_test(net, fst_matrix, dist_type='euclidean', perms=999):
 
 ########### analysis of fst-distance
 
+def calculate_mantel_for_process(data, replica=1, dist_type='euclidean', perms=999):
+    """"
+    calculate mantel correlation and p value for each step along fragmentation.
+    """
+    networks = access_networks(data)[replica]
+    fst_matrices = access_fst_matrices(data)[replica]
+
+    for step, (net,fst) in enumerate(zip(networks,fst_matrices)):
+        r, p = calculate_mantel(net=net, fst_matrix=fst, dist_type=dist_type, perms=10)
+        results.append({step: (r, p)})
+        need to store results in a df
+    return r, p
 fragmentation_types = ['rand']
 net = 'RGG'
 ignore = False
@@ -522,7 +536,7 @@ net = data[1][0][200]
 nx.draw_networkx(net)
 plt.show()
 
-perform_mantel_test(net=net,fst_matrix=fst, dist_type='path',perms=999)
+calculate_mantel(net=net,fst_matrix=fst, dist_type='path',perms=999)
 
 
 

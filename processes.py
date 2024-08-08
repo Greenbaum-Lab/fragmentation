@@ -197,7 +197,6 @@ def remove_edge_distance(net: nx.Graph) -> list:
 
     # sort edges by distance
     edges = sorted(edges, key=distances.get, reverse=True)
-
     while edges:
         # Remove the longest edge from network (first item)
         migration.remove_edge(*edges[0])
@@ -206,7 +205,6 @@ def remove_edge_distance(net: nx.Graph) -> list:
         migration_list.append(migration.copy())
 
     return migration_list
-
 
 
 def sort_edges(edges,nodes_order):

@@ -9,10 +9,10 @@ from matplotlib import pyplot as plt
 
 ########## general functions
 
-def load_data(fragmentation_types, net, ignore):
+def load_data(fragmentation_types):
     data = {}
     for frag_type in fragmentation_types:
-        filename = f'RGG, {frag_type}_ignore_{ignore}.pickle'
+        filename = f'{frag_type}.pickle'
         with open(filename, 'rb') as file:
             data[frag_type] = pickle.load(file)
     print("I finished loading!")
@@ -45,6 +45,9 @@ def access_fst_mean(frag_data:list):
 
 def access_networks(frag_data:list):
     return frag_data[1]
+
+def access_fst_matrices(frag_data:list):
+    return frag_data[7]
 
 
 def normalize_steps(data):
