@@ -215,37 +215,37 @@ def plot_network_stacked_area(df: pd.DataFrame, frag: str):
     plt.show()
 
 
-def calculate_mantel_correlation(data):
-    # Initialize a list to store the results
-    mantel_results = []
-
-    # Get the number of replicas
-    num_replicas = len(data[7])
-
-    # Loop over all replicas
-    for rep in range(num_replicas):
-        # Get the number of steps for the current replica
-        num_steps = len(data[7][rep])
-        num_steps = 10
-
-        # Loop over all steps
-        for step in range(num_steps):
-            # Get the FST matrix and network for the current step
-            matrix = data[7][rep][step]
-            net = data[1][rep][step]
-
-            distance_matrix = get_euclidean_matrix(net)
-
-            correlation = perform_mantel_test(matrix, distance_matrix, perms=999,
-                                              method='pearson',print=False)[0]
-
-            mantel_results.append({
-                'replica': rep,
-                'step': step,
-                'correlation': correlation
-            })
-
-    return pd.DataFrame(mantel_results)
+# def calculate_mantel_correlation(data):
+#     # Initialize a list to store the results
+#     mantel_results = []
+#
+#     # Get the number of replicas
+#     num_replicas = len(data[7])
+#
+#     # Loop over all replicas
+#     for rep in range(num_replicas):
+#         # Get the number of steps for the current replica
+#         num_steps = len(data[7][rep])
+#         num_steps = 10
+#
+#         # Loop over all steps
+#         for step in range(num_steps):
+#             # Get the FST matrix and network for the current step
+#             matrix = data[7][rep][step]
+#             net = data[1][rep][step]
+#
+#             distance_matrix = get_euclidean_matrix(net)
+#
+#             correlation = perform_mantel_test(matrix, distance_matrix, perms=999,
+#                                               method='pearson',print=False)[0]
+#
+#             mantel_results.append({
+#                 'replica': rep,
+#                 'step': step,
+#                 'correlation': correlation
+#             })
+#
+#     return pd.DataFrame(mantel_results)
 
 #
 # def plot_step_vs_correlation(df):
@@ -400,27 +400,33 @@ def calculate_mantel_correlation(data):
 ##plot fst-distance relationship
 from mantel import test
 
-# do it for a single component
-#     iterate over all componnentes in the net
-
-
 def get_shortest_path_matrix(net):
     """
     calculate the shortest path length between all pairs of nodes in the network.
-
+    unconnected nodes are marked with inf.
     :return: distance matrix of edges between nodes
     """
     n = nx.number_of_nodes(net)
-    distance_matrix = np.full((n, n), np.nan)
+    distance_matrix = np.full((n, n), np.inf)
+    np.fill_diagonal(distance_matrix, 0)  # Distance to self is 0
+
     # use dijkstra algorithm to calculate the shortest path length
     for source, paths in nx.shortest_path_length(net):
         for target, length in paths.items():
             distance_matrix[source, target] = length
 
+
     return distance_matrix
 
 
 def get_euclidean_matrix(net):
+        """
+        Calculate the Euclidean distance between all pairs of nodes in the network.
+        unconnected nodes are marked with inf.
+
+        :param net:
+        :return:
+        """
         n = range(nx.number_of_nodes(net))
         # Extract node positions into a numpy array
         positions = nx.get_node_attributes(net, 'pos')
@@ -428,18 +434,17 @@ def get_euclidean_matrix(net):
         # Calculate the Euclidean distance matrix using broadcasting
         diff = pos_array[:, np.newaxis, :] - pos_array[np.newaxis, :, :]
         distance_matrix = np.sqrt(np.sum(diff**2, axis=-1))
-        if nx.is_connected(net):
-            # If the network is connected, return the distance matrix
-            return distance_matrix
-        else:
-            pairs = list(combinations(n, 2))
-            print(pairs)
-            # insert na for each pair of nodes that are not connected
-            for u, v in pairs:
-                if nx.is_path(G=net,path= [u, v]):
-                    distance_matrix[u, v] = np.nan
-            return distance_matrix
 
+        # If the network is connected, return the distance matrix
+        if not nx.is_connected(net):
+            pairs = list(combinations(n, 2))
+            # insert inf for each pair of nodes that are not connected
+            for u, v in pairs:
+                if not nx.has_path(net,source=u, target=v):
+                    distance_matrix[u, v] = np.inf
+                    distance_matrix[v, u] = np.inf
+
+        return distance_matrix
 
 
 def get_random_walk_matrix(net):
@@ -448,6 +453,85 @@ def get_random_walk_matrix(net):
 
     :return: distance matrix of edges between nodes
     """
+
+def find_connected_components(net):
+    """
+    Find all connected components in the network.
+    use only compoents bigger than 2 nodes.
+    :param matrix: distance matrix.
+    :return: adjacency matrices of all components.
+    """
+    indices = []
+
+    components = list(nx.connected_components(net))
+    for comp in components:
+        comp_nodes = list(comp)
+        if len(comp_nodes) > 2:
+            indices.append(comp_nodes)
+    return indices
+
+def perform_mantel_test(net, fst_matrix, dist_type='euclidean', perms=999):
+    """
+    Perform a Mantel test for two distance matrices.
+
+    :param net: NetworkX graph
+    :param fst_matrix: Genetic distance matrix
+    :param dist_type: Type of distance ('euclidean' or 'path')
+    :param perms: Number of permutations for the Mantel test
+    :return: Weighted mean of the correlation and p-value by component size
+    """
+    if dist_type == 'euclidean':
+        distance_matrix = get_euclidean_matrix(net)
+    else:
+        distance_matrix = get_shortest_path_matrix(net)
+
+    if nx.is_connected(net):
+        r, p, _ = test(X=distance_matrix, Y=fst_matrix, perms=perms, method='pearson', ignore_nans=True)
+        print(f'r={r}, p={p}')
+        return r, p
+
+    r_values, p_values, weights = [], [], []
+
+    # in case the network is not connected, calculate the mantel test for each component
+    for comp in find_connected_components(net):
+        comp_dist_matrix = distance_matrix[np.ix_(comp, comp)]
+        comp_fst_matrix = fst_matrix[np.ix_(comp, comp)]
+        r, p, _ = test(X=comp_dist_matrix, Y=comp_fst_matrix, perms=perms, method='pearson', ignore_nans=True)
+        r_values.append(r)
+        p_values.append(p)
+        weights.append(len(comp))
+
+    # calculate the weighted mean of the correlation and p-value
+    weighted_r = np.average(r_values, weights=weights)
+    weighted_p = np.average(p_values, weights=weights)
+    print(f'r={weighted_r}, p={weighted_p}')
+    return weighted_r, weighted_p
+
+
+########### analysis of fst-distance
+
+fragmentation_types = ['rand']
+net = 'RGG'
+ignore = False
+data = load_data(fragmentation_types, net, ignore)
+data = data[fragmentation_types[0]]
+
+fst = data[7][0][200]
+net = data[1][0][200]
+
+nx.draw_networkx(net)
+plt.show()
+
+perform_mantel_test(net=net,fst_matrix=fst, dist_type='path',perms=999)
+
+
+
+
+
+
+
+
+
 
 #
 # def plot_matrix_relationship(distance_matrix, fst_matrix, method='pearson', perms=999):
@@ -480,53 +564,3 @@ def get_random_walk_matrix(net):
 #     plt.savefig(f'./figs/distance_fst.jpg', format="jpg")
 #
 #     plt.show()
-
-
-
-def perform_mantel_test(distance_matrix, fst_matrix,print=bool):
-    # Convert all zeros to NaN in both matrices
-    # Convert 50 to NaN. 50 is the default value for isolated nodes
-    distance_matrix = np.where((distance_matrix == 0) | (distance_matrix == 50), np.nan, distance_matrix)
-    fst_matrix = np.where(fst_matrix == 0, np.nan, fst_matrix)
-
-    # Perform Mantel test, expecting a dictionary as a return value
-    result = test(fst_matrix, distance_matrix, perms=999, method='pearson', ignore_nans=True)
-
-    if print:
-        print(f"Correlation: {result[0]}")
-        print(f"P-value: {result[1]}")
-
-    return result[0], result[1]
-
-
-
-net = nx.random_geometric_graph(10, 0.2,seed=42)
-nx.draw_networkx(net)
-plt.show()
-x=np.array([[1,2,3,4,5],
-           [1,2,3,4,5],
-           [1,2,3,4,5],
-           [1,2,3,4,5],
-           [1,2,3,4,5]])
-
-distance_matrix = get_euclidean_matrix(net)
-print(distance_matrix)
-
-
-
-#
-# fragmentation_types = ['rand']
-# net = 'RGG'
-# ignore = False
-# data = load_data(fragmentation_types, net, ignore)
-#
-# data = data[fragmentation_types[0]]
-# matrix = data[7][0][20]
-# net = data[1][0][20]
-# distance_matrix = get_euclidean_matrix(net)
-# perform_mantel_test(matrix,distance_matrix)
-#
-# distance_matrix = get_distance_matrix(net)
-# plot_matrix_relationship(distance_matrix=distance_matrix,fst_matrix=matrix)
-#
-#
