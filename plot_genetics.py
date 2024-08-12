@@ -76,7 +76,7 @@ def plot_all_fragmentation_types(data, measure: str):
     plt.xlabel('Fragmentation (%)', fontsize=16)
     plt.ylabel(measure, fontsize=16)
     plt.legend()
-    plt.savefig(f'./figs/genetics_general_{measure}.jpg', format="jpg")
+    plt.savefig(f'./figs/genetics_general_{measure}.svg', format="svg")
     plt.show()
 
 
@@ -310,14 +310,12 @@ def plot_nodes_all(data):
 
 #######################
 ####################### plot data
-fragmentation_types = ['rand', 'cor', 'intr', 'dist', 'reg', 'div', 'opt','wrst']
-# fragmentation_types = ['rand']
-net = 'RGG'
-ignore = False
-data = load_data(fragmentation_types)
+# fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt','wrst']
+# # fragmentation_types = ['rand']
+# data = load_data(fragmentation_types)
 #
-plot_all_fragmentation_types(data, measure='fst')
-plot_all_fragmentation_types(data, measure='het')
+# plot_all_fragmentation_types(data, measure='fst')
+# plot_all_fragmentation_types(data, measure='het')
 
 
 ##############plot distributions

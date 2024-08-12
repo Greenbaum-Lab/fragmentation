@@ -1,3 +1,5 @@
+from random import random
+
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -6,6 +8,8 @@ import seaborn as sns
 from itertools import combinations
 from funcs import load_data, normalize_steps, calculate_statistics, compute_modularity, calculate_centrality, \
     measure_giant_component, access_networks, access_fst_matrices
+from mantel import test
+import random
 
 
 def plot_het_central(data: dict, measure: str):
@@ -23,18 +27,18 @@ def plot_het_central(data: dict, measure: str):
         # merged['avg'] = np.log10(merged['avg'])
         if measure == 'component':
             sns.regplot(x='component', y='avg', data=merged, fit_reg=True, order=2,
-                        truncate=True, scatter_kws={'rasterized': True, 's': 50, 'alpha': 0.01, 'color': color_palette(i)},
+                        truncate=True,
+                        scatter_kws={'rasterized': True, 's': 50, 'alpha': 0.01, 'color': color_palette(i)},
                         line_kws={'lw': 2, 'label': frag_type})
 
             # add a diagonal line
-            # plt.plot([0.05, 1], [0.05, 1], linestyle='--', color='black',linewidth=1)
-            plt.plot([-1, 0], [-1.5, 0], linestyle='--', color='black',linewidth=1)
+            plt.plot([0.05, 1], [0.05, 1], linestyle='--', color='black',linewidth=1)
             plt.xlabel('Fraction of nodes in the largest component', fontsize=16)
-
 
         if measure == 'modularity':
             sns.regplot(x='modularity', y='avg', data=merged, fit_reg=True, order=2,
-                        truncate=True, scatter_kws={'rasterized': True, 's': 50, 'alpha': 0.01, 'color': color_palette(i)},
+                        truncate=True,
+                        scatter_kws={'rasterized': True, 's': 50, 'alpha': 0.01, 'color': color_palette(i)},
                         line_kws={'lw': 2, 'label': frag_type})
 
             plt.gca().invert_xaxis()
@@ -60,6 +64,7 @@ def measure_isolated_nodes(network: nx.Graph) -> int:
     """
     isolated_nodes = list(nx.isolates(network))
     return len(isolated_nodes) / len(network)
+
 
 def measure_components(network: nx.Graph, min_size: int = 4) -> int:
     """
@@ -149,7 +154,6 @@ def measure_network_metrics_replicas(replicas: list) -> pd.DataFrame:
     return pd.concat(all_metrics, ignore_index=True)
 
 
-
 def calculate_statistics(df):
     """Calculate mean and 95% confidence interval for all columns in the dataframe."""
     result = []
@@ -158,7 +162,7 @@ def calculate_statistics(df):
     columns_to_analyze = df.columns.difference(['step', 'replica'])
 
     for column in columns_to_analyze:
-        mean_values = round(df.groupby('step')[column].mean(),3)
+        mean_values = round(df.groupby('step')[column].mean(), 3)
 
         # Create a DataFrame for this column's statistics
         column_stats = pd.DataFrame({
@@ -216,113 +220,16 @@ def plot_network_stacked_area(df: pd.DataFrame, frag: str):
     plt.show()
 
 
-# def calculate_mantel_correlation(data):
-#     # Initialize a list to store the results
-#     mantel_results = []
-#
-#     # Get the number of replicas
-#     num_replicas = len(data[7])
-#
-#     # Loop over all replicas
-#     for rep in range(num_replicas):
-#         # Get the number of steps for the current replica
-#         num_steps = len(data[7][rep])
-#         num_steps = 10
-#
-#         # Loop over all steps
-#         for step in range(num_steps):
-#             # Get the FST matrix and network for the current step
-#             matrix = data[7][rep][step]
-#             net = data[1][rep][step]
-#
-#             distance_matrix = get_euclidean_matrix(net)
-#
-#             correlation = perform_mantel_test(matrix, distance_matrix, perms=999,
-#                                               method='pearson',print=False)[0]
-#
-#             mantel_results.append({
-#                 'replica': rep,
-#                 'step': step,
-#                 'correlation': correlation
-#             })
-#
-#     return pd.DataFrame(mantel_results)
-
-#
-# def plot_step_vs_correlation(df):
-#     plt.figure(figsize=(10, 6))
-#     plt.plot(df['step'], df['correlation'])
-#     plt.xlabel('Step')
-#     plt.ylabel('Correlation')
-#     plt.show()
-#
-#
-# def calculate_statistics(df):
-#     # Group the data by 'step'
-#     grouped = df.groupby('step')
-#
-#     # Calculate the mean correlation for each step
-#     mean_correlation = grouped['correlation'].mean()
-#
-#     # Calculate the standard error of the mean for each step
-#     sem_correlation = grouped['correlation'].sem()
-#
-#     ci_correlation = 1.96 * sem_correlation  # 95% confidence interval
-#
-#     # Create a new DataFrame for the results
-#     results = pd.DataFrame({
-#         'step': mean_correlation.index,
-#         'correlation_mean': mean_correlation.values,
-#         'correlation_ci': ci_correlation.values
-#     })
-#
-#     return results
-#
-# def plot_correlation_with_ci(df):
-#     plt.figure(figsize=(10, 6))
-#     sns.lineplot(x='step', y='correlation_mean', data=df)
-#     plt.fill_between(df['step'], df['correlation_mean'] - df['correlation_ci'], df['correlation_mean'] + df['correlation_ci'], color='b', alpha=0.1)
-#     plt.xlabel('Step')
-#     plt.ylabel('Correlation')
-#     plt.show()
-#
-#
-# def plot_correlation_with_ci(df, fragmentation_types):
-#     plt.figure(figsize=(10, 6))
-#
-#     # If a single fragmentation type is provided, convert it to a list
-#     if isinstance(fragmentation_types, str):
-#         fragmentation_types = [fragmentation_types]
-#
-#     # Loop over all fragmentation types
-#     for frag_type in fragmentation_types:
-#         # Filter the data for the current fragmentation type
-#         df_filtered = df[df['fragmentation_type'] == frag_type]
-#
-#         # Plot the data for the current fragmentation type
-#         sns.lineplot(x='step', y='correlation_mean', data=df_filtered, label=frag_type)
-#         plt.fill_between(df_filtered['step'], df_filtered['correlation_mean'] - df_filtered['correlation_ci'], df_filtered['correlation_mean'] + df_filtered['correlation_ci'], alpha=0.1)
-#
-#     plt.xlabel('Step')
-#     plt.ylabel('Correlation')
-#     plt.legend()
-#     plt.show()
-#
-
-
-
 
 ###########################################@@#####################
 ###############################  analysis  #######################
 
-# fragmentation_types = ['rand', 'cor', 'intr', 'dist', 'reg', 'div', 'opt']
+# fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt', 'wrst']
 # # fragmentation_types = ['div']
-# net = 'RGG'
-# ignore = False
-# data = load_data(fragmentation_types, net, ignore)
+# data = load_data(fragmentation_types)
 #
 # ########################plot centrality vs heterozygosity
-# plot_het_central(data, measure='modularity')
+# plot_het_central(data, measure='component')
 
 
 ##############################plot stacks
@@ -334,72 +241,12 @@ def plot_network_stacked_area(df: pd.DataFrame, frag: str):
 ##############################plot centrality vs fragmnetation
 # plot_centrality(data,centrality='connectivity')
 
-# x=calculate_mantel_correlation(data)
-# print(x)
 # stats= calculate_statistics(x)
 # print(stats)
 # plot_correlation_with_ci(stats, fragmentation_types)
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-##plot fst-distance relationship
-from mantel import test
+##fst-distance relationship
 
 def get_shortest_path_matrix(net):
     """
@@ -416,44 +263,91 @@ def get_shortest_path_matrix(net):
         for target, length in paths.items():
             distance_matrix[source, target] = length
 
-
     return distance_matrix
 
 
 def get_euclidean_matrix(net):
-        """
+    """
         Calculate the Euclidean distance between all pairs of nodes in the network.
         unconnected nodes are marked with inf.
 
         :param net:
         :return:
         """
-        n = range(nx.number_of_nodes(net))
-        # Extract node positions into a numpy array
-        positions = nx.get_node_attributes(net, 'pos')
-        pos_array = np.array([positions[node] for node in sorted(net.nodes())])
-        # Calculate the Euclidean distance matrix using broadcasting
-        diff = pos_array[:, np.newaxis, :] - pos_array[np.newaxis, :, :]
-        distance_matrix = np.sqrt(np.sum(diff**2, axis=-1))
+    n = range(nx.number_of_nodes(net))
+    # Extract node positions into a numpy array
+    positions = nx.get_node_attributes(net, 'pos')
+    pos_array = np.array([positions[node] for node in sorted(net.nodes())])
+    # Calculate the Euclidean distance matrix using broadcasting
+    diff = pos_array[:, np.newaxis, :] - pos_array[np.newaxis, :, :]
+    distance_matrix = np.sqrt(np.sum(diff ** 2, axis=-1))
 
-        # If the network is connected, return the distance matrix
-        if not nx.is_connected(net):
-            pairs = list(combinations(n, 2))
-            # insert inf for each pair of nodes that are not connected
-            for u, v in pairs:
-                if not nx.has_path(net,source=u, target=v):
-                    distance_matrix[u, v] = np.inf
-                    distance_matrix[v, u] = np.inf
+    # If the network is connected, return the distance matrix
+    if not nx.is_connected(net):
+        pairs = list(combinations(n, 2))
+        # insert inf for each pair of nodes that are not connected
+        for u, v in pairs:
+            if not nx.has_path(net, source=u, target=v):
+                distance_matrix[u, v] = np.inf
+                distance_matrix[v, u] = np.inf
 
-        return distance_matrix
+    return distance_matrix
+
+
+def random_walk(net, start, end):
+    current_node = start
+    steps = 0
+    while current_node != end:
+        neighbors = list(net.neighbors(current_node))
+        current_node = random.choice(neighbors)
+        steps += 1
+    return steps
+
+def get_random_walk_matrix(net):
+    """
+    calculate the random walk distance between all pairs of nodes in the network.
+    :return: distance matrix of edges between nodes
+    """
+    n = range(nx.number_of_nodes(net))
+    # create a martix of inf in the size of the number of nodes
+    distance_matrix = np.full(((max(n)+1), (max(n))+1), np.inf)
+    np.fill_diagonal(distance_matrix, 0)
+    #get all node pair combinations
+    pairs = list(combinations(n, 2))
+    # insert the random walk distance for each pair of nodes that are connected
+    for u, v in pairs:
+        if nx.has_path(net, source=u, target=v):
+            distance_matrix[u, v] = random_walk(net, u, v)
+            distance_matrix[v, u] = distance_matrix[u, v]
+    return distance_matrix
+
+
 
 
 def get_random_walk_matrix(net):
     """
     calculate the random walk distance between all pairs of nodes in the network.
-
     :return: distance matrix of edges between nodes
     """
+    n = range(nx.number_of_nodes(net))
+    # create a martix of inf in the size of the number of nodes
+    distance_matrix = np.full(((max(n)+1), (max(n))+1), np.inf)
+    np.fill_diagonal(distance_matrix, 0)
+    #get all node pair combinations
+    pairs = list(combinations(n, 2))
+    # insert the random walk distance for each pair of nodes that are connected
+    steps = []
+    for u, v in pairs:
+        if nx.has_path(net, source=u, target=v):
+            steps = []
+
+            for i in range(50):
+                itreration = random_walk(net, u, v)
+                steps.append(itreration)
+            res = np.mean(steps)
+            distance_matrix[u, v] = res
+            distance_matrix[v, u] = distance_matrix[u, v]
+    return distance_matrix
 
 def find_connected_components(net):
     """
@@ -467,11 +361,12 @@ def find_connected_components(net):
     components = list(nx.connected_components(net))
     for comp in components:
         comp_nodes = list(comp)
-        if len(comp_nodes) > 2:
+        if len(comp_nodes) > 3:
             indices.append(comp_nodes)
     return indices
 
-def calculate_mantel(net, fst_matrix, dist_type='euclidean', perms=999):
+
+def calculate_mantel(net, fst_matrix, dist_type, perms):
     """
     Perform a Mantel test for two distance matrices.
 
@@ -484,16 +379,16 @@ def calculate_mantel(net, fst_matrix, dist_type='euclidean', perms=999):
     # calculate the distance matrix based on network connectivity
     if dist_type == 'euclidean':
         distance_matrix = get_euclidean_matrix(net)
-    else:
+    if dist_type == 'path':
         distance_matrix = get_shortest_path_matrix(net)
+    if dist_type == 'random':
+        distance_matrix = get_random_walk_matrix(net)
     # if the network is connected, calculate the mantel test directly
     if nx.is_connected(net):
         r, p, _ = test(X=distance_matrix, Y=fst_matrix, perms=perms, method='pearson', ignore_nans=True)
-        print(f'r={r}, p={p}')
         return r, p
 
     r_values, p_values, weights = [], [], []
-
     # in case the network is not connected, calculate the mantel test for each component
     for comp in find_connected_components(net):
         comp_dist_matrix = distance_matrix[np.ix_(comp, comp)]
@@ -501,80 +396,143 @@ def calculate_mantel(net, fst_matrix, dist_type='euclidean', perms=999):
         r, p, _ = test(X=comp_dist_matrix, Y=comp_fst_matrix, perms=perms, method='pearson', ignore_nans=True)
         r_values.append(r)
         p_values.append(p)
-        weights.append(len(comp))
+        if r is np.nan:
+            weights.append(0)
+        else:
+            weights.append(len(comp))
+    # Check if r_values or p_values is empty (happens when the network has its last component >3)
+    if not r_values or not p_values:
+        return None
+    # symmetric 3*3 matrices get na in shortest path distance, so drop them in all distance matrices
+    if len(r_values) == 1:
+        return r_values[0], p_values[0]
+    # Mask NaN values that result from symmetric matrices with no variation
+    masked_r_values = np.ma.masked_array(r_values, np.isnan(r_values))
+    masked_p_values = np.ma.masked_array(p_values, np.isnan(p_values))
 
     # calculate the weighted mean of the correlation and p-value
-    weighted_r = np.average(r_values, weights=weights)
-    weighted_p = np.average(p_values, weights=weights)
-    print(f'r={weighted_r}, p={weighted_p}')
+    weighted_r = np.ma.average(masked_r_values, weights=weights)
+    weighted_p = np.ma.average(masked_p_values, weights=weights)
+
     return weighted_r, weighted_p
 
 
 ########### analysis of fst-distance
 
-def calculate_mantel_for_process(data, replica=1, dist_type='euclidean', perms=999):
+def calculate_mantel_for_process(data, perms, dist_type, replica):
     """"
     calculate mantel correlation and p value for each step along fragmentation.
+    :param data: raw data of fragmentation type
     """
+    results = []
     networks = access_networks(data)[replica]
     fst_matrices = access_fst_matrices(data)[replica]
 
-    for step, (net,fst) in enumerate(zip(networks,fst_matrices)):
-        r, p = calculate_mantel(net=net, fst_matrix=fst, dist_type=dist_type, perms=10)
-        results.append({step: (r, p)})
-        need to store results in a df
-    return r, p
-fragmentation_types = ['rand']
-net = 'RGG'
-ignore = False
-data = load_data(fragmentation_types, net, ignore)
-data = data[fragmentation_types[0]]
-
-fst = data[7][0][200]
-net = data[1][0][200]
-
-nx.draw_networkx(net)
-plt.show()
-
-calculate_mantel(net=net,fst_matrix=fst, dist_type='path',perms=999)
+    for step, (net, fst) in enumerate(zip(networks, fst_matrices)):
+        result = calculate_mantel(net=net, perms=perms, fst_matrix=fst, dist_type=dist_type)
+        if result is None:
+            break
+        r, p = result
+        results.append({'step': step, 'r_val': r, 'p_val': p, 'replica': replica})
+    cor_data = pd.DataFrame(results)
+    return cor_data
 
 
+def calculate_mantel_replicas(data,perms, dist_type):
+    """"
+    calculate mantel correlation and p value across fragmentation for all replicas.
+    """
+    results = []
+    networks = access_networks(data)
+
+    for replica in range(len(networks)):
+        cor_data = calculate_mantel_for_process(data, perms, dist_type=dist_type, replica=replica)
+        results.append(cor_data)
+    cor_data = pd.concat(results)
+
+    return cor_data
 
 
+def calculate_mantel_all(data, perms, dist_type='euclidean'):
+    """"
+    calculate mantel correlation and p value across fragmentation for all fragmnetation types.
+    """
+    results = []
+    for frag_type in data.keys():
+        cor_data = calculate_mantel_replicas(data[frag_type], perms, dist_type)
+        cor_data['fragmentation_type'] = frag_type
+        results.append(cor_data)
+    cor_data = pd.concat(results)
+
+    # write data as csv
+    cor_data.to_csv(f'./cor_fst_{dist_type}.csv', index=False)
+    return cor_data
 
 
+def plot_cor_fst(df):
+    """
+    plot mantel correlation for a single type or replica.
+    mini test.
+    """
+    # df = normalize_steps(df)
+    plt.figure(figsize=(10, 6))
+    sns.lineplot(x='step', y='r_val', data=df)
+    plt.xlabel('Fragmentation (%)')
+    plt.ylabel('Correlation')
+    plt.show()
 
 
+def plot_mantel_all(df):
+    """
+    plot mantel correlation for all fragmentation types.
+    """
+    df = normalize_steps(df)
+    plt.figure(figsize=(10, 6))
+    sns.lineplot(x='step', y='r_val', hue='fragmentation_type', data=df)
+    plt.xlabel('Fragmentation (%)')
+    plt.ylabel('Correlation')
+    plt.tick_params(axis='both', labelsize=16)
 
+    plt.savefig(f'./figs/cor_fst_euclid.svg', format="svg")
+
+    plt.show()
 
 #
-# def plot_matrix_relationship(distance_matrix, fst_matrix, method='pearson', perms=999):
-#     #calculate the mantel test correlation
-#     perform_mantel_test(distance_matrix, fst_matrix, perms, method)
-#     # Flatten the matrices for plotting, ignoring NaN values
-#     flat_matrix1 = distance_matrix.flatten()
-#     flat_matrix2 = fst_matrix.flatten()
+fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt', 'wrst']
+# fragmentation_types = ['rand']
+data = load_data(fragmentation_types)
+# data = data[fragmentation_types[0]]
 #
-#     valid_indices = ~np.isnan(flat_matrix1) & ~np.isnan(flat_matrix2)
-#     flat_matrix1 = flat_matrix1[valid_indices]
-#     flat_matrix2 = flat_matrix2[valid_indices]
 #
-#     # Create scatter plot
-#     plt.figure(figsize=(8, 6))
-#     plt.scatter(flat_matrix1, flat_matrix2, color='blue', edgecolor='k', alpha=0.7)
+# net = data[1][0][10]
+# fst=data[7][0][10]
 #
-#     # Add labels and title
-#     plt.xlabel('Euclidean distance')
-#     plt.ylabel('Fst')
+# distance_matrix = get_shortest_path_matrix(net)
 #
-#     # Add a line of best fit
-#     m, b = np.polyfit(flat_matrix1, flat_matrix2, 1)
-#     plt.plot(flat_matrix1, m * flat_matrix1 + b, color='red')
-#     #
-#     # coeffs = np.polyfit(flat_matrix1, flat_matrix2, 2)  # Quadratic fit
-#     # p = np.poly1d(coeffs)  # Create polynomial function
-#     # t = np.linspace(min(flat_matrix1), max(flat_matrix1), 500)
-#     # plt.plot(t, p(t), color='red')
-#     plt.savefig(f'./figs/distance_fst.jpg', format="jpg")
 #
-#     plt.show()
+# flat_matrix1 = distance_matrix.flatten()
+# flat_matrix2 = fst.flatten()
+# flat_matrix1 = flat_matrix1[flat_matrix1 != 0]
+# flat_matrix2 = flat_matrix2[flat_matrix2 != 0]
+# plt.figure(figsize=(8, 6))
+# plt.scatter(flat_matrix1, flat_matrix2, color='blue', edgecolor='k', alpha=0.7)
+# # Add labels and title
+# plt.xlabel('edges')
+# plt.ylabel('Fst')
+# plt.tick_params(axis='both', labelsize=16)
+#
+# m, b = np.polyfit(flat_matrix1, flat_matrix2, 1)
+# plt.plot(flat_matrix1, m * flat_matrix1 + b, color='red')
+# plt.savefig(f'./figs/fst_path.svg', format="svg", dpi=300)
+# plt.show()
+#
+# print(calculate_mantel(net=net,fst_matrix=fst, dist_type='random',perms=999))
+
+# df = calculate_mantel_for_process(data, replica=1, dist_type='random', perms=999)
+# print(df)
+# df = calculate_mantel_replicas(data, dist_type='random', perms=990)
+# plot_cor_fst(df)
+
+df = calculate_mantel_all(data=data,perms=999, dist_type='random')
+print(df)
+plot_mantel_all(df)
