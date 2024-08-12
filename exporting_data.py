@@ -158,8 +158,8 @@ def export_het_csv(data, frag: str):
     return final_df
 
 
-frag = 'div'
-with open(f'RGG, {frag}_ignore_False_d06.pickle', 'rb') as file:
+frag = 'dist'
+with open(f'{frag}_06.pickle', 'rb') as file:
     rand = pickle.load(file)
 print('finish')
 
@@ -169,6 +169,6 @@ print('finish')
 # plt.plot(df['step'], df['het'])
 # plt.show()
 
-export_het_csv(rand, frag)
+# export_het_csv(rand, frag)
 
 

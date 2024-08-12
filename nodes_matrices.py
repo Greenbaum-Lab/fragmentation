@@ -126,27 +126,13 @@ def compute_correlation(df):
     grouped = df.groupby(['step', 'replica'])
 
     for (step, replica), group in grouped:
+        if len(group) < 2: # need at least 2 data points to calculate correlation
+            continue
         cor, pval = pearsonr(group['het'], group['central'])
         results.append({'step': step, 'replica': replica, 'cor': cor, 'pval': pval})
 
     results_df = pd.DataFrame(results)
     return results_df
-
-
-def plot_mean_with_ci(df):
-    """
-    Plot the mean correlation with shaded 95% confidence intervals for each 'frag' type using sns.lineplot.
-
-    Parameters:
-        df (pd.DataFrame): DataFrame containing 'step', 'cor', and 'frag' columns.
-    """
-    plt.figure(figsize=(10, 6))
-    sns.lineplot(x='step', y='cor', hue='frag', data=df)
-    plt.xlabel('Step', fontsize=20)
-    plt.ylabel('Correlation (r)', fontsize=20)
-    plt.legend(title='Fragmentation Type')
-    plt.savefig(f'./figs/cor_central.svg', format="svg")
-    plt.show()
 
 
 ##### plot heterozygisuty vs. node centrality
@@ -155,34 +141,37 @@ fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt', 'wrst
 # data = load_data(fragmentation_types)
 
 ### compute correlation between heterozygosity and centrality for all processes
-# make_het_central_all(data, 'degree')
+### change centrality name
+# make_het_central_all(data, 'bet')
 # for frag in fragmentation_types:
-#     df = pd.read_csv(f'./csv/degree_het_{frag}.csv')
+#     df = pd.read_csv(f'./csv/bet_het_{frag}.csv')
 #     results_df = compute_correlation(df)
-#     results_df.to_csv(f'./csv/degree_het_{frag}_cor.csv', index=False)
+#     results_df.to_csv(f'./csv/bet_het_{frag}_cor.csv', index=False)
 
 
 ##### plot single degree-het correlation
-# df = pd.read_csv(f'./csv/degree_het_rand.csv')
+# df = pd.read_csv(f'./csv/bet_het_rand.csv')
 # df = (df[(df['step'] == 0) & (df['replica'] == 0)])
 # df = np.log10(df)
 # ax = sns.regplot(x='central', y='het', data=df,
 #             fit_reg=True, order=1)
 # plt.ylabel('Heterozygosity (log)', fontsize=20)
-# plt.xlabel('degree (log)', fontsize=20)
+# plt.xlabel('betweeness (log)', fontsize=20)
 # plt.tick_params(axis='both', labelsize=16)
 # # plt.legend(title='Fragmentation Type')
-# plt.savefig(f'./figs/degree_het_singlecor.svg', format="svg")
+# plt.savefig(f'./figs/bet_het_singlecor.svg', format="svg")
 # plt.show()
 
 #### plot correlation het-degree for all replicates during fragmetiaon
-plt.figure(figsize=(10, 6))
-for frag in fragmentation_types:
-    df = pd.read_csv(f'./csv/degree_het_{frag}_cor.csv')
-    sns.lineplot(x='step', y='cor',data=df)
-plt.xlabel('Step', fontsize=20)
-plt.ylabel('Correlation (r)', fontsize=20)
-plt.legend()
-plt.tick_params(axis='both', labelsize=16)
-plt.savefig(f'./figs/degree_het_cor.svg', format="svg")
-plt.show()
+# plt.figure(figsize=(10, 6))
+# for frag in fragmentation_types:
+#     df = pd.read_csv(f'./csv/degree_het_{frag}_cor.csv')
+#     df = np.log10(df)
+#     sns.lineplot(x='step', y='cor',data=df)
+# plt.xlabel('Step', fontsize=20)
+# plt.ylabel('Correlation (r)-betweenness', fontsize=20)
+# # plt.ylim(0,1)
+# plt.legend()
+# plt.tick_params(axis='both', labelsize=16)
+# # plt.savefig(f'./figs/bet_het_cor.svg', format="svg")
+# plt.show()
