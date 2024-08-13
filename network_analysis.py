@@ -303,50 +303,75 @@ def random_walk(net, start, end):
         steps += 1
     return steps
 
-def get_random_walk_matrix(net):
+
+
+# def get_random_walk_matrix(net):
+#     """
+#     calculate the random walk distance between all pairs of nodes in the network.
+#     :return: distance matrix of edges between nodes
+#     """
+#     n = range(nx.number_of_nodes(net))
+#     # create a martix of inf in the size of the number of nodes
+#     distance_matrix = np.full(((max(n)+1), (max(n))+1), np.inf)
+#     np.fill_diagonal(distance_matrix, 0)
+#     #get all node pair combinations
+#     pairs = list(combinations(n, 2))
+#     # insert the random walk distance for each pair of nodes that are connected
+#     steps = []
+#     for u, v in pairs:
+#         if nx.has_path(net, source=u, target=v):
+#             steps = []
+#
+#             for i in range(50):
+#                 itreration = random_walk(net, u, v)
+#                 steps.append(itreration)
+#             res = np.mean(steps)
+#             distance_matrix[u, v] = res
+#             distance_matrix[v, u] = distance_matrix[u, v]
+#     return distance_matrix
+#
+
+
+import concurrent.futures
+from itertools import combinations
+
+import concurrent.futures
+from itertools import combinations
+import numpy as np
+import networkx as nx
+import random
+
+def random_walk(net, start, end):
+    current_node = start
+    steps = 0
+    while current_node != end:
+        neighbors = list(net.neighbors(current_node))
+        current_node = random.choice(neighbors)
+        steps += 1
+    return steps
+
+def compute_random_walk_distance(net, u, v):
+    steps = [random_walk(net, u, v) for _ in range(50)]
+    return u, v, np.mean(steps)
+
+def get_random_walk_matrix(net, num_workers=None):
     """
-    calculate the random walk distance between all pairs of nodes in the network.
-    :return: distance matrix of edges between nodes
+    Calculate the random walk distance between all pairs of nodes in the network.
+    :param num_workers: Number of threads to use for parallel processing.
+    :return: Distance matrix of edges between nodes
     """
     n = range(nx.number_of_nodes(net))
-    # create a martix of inf in the size of the number of nodes
-    distance_matrix = np.full(((max(n)+1), (max(n))+1), np.inf)
+    distance_matrix = np.full((max(n) + 1, max(n) + 1), np.inf)
     np.fill_diagonal(distance_matrix, 0)
-    #get all node pair combinations
     pairs = list(combinations(n, 2))
-    # insert the random walk distance for each pair of nodes that are connected
-    for u, v in pairs:
-        if nx.has_path(net, source=u, target=v):
-            distance_matrix[u, v] = random_walk(net, u, v)
-            distance_matrix[v, u] = distance_matrix[u, v]
-    return distance_matrix
 
-
-
-
-def get_random_walk_matrix(net):
-    """
-    calculate the random walk distance between all pairs of nodes in the network.
-    :return: distance matrix of edges between nodes
-    """
-    n = range(nx.number_of_nodes(net))
-    # create a martix of inf in the size of the number of nodes
-    distance_matrix = np.full(((max(n)+1), (max(n))+1), np.inf)
-    np.fill_diagonal(distance_matrix, 0)
-    #get all node pair combinations
-    pairs = list(combinations(n, 2))
-    # insert the random walk distance for each pair of nodes that are connected
-    steps = []
-    for u, v in pairs:
-        if nx.has_path(net, source=u, target=v):
-            steps = []
-
-            for i in range(50):
-                itreration = random_walk(net, u, v)
-                steps.append(itreration)
-            res = np.mean(steps)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
+        futures = [executor.submit(compute_random_walk_distance, net, u, v) for u, v in pairs if nx.has_path(net, u, v)]
+        for future in concurrent.futures.as_completed(futures):
+            u, v, res = future.result()
             distance_matrix[u, v] = res
-            distance_matrix[v, u] = distance_matrix[u, v]
+            distance_matrix[v, u] = res
+
     return distance_matrix
 
 def find_connected_components(net):
@@ -446,6 +471,7 @@ def calculate_mantel_replicas(data,perms, dist_type):
     networks = access_networks(data)
 
     for replica in range(len(networks)):
+        print(replica)
         cor_data = calculate_mantel_for_process(data, perms, dist_type=dist_type, replica=replica)
         results.append(cor_data)
     cor_data = pd.concat(results)
@@ -459,13 +485,16 @@ def calculate_mantel_all(data, perms, dist_type='euclidean'):
     """
     results = []
     for frag_type in data.keys():
+        print(frag_type)
         cor_data = calculate_mantel_replicas(data[frag_type], perms, dist_type)
         cor_data['fragmentation_type'] = frag_type
         results.append(cor_data)
+        cor_data.to_csv(f'./corl_fst_{frag_type}_{dist_type}.csv', index=False)
+
     cor_data = pd.concat(results)
 
     # write data as csv
-    cor_data.to_csv(f'./cor_fst_{dist_type}.csv', index=False)
+    cor_data.to_csv(f'./corl_fst_{dist_type}_all.csv', index=False)
     return cor_data
 
 
@@ -493,46 +522,54 @@ def plot_mantel_all(df):
     plt.ylabel('Correlation')
     plt.tick_params(axis='both', labelsize=16)
 
-    plt.savefig(f'./figs/cor_fst_euclid.svg', format="svg")
+    plt.savefig(f'./figs/cor_fst_path.svg', format="svg")
 
     plt.show()
 
-#
+
 fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt', 'wrst']
-# fragmentation_types = ['rand']
+# fragmentation_types = ['rand', 'cor']
 data = load_data(fragmentation_types)
 # data = data[fragmentation_types[0]]
-#
-#
-# net = data[1][0][10]
-# fst=data[7][0][10]
-#
-# distance_matrix = get_shortest_path_matrix(net)
-#
-#
+
+
+#### plot single correlation fst-distance
+# net = data[1][0][0]
+# fst=data[7][0][0]
+# distance_matrix = get_random_walk_matrix(net)
 # flat_matrix1 = distance_matrix.flatten()
 # flat_matrix2 = fst.flatten()
 # flat_matrix1 = flat_matrix1[flat_matrix1 != 0]
 # flat_matrix2 = flat_matrix2[flat_matrix2 != 0]
-# plt.figure(figsize=(8, 6))
-# plt.scatter(flat_matrix1, flat_matrix2, color='blue', edgecolor='k', alpha=0.7)
-# # Add labels and title
-# plt.xlabel('edges')
-# plt.ylabel('Fst')
+# df = pd.DataFrame({'distance': flat_matrix1, 'fst': flat_matrix2})
+# ax = sns.regplot(x='distance', y='fst', data=df,
+#             fit_reg=True, order=1)
+# plt.ylabel('fst', fontsize=20)
+# plt.xlabel('random walk', fontsize=20)
 # plt.tick_params(axis='both', labelsize=16)
-#
-# m, b = np.polyfit(flat_matrix1, flat_matrix2, 1)
-# plt.plot(flat_matrix1, m * flat_matrix1 + b, color='red')
-# plt.savefig(f'./figs/fst_path.svg', format="svg", dpi=300)
+# plt.savefig(f'./figs/random_fst_single.svg', format="svg")
 # plt.show()
-#
-# print(calculate_mantel(net=net,fst_matrix=fst, dist_type='random',perms=999))
+# print(calculate_mantel(net=net,fst_matrix=fst, dist_type='random',perms=3000))
 
 # df = calculate_mantel_for_process(data, replica=1, dist_type='random', perms=999)
 # print(df)
 # df = calculate_mantel_replicas(data, dist_type='random', perms=990)
 # plot_cor_fst(df)
 
+
+
+### plot mantel correletion for all processes
+# df = pd.read_csv('./csv/cor_fst_path.csv')
+# df = df.replace('--', np.nan)
+# df['r_val'] = df['r_val'].astype(float)
+# plt.figure(figsize=(10, 6))
+# sns.lineplot(x='step', y='r_val', data=df,hue='fragmentation_type')
+# plt.xlabel('Fragmentation (%)')
+# plt.ylabel('Correlation')
+# plt.tick_params(axis='both', labelsize=16)
+# plt.savefig(f'./figs/cor_fst_path.svg', format="svg")
+# plt.show()
+
 df = calculate_mantel_all(data=data,perms=999, dist_type='random')
-print(df)
-plot_mantel_all(df)
+
+# plot_mantel_all(df)
