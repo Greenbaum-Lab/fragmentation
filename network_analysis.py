@@ -463,8 +463,31 @@ def calculate_mantel_for_process(data, perms, dist_type, replica):
     return cor_data
 
 
+def calculate_mantel_for_process(data, perms, dist_type, replica, num_workers=None):
+    results = []
+    networks = access_networks(data)[replica]
+    fst_matrices = access_fst_matrices(data)[replica]
+
+    def process_step(step, net, fst):
+        result = calculate_mantel(net=net, perms=perms, fst_matrix=fst, dist_type=dist_type)
+        if result is None:
+            return None
+        r, p = result
+        return {'step': step, 'r_val': r, 'p_val': p, 'replica': replica}
+
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = [executor.submit(process_step, step, net, fst) for step, (net, fst) in enumerate(zip(networks, fst_matrices))]
+        for future in concurrent.futures.as_completed(futures):
+            result = future.result()
+            if result is not None:
+                results.append(result)
+
+    cor_data = pd.DataFrame(results)
+    return cor_data
+
+
 def calculate_mantel_replicas(data,perms, dist_type):
-    """"
+    """
     calculate mantel correlation and p value across fragmentation for all replicas.
     """
     results = []
@@ -489,7 +512,7 @@ def calculate_mantel_all(data, perms, dist_type='euclidean'):
         cor_data = calculate_mantel_replicas(data[frag_type], perms, dist_type)
         cor_data['fragmentation_type'] = frag_type
         results.append(cor_data)
-        cor_data.to_csv(f'./corl_fst_{frag_type}_{dist_type}.csv', index=False)
+        cor_data.to_csv(f'./csv/corl_fst_{frag_type}_{dist_type}.csv', index=False)
 
     cor_data = pd.concat(results)
 
@@ -515,21 +538,19 @@ def plot_mantel_all(df):
     """
     plot mantel correlation for all fragmentation types.
     """
-    df = normalize_steps(df)
+    # df = normalize_steps(df)
     plt.figure(figsize=(10, 6))
     sns.lineplot(x='step', y='r_val', hue='fragmentation_type', data=df)
     plt.xlabel('Fragmentation (%)')
     plt.ylabel('Correlation')
     plt.tick_params(axis='both', labelsize=16)
-
-    plt.savefig(f'./figs/cor_fst_path.svg', format="svg")
-
+    plt.savefig(f'./figs/cor_fst_random.svg', format="svg")
     plt.show()
 
 
 fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt', 'wrst']
 # fragmentation_types = ['rand', 'cor']
-data = load_data(fragmentation_types)
+# data = load_data(fragmentation_types)
 # data = data[fragmentation_types[0]]
 
 
@@ -555,6 +576,7 @@ data = load_data(fragmentation_types)
 # print(df)
 # df = calculate_mantel_replicas(data, dist_type='random', perms=990)
 # plot_cor_fst(df)
+# df = calculate_mantel_all(data=data,perms=999, dist_type='random')
 
 
 
@@ -570,6 +592,5 @@ data = load_data(fragmentation_types)
 # plt.savefig(f'./figs/cor_fst_path.svg', format="svg")
 # plt.show()
 
-df = calculate_mantel_all(data=data,perms=999, dist_type='random')
-
+# df = pd.read_csv('./csv/corl_fst_random_all.csv')
 # plot_mantel_all(df)

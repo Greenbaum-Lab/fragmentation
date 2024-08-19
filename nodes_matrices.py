@@ -150,8 +150,8 @@ fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt', 'wrst
 
 
 ##### plot single degree-het correlation
-# df = pd.read_csv(f'./csv/degree_het_rand.csv')
-# df = (df[(df['step'] == 0) & (df['replica'] == 50)])
+# df = pd.read_csv(f'./csv/degree_het_dist.csv')
+# df = (df[(df['step'] == 168) & (df['replica'] == 37)])
 # # df = np.log10(df)
 # ax = sns.regplot(x='central', y='het', data=df,
 #             fit_reg=True, order=1)
@@ -161,6 +161,11 @@ fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt', 'wrst
 # # plt.legend(title='Fragmentation Type')
 # plt.savefig(f'./figs/degree_het_singlecor.svg', format="svg")
 # plt.show()
+# cor, pval = pearsonr(df['central'], df['het'])
+# print(cor, pval)
+
+
+
 
 #### plot correlation het-degree for all replicates during fragmetiaon
 # plt.figure(figsize=(10, 6))
