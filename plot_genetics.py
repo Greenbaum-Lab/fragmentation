@@ -320,18 +320,16 @@ def plot_nodes_all(data):
 
 ##############plot distributions
 ##### one frag type each time
-# fragmentation_types = ['rand', 'cor', 'intr', 'dist', 'reg', 'div', 'opt']
-# fragmentation_types = ['dist']
-# frag_type = fragmentation_types[0]
-#
-# net = 'RGG'
-# ignore = False
-# data = load_data(fragmentation_types, net, ignore)
-#
-# df = filter_intervals(data[frag_type],measure='het')
-# plot_distribution_het(df,type=frag_type)
-# df = filter_intervals(data[frag_type],measure='fst')
-# plot_distribution_fst(df,type=frag_type)
+# fragmentation_types = ['rand', 'cor', 'intr', 'dist', 'reg', 'div', 'opt','wrst']
+fragmentation_types = ['wrst']
+frag_type = fragmentation_types[0]
+
+data = load_data(fragmentation_types)
+
+df = filter_intervals(data[frag_type],measure='het')
+plot_distribution_het(df,type=frag_type)
+df = filter_intervals(data[frag_type],measure='fst')
+plot_distribution_fst(df,type=frag_type)
 
 
 ####################### plot individual nodes
