@@ -1,5 +1,5 @@
 from statistics import mean
-test
+
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -321,7 +321,7 @@ def plot_nodes_all(data):
 ##############plot distributions
 ##### one frag type each time
 # fragmentation_types = ['rand', 'cor', 'intr', 'dist', 'reg', 'div', 'opt','wrst']
-fragmentation_types = ['wrst']
+fragmentation_types = ['reg']
 frag_type = fragmentation_types[0]
 
 data = load_data(fragmentation_types)
@@ -335,7 +335,7 @@ plot_distribution_fst(df,type=frag_type)
 ####################### plot individual nodes
 ################
 # fragmentation_types = ['rand', 'cor', 'intr', 'dist', 'reg', 'div', 'opt']
-# # fragmentation_types = ['rand']
+# fragmentation_types = ['rand']
 # net = 'RGG'
 # ignore = False
 # data = load_data(fragmentation_types, net, ignore)
