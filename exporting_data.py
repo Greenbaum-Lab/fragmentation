@@ -1,9 +1,9 @@
 import pickle
-
 import networkx as nx
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
+from statsmodels.tsa.ar_model import AutoReg
 
 from funcs import access_het_dist, access_networks
 
@@ -118,42 +118,7 @@ def export_het_csv(data, frag: str):
 ####################################################
 ######################### analysis #################
 
-######## read the file with RGG (d-0.3) data
-
-df = pd.read_csv('cor_het.csv')
-time_series = df[(df['replica'] == 0) & (df['node_number'] == 49)]
-print(df)
-
-
-window_size = int(len(df) * 0.5)  # 50% of the data
-step_size = 1  # Sliding step (you can adjust this)
-
-def calc_autocorr_lag1(series):
-    return series.autocorr(lag=1)
-
-# Store autocorrelation results
-autocorr_results = []
-
-# Loop through the data with the sliding window
-for start in range(0, len(df) - window_size + 1, step_size):
-    window_data = df['het'][start:start + window_size]  # Extract the window of 'het'
-    autocorr_value = calc_autocorr_lag1(window_data)  # Calculate lag-1 autocorrelation
-    autocorr_results.append({
-        'start_index': start,
-        'end_index': start + window_size - 1,
-        'autocorr_lag1': autocorr_value
-    })
-
-# Convert results to a DataFrame for better visualization
-autocorr_df = pd.DataFrame(autocorr_results)
-
-
-# het_series = pd.Series(df['het'].values)
-# autocorr_lag1 = het_series.autocorr(lag=1)
-print(autocorr_df)
-
-plt.show(autocorr_df)
-plt.show()
+######## read the file with RGG (d-0.6) data
 
 
 frag = 'cor'
@@ -185,9 +150,18 @@ def get_largest_component(nets):
 nets = access_networks(cor)
 het = assign_node_numbers(cor)
 components = get_largest_component(nets)
+# pd.set_option('display.max_rows', None)
 
 # get the heterozygosity data for the corresponding largest component
-full_data = pd.merge(het, components, on=['replica', 'step', 'node_number'])
+component_data = pd.merge(het, components, on=['replica', 'step', 'node_number'])
+component_data = component_data.sort_values(by=['replica', 'step', 'node_number'])
+# add 'net' column to differntiate every net in the same replica
+# component_data['net'] = component_data.groupby(['replica', 'step']).ngroup()
+# print(component_data.head(1000))
+
+component_data = component_data[component_data['replica'] == 0]
+
+print(component_data)
 
 # plot the heterozygosity data of all nodes of replica 0 with step on x axis and het as y axis
 # df = full_data[(full_data['replica'] == 0) & (full_data['node_number'] == 43)]
@@ -195,7 +169,85 @@ full_data = pd.merge(het, components, on=['replica', 'step', 'node_number'])
 # plt.plot(df['step'], df['het'])
 # plt.show()
 
-# calculate the sd skewness and kurtosis for the heterozygosity data
+####### calculate the sd skewness and kurtosis for the heterozygosity data
+
+def calculate_return_rate(df, window_fraction=0.5, step_size=1):
+    """
+    Calculate return rates (inverse of AR(1) coefficients) using a rolling window approach.
+    :param df: DataFrame with 'step' and 'het' columns.
+
+    """
+    window_size = int(len(df) * window_fraction)
+    ar1_coefficients, return_rates, time_indices = [], [], []
+
+    for start in range(0, len(df) - window_size + 1, step_size):
+        window_data = df['het'][start:start + window_size]  # Current window of data
+        window_data_demeaned = window_data - np.mean(window_data)  # Demean the data within the window
+
+        # Fit an AR(1) model with no intercept
+        model = AutoReg(window_data_demeaned, lags=1, trend='n').fit()
+        ar1 = model.params[0]
+        return_rate = 1 / ar1
+
+        ar1_coefficients.append(ar1)
+        return_rates.append(return_rate)
+        time_indices.append(df['step'][start + window_size - 1])  # Last index in the window
+
+    # Create a DataFrame to store the results
+    results_df = pd.DataFrame({
+        'step': time_indices,
+        'returnrate': return_rates
+    })
+
+    return results_df
+
+
+
+def calculate_return_rate(df):
+    """
+    Calculate return rates (inverse of AR(1) coefficients) for each 'net' value.
+    :param df: DataFrame with 'step', 'het', and 'net' columns.
+    """
+    ar1_coefficients, return_rates, time_indices = [], [], []
+
+    for net, group in df.groupby('step'):
+        window_data = group['het']  # Data for the current 'net' value
+        print(window_data)
+        window_data_demeaned = window_data - np.mean(window_data)  # Demean the data
+
+        if len(window_data) < 3:
+            continue
+        print(len(window_data))
+
+        # Fit an AR(1) model with no intercept
+        model = AutoReg(window_data_demeaned, lags=1, trend='n').fit()
+        ar1 = model.params[0]
+        return_rate = 1 / ar1
+
+        ar1_coefficients.append(ar1)
+        return_rates.append(return_rate)
+        time_indices.append(group['step'].iloc[-1])  # Last index in the group
+
+    # Create a DataFrame to store the results
+    results_df = pd.DataFrame({
+        'step': time_indices,
+        'returnrate': return_rates
+    })
+
+    return results_df
+
+
+
+
+
+rr = calculate_return_rate(component_data)
+print(rr)
+
+plt.plot(rr['step'], rr['returnrate'])
+plt.ylim(-1,2)
+plt.show()
+
+
 def calculate_indicators(data):
     """
     Calculate the standard deviation, skewness, and kurtosis of the heterozygosity data.
@@ -206,30 +258,42 @@ def calculate_indicators(data):
     indicators = grouped.agg(['std', 'skew']).reset_index()
     indicators['kurt'] = grouped.apply(pd.Series.kurtosis).values
 
+    # Calculate return rates
+    rr_df = calculate_return_rate(data)
+    print(rr_df)
+    indicators = pd.merge(indicators, rr_df, on='step', how='left')
+
     return indicators
 
+#
+# indicators = calculate_indicators(component_data)
+# print(indicators)
+#
+# df = indicators[(indicators['replica'] == 0)]
+# # print(df)
+# plt.plot(df['step'], df['std'])
+# plt.show()
+#
+# df = indicators[(indicators['replica'] == 0)]
+# # print(df)
+# plt.plot(df['step'], df['skew'])
+# plt.show()
+#
+# df = indicators[(indicators['replica'] == 0)]
+# # print(df)
+# plt.plot(df['step'], df['kurt'])
+# plt.show()
+#
+# df = indicators[(indicators['replica'] == 0)]
+# # print(df)
+# plt.plot(df['step'], df['returnrate'])
+# plt.show()
+#
+#
+#
 
-indicators = calculate_indicators(full_data)
-print(indicators)
-
-df = indicators[(indicators['replica'] == 0)]
-# print(df)
-plt.plot(df['step'], df['std'])
-plt.show()
-
-df = indicators[(indicators['replica'] == 0)]
-# print(df)
-plt.plot(df['step'], df['skew'])
-plt.show()
-
-df = indicators[(indicators['replica'] == 0)]
-# print(df)
-plt.plot(df['step'], df['kurt'])
-plt.show()
 
 
-
-# Create a pandas series
 
 
 
