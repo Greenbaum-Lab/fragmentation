@@ -160,8 +160,8 @@ component_data = component_data.sort_values(by=['replica', 'step', 'node_number'
 # print(component_data.head(1000))
 
 component_data = component_data[component_data['replica'] == 0]
-
-print(component_data)
+x = component_data[(component_data['replica'] == 0) & (component_data['step'].between(224, 227))]
+print(x)
 
 # plot the heterozygosity data of all nodes of replica 0 with step on x axis and het as y axis
 # df = full_data[(full_data['replica'] == 0) & (full_data['node_number'] == 43)]
@@ -171,48 +171,49 @@ print(component_data)
 
 ####### calculate the sd skewness and kurtosis for the heterozygosity data
 
-def calculate_return_rate(df, window_fraction=0.5, step_size=1):
-    """
-    Calculate return rates (inverse of AR(1) coefficients) using a rolling window approach.
-    :param df: DataFrame with 'step' and 'het' columns.
-
-    """
-    window_size = int(len(df) * window_fraction)
-    ar1_coefficients, return_rates, time_indices = [], [], []
-
-    for start in range(0, len(df) - window_size + 1, step_size):
-        window_data = df['het'][start:start + window_size]  # Current window of data
-        window_data_demeaned = window_data - np.mean(window_data)  # Demean the data within the window
-
-        # Fit an AR(1) model with no intercept
-        model = AutoReg(window_data_demeaned, lags=1, trend='n').fit()
-        ar1 = model.params[0]
-        return_rate = 1 / ar1
-
-        ar1_coefficients.append(ar1)
-        return_rates.append(return_rate)
-        time_indices.append(df['step'][start + window_size - 1])  # Last index in the window
-
-    # Create a DataFrame to store the results
-    results_df = pd.DataFrame({
-        'step': time_indices,
-        'returnrate': return_rates
-    })
-
-    return results_df
-
+# def calculate_return_rate(df, window_fraction=0.5, step_size=1):
+#     """
+#     Calculate return rates (inverse of AR(1) coefficients) using a rolling window approach.
+#     :param df: DataFrame with 'step' and 'het' columns.
+#
+#     """
+#     window_size = int(len(df) * window_fraction)
+#     ar1_coefficients, return_rates, time_indices = [], [], []
+#
+#     for start in range(0, len(df) - window_size + 1, step_size):
+#         window_data = df['het'][start:start + window_size]  # Current window of data
+#         window_data_demeaned = window_data - np.mean(window_data)  # Demean the data within the window
+#
+#         # Fit an AR(1) model with no intercept
+#         model = AutoReg(window_data_demeaned, lags=1, trend='n').fit()
+#         ar1 = model.params[0]
+#         return_rate = 1 / ar1
+#
+#         ar1_coefficients.append(ar1)
+#         return_rates.append(return_rate)
+#         time_indices.append(df['step'][start + window_size - 1])  # Last index in the window
+#
+#     # Create a DataFrame to store the results
+#     results_df = pd.DataFrame({
+#         'step': time_indices,
+#         'returnrate': return_rates
+#     })
+#
+#     return results_df
+#
 
 
 def calculate_return_rate(df):
     """
-    Calculate return rates (inverse of AR(1) coefficients) for each 'net' value.
+    Calculate return rates (inverse of AR(1) coefficients) for each 'step'.
     :param df: DataFrame with 'step', 'het', and 'net' columns.
     """
     ar1_coefficients, return_rates, time_indices = [], [], []
 
-    for net, group in df.groupby('step'):
-        window_data = group['het']  # Data for the current 'net' value
+    for step, group in df.groupby('step'):
+        window_data = group['het']
         print(window_data)
+        print(step)
         window_data_demeaned = window_data - np.mean(window_data)  # Demean the data
 
         if len(window_data) < 3:
@@ -221,12 +222,14 @@ def calculate_return_rate(df):
 
         # Fit an AR(1) model with no intercept
         model = AutoReg(window_data_demeaned, lags=1, trend='n').fit()
+        print(model.params)
         ar1 = model.params[0]
         return_rate = 1 / ar1
 
         ar1_coefficients.append(ar1)
         return_rates.append(return_rate)
-        time_indices.append(group['step'].iloc[-1])  # Last index in the group
+        time_indices.append(group['step'].iloc[-1])
+        print(group['step'].iloc[-1])# Last index in the group
 
     # Create a DataFrame to store the results
     results_df = pd.DataFrame({
@@ -237,14 +240,11 @@ def calculate_return_rate(df):
     return results_df
 
 
-
-
-
-rr = calculate_return_rate(component_data)
+rr = calculate_return_rate(x)
 print(rr)
 
 plt.plot(rr['step'], rr['returnrate'])
-plt.ylim(-1,2)
+plt.ylim(-10, 10)
 plt.show()
 
 
