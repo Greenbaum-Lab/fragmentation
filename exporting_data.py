@@ -150,18 +150,11 @@ def get_largest_component(nets):
 nets = access_networks(cor)
 het = assign_node_numbers(cor)
 components = get_largest_component(nets)
-# pd.set_option('display.max_rows', None)
 
 # get the heterozygosity data for the corresponding largest component
 component_data = pd.merge(het, components, on=['replica', 'step', 'node_number'])
 component_data = component_data.sort_values(by=['replica', 'step', 'node_number'])
-# add 'net' column to differntiate every net in the same replica
-# component_data['net'] = component_data.groupby(['replica', 'step']).ngroup()
-# print(component_data.head(1000))
-
-component_data = component_data[component_data['replica'] == 0]
-x = component_data[(component_data['replica'] == 0) & (component_data['step'].between(224, 227))]
-print(x)
+# component_data = component_data[component_data['replica'].between(0, 10)]
 
 # plot the heterozygosity data of all nodes of replica 0 with step on x axis and het as y axis
 # df = full_data[(full_data['replica'] == 0) & (full_data['node_number'] == 43)]
@@ -170,37 +163,6 @@ print(x)
 # plt.show()
 
 ####### calculate the sd skewness and kurtosis for the heterozygosity data
-
-# def calculate_return_rate(df, window_fraction=0.5, step_size=1):
-#     """
-#     Calculate return rates (inverse of AR(1) coefficients) using a rolling window approach.
-#     :param df: DataFrame with 'step' and 'het' columns.
-#
-#     """
-#     window_size = int(len(df) * window_fraction)
-#     ar1_coefficients, return_rates, time_indices = [], [], []
-#
-#     for start in range(0, len(df) - window_size + 1, step_size):
-#         window_data = df['het'][start:start + window_size]  # Current window of data
-#         window_data_demeaned = window_data - np.mean(window_data)  # Demean the data within the window
-#
-#         # Fit an AR(1) model with no intercept
-#         model = AutoReg(window_data_demeaned, lags=1, trend='n').fit()
-#         ar1 = model.params[0]
-#         return_rate = 1 / ar1
-#
-#         ar1_coefficients.append(ar1)
-#         return_rates.append(return_rate)
-#         time_indices.append(df['step'][start + window_size - 1])  # Last index in the window
-#
-#     # Create a DataFrame to store the results
-#     results_df = pd.DataFrame({
-#         'step': time_indices,
-#         'returnrate': return_rates
-#     })
-#
-#     return results_df
-#
 
 
 def calculate_return_rate(df):
@@ -229,7 +191,7 @@ def calculate_return_rate(df):
         ar1_coefficients.append(ar1)
         return_rates.append(return_rate)
         time_indices.append(group['step'].iloc[-1])
-        print(group['step'].iloc[-1])# Last index in the group
+        print(group['step'].iloc[-1]) # Last index in the group
 
     # Create a DataFrame to store the results
     results_df = pd.DataFrame({
@@ -239,13 +201,13 @@ def calculate_return_rate(df):
 
     return results_df
 
-
-rr = calculate_return_rate(x)
-print(rr)
-
-plt.plot(rr['step'], rr['returnrate'])
-plt.ylim(-10, 10)
-plt.show()
+#
+# rr = calculate_return_rate(x)
+# print(rr)
+#
+# plt.plot(rr['step'], rr['returnrate'])
+# plt.ylim(-10, 10)
+# plt.show()
 
 
 def calculate_indicators(data):
@@ -254,50 +216,76 @@ def calculate_indicators(data):
     :param data: DataFrame with 'replica', 'step', and 'het' columns.
     :return: DataFrame with the calculated indicators for each step and replica.
     """
+
     grouped = data.groupby(['replica', 'step'])['het']
     indicators = grouped.agg(['std', 'skew']).reset_index()
     indicators['kurt'] = grouped.apply(pd.Series.kurtosis).values
 
     # Calculate return rates
-    rr_df = calculate_return_rate(data)
-    print(rr_df)
-    indicators = pd.merge(indicators, rr_df, on='step', how='left')
+    # rr_df = calculate_return_rate(data)
+    # print(rr_df)
+    # indicators = pd.merge(indicators, rr_df, on='step', how='left')
 
     return indicators
 
-#
-# indicators = calculate_indicators(component_data)
-# print(indicators)
-#
+
+indicators = calculate_indicators(component_data)
+print(indicators)
+# save info to csv
+indicators.to_csv(f'indicators.csv', index=False)
 # df = indicators[(indicators['replica'] == 0)]
-# # print(df)
+# print(df)
 # plt.plot(df['step'], df['std'])
 # plt.show()
-#
-# df = indicators[(indicators['replica'] == 0)]
-# # print(df)
-# plt.plot(df['step'], df['skew'])
-# plt.show()
-#
-# df = indicators[(indicators['replica'] == 0)]
-# # print(df)
-# plt.plot(df['step'], df['kurt'])
-# plt.show()
-#
+
 # df = indicators[(indicators['replica'] == 0)]
 # # print(df)
 # plt.plot(df['step'], df['returnrate'])
 # plt.show()
 #
 #
+# summary = indicators.groupby('step').agg(
+#     mean_std=('std', 'mean'),
+#     mean_skew=('skew', 'mean'),
+#     mean_kurt=('kurt', 'mean'),
+#     ci95_std=('std', lambda x: 1.96 * x.std() / (len(x)**0.5)),
+#     ci95_skew=('skew', lambda x: 1.96 * x.std() / (len(x)**0.5)),
+#     ci95_kurt=('kurt', lambda x: 1.96 * x.std() / (len(x)**0.5))
+# ).reset_index()
 #
-
-
-
-
-
-
+# print(summary)
 #
+#
+# plt.plot(summary['step'], summary['mean_std'])
+# plt.fill_between(summary['step'],
+#                  summary['mean_std'] - summary['ci95_std'],
+#                  summary['mean_std'] + summary['ci95_std'],
+#                   alpha=0.2)
+# plt.xlabel('Step')
+# plt.ylabel('Standard Deviation')
+# plt.savefig(f'./figs/ews_std.svg', format="svg")
+# plt.show()
+#
+# plt.plot(summary['step'], summary['mean_skew'])
+# plt.fill_between(summary['step'],
+#                  summary['mean_skew'] - summary['ci95_skew'],
+#                  summary['mean_skew'] + summary['ci95_skew'],
+#                   alpha=0.2)
+# plt.xlabel('Step')
+# plt.ylabel('skew')
+# plt.savefig(f'./figs/ews_skew.svg', format="svg")
+# plt.show()
+#
+# plt.plot(summary['step'], summary['mean_kurt'])
+# plt.fill_between(summary['step'],
+#                  summary['mean_kurt'] - summary['ci95_kurt'],
+#                  summary['mean_kurt'] + summary['ci95_kurt'],
+#                   alpha=0.2)
+# plt.xlabel('Step')
+# plt.ylabel('kurt')
+# plt.savefig(f'./figs/ews_kurt.svg', format="svg")
+# plt.show()
+
 ########## plot het for a specific node
 # df = assign_node_numbers(cor)
 # df = df[(df['replica'] == 99) & (df['node_number'] == 40)]
