@@ -120,9 +120,7 @@ def export_het_csv(data, frag: str):
 
 ######## read the file with RGG (d-0.6) data
 
-
-frag = 'cor'
-with open(f'{frag}_06.pickle', 'rb') as file:
+with open(f'cor_d0.6_r1000.pickle', 'rb') as file:
     cor = pickle.load(file)
 print('finish')
 
@@ -174,24 +172,19 @@ def calculate_return_rate(df):
 
     for step, group in df.groupby('step'):
         window_data = group['het']
-        print(window_data)
-        print(step)
         window_data_demeaned = window_data - np.mean(window_data)  # Demean the data
 
         if len(window_data) < 3:
             continue
-        print(len(window_data))
 
         # Fit an AR(1) model with no intercept
         model = AutoReg(window_data_demeaned, lags=1, trend='n').fit()
-        print(model.params)
         ar1 = model.params[0]
         return_rate = 1 / ar1
 
         ar1_coefficients.append(ar1)
         return_rates.append(return_rate)
         time_indices.append(group['step'].iloc[-1])
-        print(group['step'].iloc[-1]) # Last index in the group
 
     # Create a DataFrame to store the results
     results_df = pd.DataFrame({
@@ -232,59 +225,55 @@ def calculate_indicators(data):
 indicators = calculate_indicators(component_data)
 print(indicators)
 # save info to csv
-indicators.to_csv(f'indicators.csv', index=False)
+# indicators.to_csv(f'indicators.csv', index=False)
 # df = indicators[(indicators['replica'] == 0)]
 # print(df)
 # plt.plot(df['step'], df['std'])
 # plt.show()
 
-# df = indicators[(indicators['replica'] == 0)]
-# # print(df)
-# plt.plot(df['step'], df['returnrate'])
-# plt.show()
-#
-#
-# summary = indicators.groupby('step').agg(
-#     mean_std=('std', 'mean'),
-#     mean_skew=('skew', 'mean'),
-#     mean_kurt=('kurt', 'mean'),
-#     ci95_std=('std', lambda x: 1.96 * x.std() / (len(x)**0.5)),
-#     ci95_skew=('skew', lambda x: 1.96 * x.std() / (len(x)**0.5)),
-#     ci95_kurt=('kurt', lambda x: 1.96 * x.std() / (len(x)**0.5))
-# ).reset_index()
-#
-# print(summary)
-#
-#
-# plt.plot(summary['step'], summary['mean_std'])
-# plt.fill_between(summary['step'],
-#                  summary['mean_std'] - summary['ci95_std'],
-#                  summary['mean_std'] + summary['ci95_std'],
-#                   alpha=0.2)
-# plt.xlabel('Step')
-# plt.ylabel('Standard Deviation')
-# plt.savefig(f'./figs/ews_std.svg', format="svg")
-# plt.show()
-#
-# plt.plot(summary['step'], summary['mean_skew'])
-# plt.fill_between(summary['step'],
-#                  summary['mean_skew'] - summary['ci95_skew'],
-#                  summary['mean_skew'] + summary['ci95_skew'],
-#                   alpha=0.2)
-# plt.xlabel('Step')
-# plt.ylabel('skew')
-# plt.savefig(f'./figs/ews_skew.svg', format="svg")
-# plt.show()
-#
-# plt.plot(summary['step'], summary['mean_kurt'])
-# plt.fill_between(summary['step'],
-#                  summary['mean_kurt'] - summary['ci95_kurt'],
-#                  summary['mean_kurt'] + summary['ci95_kurt'],
-#                   alpha=0.2)
-# plt.xlabel('Step')
-# plt.ylabel('kurt')
-# plt.savefig(f'./figs/ews_kurt.svg', format="svg")
-# plt.show()
+
+
+summary = indicators.groupby('step').agg(
+    mean_std=('std', 'mean'),
+    mean_skew=('skew', 'mean'),
+    mean_kurt=('kurt', 'mean'),
+    ci95_std=('std', lambda x: 1.96 * x.std() / (len(x)**0.5)),
+    ci95_skew=('skew', lambda x: 1.96 * x.std() / (len(x)**0.5)),
+    ci95_kurt=('kurt', lambda x: 1.96 * x.std() / (len(x)**0.5))
+).reset_index()
+
+print(summary)
+
+
+plt.plot(summary['step'], summary['mean_std'])
+plt.fill_between(summary['step'],
+                 summary['mean_std'] - summary['ci95_std'],
+                 summary['mean_std'] + summary['ci95_std'],
+                  alpha=0.2)
+plt.xlabel('Step')
+plt.ylabel('Standard Deviation')
+plt.savefig(f'./figs/ews_std.svg', format="svg")
+plt.show()
+
+plt.plot(summary['step'], summary['mean_skew'])
+plt.fill_between(summary['step'],
+                 summary['mean_skew'] - summary['ci95_skew'],
+                 summary['mean_skew'] + summary['ci95_skew'],
+                  alpha=0.2)
+plt.xlabel('Step')
+plt.ylabel('skew')
+plt.savefig(f'./figs/ews_skew.svg', format="svg")
+plt.show()
+
+plt.plot(summary['step'], summary['mean_kurt'])
+plt.fill_between(summary['step'],
+                 summary['mean_kurt'] - summary['ci95_kurt'],
+                 summary['mean_kurt'] + summary['ci95_kurt'],
+                  alpha=0.2)
+plt.xlabel('Step')
+plt.ylabel('kurt')
+plt.savefig(f'./figs/ews_kurt.svg', format="svg")
+plt.show()
 
 ########## plot het for a specific node
 # df = assign_node_numbers(cor)

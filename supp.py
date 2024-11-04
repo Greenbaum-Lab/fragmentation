@@ -111,7 +111,7 @@ def plot_centrality(data, fragmentation_types, centrality='modularity'):
 fragmentation_types = ['rand']
 net = 'RGG'
 ignore = False
-data = load_data(fragmentation_types, net, ignore)
+data = load_data(fragmentation_types)
 
 plot_centrality(data, fragmentation_types, centrality='component')
 

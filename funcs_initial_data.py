@@ -13,7 +13,6 @@ from processes import (
     remove_edge_intrusive, remove_edge_divisive, remove_edge_regressive,
     remove_edge_optimal, remove_edge_optimal_no_update, remove_edge_worst
 )
-from supp import find_breakink_point_list
 # from Transformation import transform_matrix
 
 
@@ -388,9 +387,11 @@ def create_sw_networks(num_networks, N, k, p, space_dim=2):
     for _ in range(num_networks):
         G, positions = spatial_sw(N, k, p, space_dim)
         networks.append((G, positions))
+        nx.draw_networkx(G, pos=positions)
+        plt.show()
     return networks
 
-
+create_sw_networks(5, 50, 3, 0.1)
 
 # N = 100  # Number of nodes
 # k = 3  # Each node is initially connected to k nearest neighbors

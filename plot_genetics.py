@@ -1,3 +1,4 @@
+import pickle
 from statistics import mean
 
 import networkx as nx
@@ -67,7 +68,7 @@ def plot_all_fragmentation_types(data, measure: str):
         color = color_palette(i)
 
         df_stat, breaking_point = process_data_for_single_type(data[frag_type], measure)
-        print(df_stat)
+
         plt.plot(df_stat['avg_mean'], label=frag_type, color=color)
         plt.fill_between(df_stat.index, df_stat['avg_mean'] - df_stat['avg_ci'], df_stat['avg_mean'] + df_stat['avg_ci'],
                          alpha=0.2)
@@ -311,25 +312,28 @@ def plot_nodes_all(data):
 #######################
 ####################### plot data
 # fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt','wrst']
-# # fragmentation_types = ['rand']
-# data = load_data(fragmentation_types)
-#
+fragmentation_types = ['cor']
+data = load_data(fragmentation_types)
+
+# with open(f'cor_d0.6_r1000.pickle', 'rb') as file:
+#     cor = pickle.load(file)
+# print('finish')
 # plot_all_fragmentation_types(data, measure='fst')
-# plot_all_fragmentation_types(data, measure='het')
+plot_all_fragmentation_types(data, measure='het')
 
 
 ##############plot distributions
 ##### one frag type each time
 # fragmentation_types = ['rand', 'cor', 'intr', 'dist', 'reg', 'div', 'opt','wrst']
-fragmentation_types = ['reg']
-frag_type = fragmentation_types[0]
-
-data = load_data(fragmentation_types)
-
-df = filter_intervals(data[frag_type],measure='het')
-plot_distribution_het(df,type=frag_type)
-df = filter_intervals(data[frag_type],measure='fst')
-plot_distribution_fst(df,type=frag_type)
+# fragmentation_types = ['reg']
+# frag_type = fragmentation_types[0]
+#
+# data = load_data(fragmentation_types)
+#
+# df = filter_intervals(data[frag_type],measure='het')
+# plot_distribution_het(df,type=frag_type)
+# df = filter_intervals(data[frag_type],measure='fst')
+# plot_distribution_fst(df,type=frag_type)
 
 
 ####################### plot individual nodes
