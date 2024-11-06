@@ -391,10 +391,30 @@ def create_sw_networks(num_networks, N, k, p, space_dim=2):
         plt.show()
     return networks
 
-create_sw_networks(5, 50, 3, 0.1)
 
-# N = 100  # Number of nodes
-# k = 3  # Each node is initially connected to k nearest neighbors
-# p = 0.1  # Probability of rewiring each edge
-# num_networks = 5
-# x = create_multiple_networks(num_networks,N,k,p)
+
+def make_spatial_ER(n, p):
+    net = nx.Graph()
+    positions = {i: np.random.rand(2) for i in range(n)}
+    net = nx.erdos_renyi_graph(n, p)
+    nx.set_node_attributes(net, positions, 'pos')
+    return net
+
+def make_spatial_ER_nets(n_nets, n_nodes, p):
+    nets = []
+    for _ in range(n_nets):
+        net = make_spatial_ER(n_nodes, p)
+        nets.append(net)
+    return nets
+
+N = 50  # Number of nodes
+p = 0.1  # Edge probability for ER graph
+n_nets = 500
+nets = make_spatial_ER_nets(n_nets, N, p)
+#plot edges distribution
+num_edges = [net.number_of_edges() for net in nets]
+plt.hist(num_edges, bins='auto')
+plt.show()
+
+
+
