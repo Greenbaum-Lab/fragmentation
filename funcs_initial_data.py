@@ -319,19 +319,6 @@ def make_networks(n_nets: int, n_nodes: int, net_type) -> list:
 
     return nets
 
-nets = make_networks(100, 50, 'RGG')
-
-num_edges = [net.number_of_edges() for net in nets]
-
-# Create a histogram of the number of edges
-plt.hist(num_edges, bins='auto')
-
-plt.title('Distribution of Number of Edges')
-plt.xlabel('Number of Edges')
-plt.ylabel('Frequency')
-
-plt.show()
-
 
 def make_rgg(n_nets: int, n_nodes: int, target_edges: int) -> list:
     """
@@ -355,45 +342,45 @@ def make_rgg(n_nets: int, n_nodes: int, target_edges: int) -> list:
 
 
 
-def spatial_sw(N, k, p, space_dim=2):
-    G = nx.Graph()
-    positions = {i: np.random.rand(space_dim) for i in range(N)}
+# def spatial_sw(N, k, p):
+#     G = nx.Graph()
+#     positions = {i: np.random.rand(2) for i in range(N)}
+#
+#     # Add nodes with their positions
+#     for i in range(N):
+#         G.add_node(i, pos=positions[i])
+#
+#     # Ensure each node is connected to exactly k nearest neighbors
+#     for i in range(N):
+#         distances = np.array([np.linalg.norm(positions[i] - positions[j]) for j in range(N)])
+#         nearest_neighbors = np.argsort(distances)[1:k + 1]  # Get the k nearest neighbors
+#         for j in nearest_neighbors:
+#             G.add_edge(i, j)
+#
+#     # Rewire edges with probability p
+#     for i in range(N):
+#         neighbors = list(G.neighbors(i))
+#         for neighbor in neighbors:
+#             if np.random.rand() < p:
+#                 non_neighbors = [node for node in range(N) if node not in neighbors and node != i]
+#                 if non_neighbors:
+#                     new_neighbor = non_neighbors[np.random.randint(len(non_neighbors))]
+#                     G.remove_edge(i, neighbor)
+#                     G.add_edge(i, new_neighbor)
+#
+#     return G, positions
+# def make_spatial_sw_nets(n_networks, n_nodes, k, p):
+#     networks = []
+#     for _ in range(n_networks):
+#         G, positions = spatial_sw(n_nodes, k, p)
+#         networks.append((G, positions))
+#         nx.draw_networkx(G, pos=positions)
+#         plt.show()
+#     return networks
 
-    # Add nodes with their positions
-    for i in range(N):
-        G.add_node(i, pos=positions[i])
-
-    # Ensure each node is connected to exactly k nearest neighbors
-    for i in range(N):
-        distances = np.array([np.linalg.norm(positions[i] - positions[j]) for j in range(N)])
-        nearest_neighbors = np.argsort(distances)[1:k + 1]  # Get the k nearest neighbors
-        for j in nearest_neighbors:
-            G.add_edge(i, j)
-
-    # Rewire edges with probability p
-    for i in range(N):
-        neighbors = list(G.neighbors(i))
-        for neighbor in neighbors:
-            if np.random.rand() < p:
-                non_neighbors = [node for node in range(N) if node not in neighbors and node != i]
-                if non_neighbors:
-                    new_neighbor = non_neighbors[np.random.randint(len(non_neighbors))]
-                    G.remove_edge(i, neighbor)
-                    G.add_edge(i, new_neighbor)
-
-    return G, positions
-def create_sw_networks(num_networks, N, k, p, space_dim=2):
-    networks = []
-    for _ in range(num_networks):
-        G, positions = spatial_sw(N, k, p, space_dim)
-        networks.append((G, positions))
-        nx.draw_networkx(G, pos=positions)
-        plt.show()
-    return networks
 
 
-
-def make_spatial_ER(n, p):
+def make_spatial_ER(n, p=0.1):
     net = nx.Graph()
     positions = {i: np.random.rand(2) for i in range(n)}
     net = nx.erdos_renyi_graph(n, p)
@@ -407,14 +394,44 @@ def make_spatial_ER_nets(n_nets, n_nodes, p):
         nets.append(net)
     return nets
 
-N = 50  # Number of nodes
-p = 0.1  # Edge probability for ER graph
-n_nets = 500
-nets = make_spatial_ER_nets(n_nets, N, p)
-#plot edges distribution
-num_edges = [net.number_of_edges() for net in nets]
-plt.hist(num_edges, bins='auto')
-plt.show()
 
+def make_spatial_SW(dim=2, p=0.015):
+    net = nx.grid_graph(dim=dim,periodic=False)
+    mapping = {node: i for i, node in enumerate(net.nodes())}
+    net = nx.relabel_nodes(net, mapping)
+    pos = {mapping[node]: node for node in mapping}
+    nx.set_node_attributes(net, pos, 'pos')
 
+    nodes = list(net.nodes())
+    for i in range(len(nodes)):
+        for j in range(i + 1, len(nodes)):
+            if np.random.rand() < p:
+                net.add_edge(nodes[i], nodes[j])
 
+    return net
+
+def make_spatial_SW_nets(n_nets, dim=2, p=0.015):
+    nets = []
+    for _ in range(n_nets):
+        net = make_spatial_SW(dim, p)
+        nets.append(net)
+    return nets
+
+# n_nets = 500
+# nets = make_spatial_SW_nets(n_nets, dim=[7,7], p=0.015)
+# edges = [net.number_of_edges() for net in nets]
+# print(np.mean(edges))
+# plt.hist(edges, bins=20)
+# plt.show()
+
+# net = nx.grid_graph(dim=[7,7], periodic=True)
+# nx.draw_networkx(net,with_labels=False)
+# # plt.savefig('spatial_sw.svg')
+# plt.show()
+#
+# net = make_spatial_SW([7,7], 0.015)
+# pos = nx.get_node_attributes(net, 'pos')
+# print(pos)
+# nx.draw_networkx(net, pos=pos,with_labels=False)
+# # plt.savefig('spatial_sw.svg')
+# plt.show()
