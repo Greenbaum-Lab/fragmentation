@@ -417,21 +417,3 @@ def make_spatial_SW_nets(n_nets, dim=2, p=0.015):
         nets.append(net)
     return nets
 
-# n_nets = 500
-# nets = make_spatial_SW_nets(n_nets, dim=[7,7], p=0.015)
-# edges = [net.number_of_edges() for net in nets]
-# print(np.mean(edges))
-# plt.hist(edges, bins=20)
-# plt.show()
-
-# net = nx.grid_graph(dim=[7,7], periodic=True)
-# nx.draw_networkx(net,with_labels=False)
-# # plt.savefig('spatial_sw.svg')
-# plt.show()
-#
-# net = make_spatial_SW([7,7], 0.015)
-# pos = nx.get_node_attributes(net, 'pos')
-# print(pos)
-# nx.draw_networkx(net, pos=pos,with_labels=False)
-# # plt.savefig('spatial_sw.svg')
-# plt.show()
