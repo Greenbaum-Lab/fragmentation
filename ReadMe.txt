@@ -5,10 +5,10 @@
 ## Key Components
 
 - **`fragmentation.py`**  
-  Processes input data (e.g., BAM or CSV files), calculates fragment-size distributions, and produces summary statistics. It includes options for filtering fragments by length and computing key metrics.
+  Processes input data, calculates distributions, and produces summary statistics. It includes options for computing key network metrics.
 
 - **`plot_fragments.py`**  
-  Generates visualizations such as histograms and density plots from the summary data, enabling a quick assessment of the quality and characteristics of sequencing libraries.
+  Generates visualizations such as histograms and density plots from the summary data.
 
 - **`utils.py`**  
   Contains helper functions for data parsing, filtering, and statistical calculations used by the analysis and plotting scripts.
