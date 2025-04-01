@@ -9,6 +9,7 @@ from matplotlib import pyplot as plt
 from funcs import calculate_statistics, access_het_dist, access_fst_dist, normalize_steps, load_data, access_fst_mean, \
     access_het_mean, access_networks
 
+# pd.set_option('display.max_rows', None)
 
 def find_breaking_point(networks):
     """
@@ -148,7 +149,6 @@ def plot_distribution(df, measure='het' or 'fst', type=str):
     plt.savefig(f'./figs/dist_{measure}_{type}.svg', format="svg")
     plt.show()
 
-pd.set_option('display.max_rows', None)
 def plot_distribution_het(df, type=str):
     """ Plot the distribution of heterozygosity across different steps as a ridgeline plot. """
     # Create a figure and axes
@@ -301,25 +301,52 @@ def plot_nodes(df, frag_type):
 
 def plot_nodes_all(data):
     fragmentation_types = list(data.keys())
+    num_plots = len(fragmentation_types)
+    num_cols = 2
+    num_rows = (num_plots + num_cols - 1) // num_cols
 
-    for frag_type in fragmentation_types:
+    fig, axes = plt.subplots(num_rows, num_cols, figsize=(15, num_rows * 5))
+    axes = axes.flatten()
+
+    for i, frag_type in enumerate(fragmentation_types):
         het = data[frag_type][2]
         het_nodes = extract_selected_nodes(het)
 
-        plot_nodes(het_nodes, frag_type)
+        # Create a unique identifier for each node across replicas
+        het_nodes['node_replica_id'] = het_nodes['node_number'].astype(str) + '_replica_' + het_nodes['replica'].astype(str)
+        het_nodes = normalize_steps(het_nodes)
 
+        # Pivot the DataFrame
+        pivot_df = het_nodes.pivot_table(index='step', columns='node_replica_id', values='het')
+        pivot_df = normalize_steps(pivot_df)
+
+        ax = axes[i]
+        for column in pivot_df.columns:
+            ax.plot(pivot_df.index, pivot_df[column], color='grey', alpha=0.2)
+
+        ax.set_title(f'{frag_type} fragmentation', fontsize=20)
+        ax.set_ylabel('Heterozygosity', fontsize=22)
+        ax.tick_params(axis='both', which='major', labelsize=18)
+
+    # Remove any unused subplots
+    for j in range(i + 1, len(axes)):
+        fig.delaxes(axes[j])
+
+    plt.tight_layout()
+    plt.savefig('./figs/SUP_ind.svg')
+    plt.show()
 
 #######################
 ####################### plot data
 # fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt','wrst']
-fragmentation_types = ['cor']
-data = load_data(fragmentation_types)
+# fragmentation_types = ['cor']
+# data = load_data(fragmentation_types)
 
 # with open(f'cor_d0.6_r1000.pickle', 'rb') as file:
 #     cor = pickle.load(file)
 # print('finish')
 # plot_all_fragmentation_types(data, measure='fst')
-plot_all_fragmentation_types(data, measure='het')
+# plot_all_fragmentation_types(data, measure='het')
 
 
 ##############plot distributions
@@ -338,10 +365,129 @@ plot_all_fragmentation_types(data, measure='het')
 
 ####################### plot individual nodes
 ################
-# fragmentation_types = ['rand', 'cor', 'intr', 'dist', 'reg', 'div', 'opt']
-# fragmentation_types = ['rand']
-# net = 'RGG'
-# ignore = False
-# data = load_data(fragmentation_types, net, ignore)
+# fragmentation_types = ['rand', 'cor', 'intr', 'dist', 'reg', 'div', 'opt', 'wrst']
+# # fragmentation_types = ['rand']
+# data = load_data(fragmentation_types)
 #
 # plot_nodes_all(data)
+
+
+# calculate the variance of the heterozygsity across nodes in the network
+def calculate_variance(data, steps: list, fragmentation_types: list):
+    """
+    This function calculates the variance of heterozygosity for each node in the network
+    at specified steps for each fragmentation type. The calculation is performed separately
+    for each replica, and then the mean variance is calculated across replicas for each given step.
+    """
+    all_data = []
+
+    for frag_type in fragmentation_types:
+        frag_data = data[frag_type]
+        frag_data = access_het_dist(data[f'{frag_type}'])
+
+        variance_values = []
+        for step in steps:
+            all_replicas = []
+            for replica in frag_data['replica'].unique():
+                replica_data = frag_data[(frag_data['replica'] == replica) & (frag_data['step'] == step)]
+                variance = replica_data['het'].var()
+                all_replicas.append(variance)
+            variance_values.append(np.mean(all_replicas))
+
+        for step, variance in zip(steps, variance_values):
+            all_data.append({'fragmentation_type': frag_type, 'step': step, 'variance': variance})
+
+    df = pd.DataFrame(all_data)
+    df.to_csv('./variance.csv', index=False)
+    return df
+
+# run function
+# fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt','wrst']
+# data = load_data(fragmentation_types)
+# steps = [50, 100, 150, 200]
+# calculate_variance(data, steps, fragmentation_types)
+
+
+# Load the CSV file
+# df = pd.read_csv('./variance.csv')
+# fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt','wrst']
+#
+# # Create subplots
+# fig, axes = plt.subplots(nrows=4, ncols=2, figsize=(15, 20))
+# axes = axes.flatten()
+#
+# for i, frag_type in enumerate(fragmentation_types):
+#     frag_data = df[df['fragmentation_type'] == frag_type]
+#     frag_data['step'] = frag_data['step'].astype(str)  # Convert steps to categorical
+#     axes[i].bar(frag_data['step'], frag_data['variance'], label=frag_type, alpha=0.7)
+#     axes[i].set_title(frag_type)
+#     axes[i].set_title(frag_type, fontsize=16)
+#     axes[i].set_xlabel('Step', fontsize=16)
+#     axes[i].set_ylabel('Variance', fontsize=16)
+#     axes[i].set_ylim(0, df['variance'].max() * 1.1)  # Set the same y-axis scale for all plots
+#     axes[i].tick_params(axis='both', which='major', labelsize=16)
+#
+#
+# plt.tight_layout()
+# plt.savefig('./figs/SUP_variance.svg', format="svg")
+# plt.show()
+
+
+def calculate_variance_all_steps(data, fragmentation_types: list):
+    """
+    This function calculates the variance of heterozygosity for each node in the network
+    across all steps for each fragmentation type. The calculation is performed separately
+    for each replica, and then the mean variance is calculated across replicas for each step.
+    """
+    all_data = []
+
+    for frag_type in fragmentation_types:
+        frag_data = data[frag_type]
+        frag_data = access_het_dist(data[f'{frag_type}'])
+
+        steps = frag_data['step'].unique()
+        for step in steps:
+            all_replicas = []
+            for replica in frag_data['replica'].unique():
+                replica_data = frag_data[(frag_data['replica'] == replica) & (frag_data['step'] == step)]
+                variance = replica_data['het'].var()
+                all_replicas.append(variance)
+            mean_variance = np.mean(all_replicas)
+            ci_95 = 1.96 * np.std(all_replicas) / np.sqrt(len(all_replicas))
+            all_data.append({'fragmentation_type': frag_type, 'step': step, 'variance': mean_variance, 'ci_95': ci_95})
+
+    df = pd.DataFrame(all_data)
+    df.to_csv('./variance.csv', index=False)
+    return df
+
+# run function
+# fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt','wrst']
+# data = load_data(fragmentation_types)
+# calculate_variance_all_steps(data, fragmentation_types)
+
+def plot_variance_all_fragmentation_types(df):
+    """
+    Plot the variance of heterozygosity for each fragmentation type across all steps.
+    """
+    color_palette = plt.get_cmap('tab10')
+    plt.figure(figsize=(10, 6))
+
+    fragmentation_types = df['fragmentation_type'].unique()
+    for i, frag_type in enumerate(fragmentation_types):
+        color = color_palette(i)
+        frag_df = df[df['fragmentation_type'] == frag_type]
+        frag_df['step'] = ((frag_df['step'] - frag_df['step'].min()) /
+                           (frag_df['step'].max() - frag_df['step'].min()) * 100)
+        plt.plot(frag_df['step'], frag_df['variance'], label=frag_type, color=color)
+        plt.fill_between(frag_df['step'], frag_df['variance'] - frag_df['ci_95'], frag_df['variance'] + frag_df['ci_95'],
+                         alpha=0.2, color=color)
+
+    plt.xlabel('Fragmentation (%)', fontsize=16)
+    plt.ylabel('Variance', fontsize=16)
+    plt.tick_params(axis='both', which='major', labelsize=16)
+    plt.savefig('./figs/paper figs/SUP_variance.svg', format='svg')
+    plt.show()
+
+# Load the CSV file
+df = pd.read_csv('./variance.csv')
+plot_variance_all_fragmentation_types(df)
