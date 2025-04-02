@@ -489,5 +489,5 @@ def plot_variance_all_fragmentation_types(df):
     plt.show()
 
 # Load the CSV file
-df = pd.read_csv('./variance.csv')
-plot_variance_all_fragmentation_types(df)
+# df = pd.read_csv('./variance.csv')
+# plot_variance_all_fragmentation_types(df)
