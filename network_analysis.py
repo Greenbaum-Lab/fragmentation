@@ -1,3 +1,4 @@
+import concurrent
 from random import random
 
 import networkx as nx
@@ -6,16 +7,20 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from itertools import combinations
+
+from scipy.stats import pearsonr
+
 from funcs import load_data, normalize_steps, calculate_statistics, compute_modularity, calculate_centrality, \
     measure_giant_component, access_networks, access_fst_matrices
 from mantel import test
 import random
 
 
+############################################## plots centrality vs heterozygosity
 def plot_het_central(data: dict, measure: str):
     fragmentation_types = list(data.keys())
     plt.figure()
-    color_palette = plt.get_cmap('tab10')  # You can change 'tab10' to any other available palette
+    color_palette = plt.get_cmap('tab10')
 
     for i, frag_type in enumerate(fragmentation_types):
         het = data[frag_type][3]
@@ -53,6 +58,39 @@ def plot_het_central(data: dict, measure: str):
     plt.savefig(f'./figs/het_{measure}.svg', format="svg", dpi=300)
     plt.show()
 
+
+def plot_het_component(data: dict):
+    """
+    Plot the regression of heterozygosity with the size of the giant component for each fragmentation type.
+
+    Args:
+        data (dict): Dictionary containing the data for each fragmentation type.
+    """
+    fragmentation_types = list(data.keys())
+    plt.figure(figsize=(12, 8))
+    color_palette = plt.get_cmap('tab10')
+
+    for i, frag_type in enumerate(fragmentation_types):
+        het = data[frag_type][3]
+        giant_component = calculate_centrality(data[frag_type][1], measure='component')
+        merged = pd.merge(het, giant_component, how='outer')
+        merged = merged[merged['component'] != 0]
+
+        # Create bins for 'component' size
+        bins = pd.cut(merged['component'], bins=20)
+        binned_data = merged.groupby(bins).agg(avg=('avg', 'mean'),
+                                               std=('avg', 'std')).reset_index()
+        # Plot the binned data
+        plt.scatter(binned_data['component'].apply(lambda x: x.mid), binned_data['avg'], label=frag_type,
+                    color=color_palette(i))
+        plt.errorbar(binned_data['component'].apply(lambda x: x.mid), binned_data['avg'], yerr=binned_data['std'], fmt='o',
+                 label=frag_type, color=color_palette(i))
+
+    plt.xlabel('Fraction of nodes in the largest component', fontsize=20)
+    plt.ylabel('Heterozygosity', fontsize=20)
+    plt.tick_params(axis='both', labelsize=18)
+    plt.savefig(f'./figs/paper figs/het_component.svg', format="svg")
+    plt.show()
 
 ################################
 ################################ stack plot
@@ -209,8 +247,8 @@ def plot_network_stacked_area(df: pd.DataFrame, frag: str):
     ax.stackplot(x_values, y_values, labels=columns, colors=colors, alpha=0.8)
 
     # Set parameters
-    ax.set_xlabel('Fragmentation (%)', fontsize=20)
-    ax.set_ylabel('Proportion of the network', fontsize=20)
+    ax.set_xlabel('% fragmentation', fontsize=20)
+    ax.set_ylabel('Proportion', fontsize=22)
     ax.tick_params(axis='both', which='major', labelsize=18)  # Increase the size of the tick labels
     ax.set_title(frag)
     plt.ylim(0, 1)
@@ -221,22 +259,118 @@ def plot_network_stacked_area(df: pd.DataFrame, frag: str):
 
 
 
+def plot_network_stacked_area_all(data: dict):
+    """
+    Plot the metrics as stacked area charts for all fragmentation types in a single figure with two columns.
+    :param data: Dictionary containing the metrics to plot for each fragmentation type
+    """
+
+    fragmentation_types = list(data.keys())
+    num_plots = len(fragmentation_types)
+    num_cols = 2
+    num_rows = (num_plots + num_cols - 1) // num_cols
+
+    fig, axes = plt.subplots(num_rows, num_cols, figsize=(15, num_rows * 5))
+    axes = axes.flatten()
+
+    for i, frag_type in enumerate(fragmentation_types):
+        df = data[frag_type]
+        df = df.sort_values(by='step')
+        df = normalize_steps(df)
+
+        ax = axes[i]
+        columns = ['waste', 'isolated', 'components', 'giant']
+        colors = plt.cm.Dark2.colors[:len(columns)]
+
+        x_values = df['step'].values
+        y_values = [df[col].values for col in columns]
+
+        ax.stackplot(x_values, y_values, labels=columns, colors=colors, alpha=0.8)
+        ax.set_xlabel('% fragmentation', fontsize=20)
+        ax.set_ylabel('Proportion', fontsize=22)
+        ax.tick_params(axis='both', which='major', labelsize=18)
+        ax.set_title(frag_type)
+        ax.set_ylim(0, 1)
+
+    for j in range(i + 1, len(axes)):
+        fig.delaxes(axes[j])
+
+    plt.tight_layout()
+    plt.savefig('./figs/stack_all_fragmentation_types.svg')
+    plt.show()
+
+
+
+
+def plot_network_stacked_area_all(data: dict):
+    """
+    Plot the metrics as stacked area charts for all fragmentation types in a single figure with two columns.
+    :param data: Dictionary containing the metrics to plot for each fragmentation type
+    """
+
+    fragmentation_types = list(data.keys())
+    num_plots = len(fragmentation_types)
+    num_cols = 2
+    num_rows = (num_plots + num_cols - 1) // num_cols
+
+    fig, axes = plt.subplots(num_rows, num_cols, figsize=(15, num_rows * 5))
+    axes = axes.flatten()
+
+    for i, frag_type in enumerate(fragmentation_types):
+        networks = data[frag_type][1]
+        matrices = measure_network_metrics_replicas(networks)
+        stats = calculate_statistics(matrices)
+        stats = normalize_steps(stats)
+        df = stats.sort_values(by='step')
+        df = normalize_steps(df)
+
+        ax = axes[i]
+        columns = ['waste', 'isolated', 'components', 'giant']
+        colors = plt.cm.Dark2.colors[:len(columns)]
+
+        x_values = df['step'].values
+        y_values = [df[col].values for col in columns]
+
+        ax.stackplot(x_values, y_values, labels=columns, colors=colors, alpha=0.8)
+        ax.set_xlabel('% fragmentation', fontsize=20)
+        ax.set_ylabel('Proportion', fontsize=22)
+        ax.tick_params(axis='both', which='major', labelsize=18)
+        ax.set_title(frag_type)
+        ax.set_ylim(0, 1)
+
+    for j in range(i + 1, len(axes)):
+        fig.delaxes(axes[j])
+
+    plt.tight_layout()
+    plt.savefig('./figs/stack_all_fragmentation_types.svg')
+    plt.show()
+
+
+
+
 ###########################################@@#####################
 ###############################  analysis  #######################
 
-# fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt', 'wrst']
-# # fragmentation_types = ['div']
-# data = load_data(fragmentation_types)
-#
-# ########################plot centrality vs heterozygosity
-# plot_het_central(data, measure='component')
+fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt', 'wrst']
+# fragmentation_types = ['rand', 'div']
+data = load_data(fragmentation_types)
 
+########################plot centrality vs heterozygosity
+# plot_het_central(data, measure='component')
+# plot_het_component(data)
 
 ##############################plot stacks
+
+# fragmentation_types = ['rand', 'cor', 'intr', 'dist', 'reg', 'div', 'opt', 'wrst']
+# data = load_data(fragmentation_types)
 # networks = data[fragmentation_types[0]][1]
 # matrices = measure_network_metrics_replicas(networks)
+#
 # stats = calculate_statistics(matrices)
-# plot_network_stacked_area(stats,frag=fragmentation_types[0])
+# # plot_network_stacked_area(stats,frag=fragmentation_types[0])
+# plot_network_stacked_area_all(data)
+
+
 
 ##############################plot centrality vs fragmnetation
 # plot_centrality(data,centrality='connectivity')
@@ -303,43 +437,6 @@ def random_walk(net, start, end):
         steps += 1
     return steps
 
-
-
-# def get_random_walk_matrix(net):
-#     """
-#     calculate the random walk distance between all pairs of nodes in the network.
-#     :return: distance matrix of edges between nodes
-#     """
-#     n = range(nx.number_of_nodes(net))
-#     # create a martix of inf in the size of the number of nodes
-#     distance_matrix = np.full(((max(n)+1), (max(n))+1), np.inf)
-#     np.fill_diagonal(distance_matrix, 0)
-#     #get all node pair combinations
-#     pairs = list(combinations(n, 2))
-#     # insert the random walk distance for each pair of nodes that are connected
-#     steps = []
-#     for u, v in pairs:
-#         if nx.has_path(net, source=u, target=v):
-#             steps = []
-#
-#             for i in range(50):
-#                 itreration = random_walk(net, u, v)
-#                 steps.append(itreration)
-#             res = np.mean(steps)
-#             distance_matrix[u, v] = res
-#             distance_matrix[v, u] = distance_matrix[u, v]
-#     return distance_matrix
-#
-
-
-import concurrent.futures
-from itertools import combinations
-
-import concurrent.futures
-from itertools import combinations
-import numpy as np
-import networkx as nx
-import random
 
 def random_walk(net, start, end):
     current_node = start
