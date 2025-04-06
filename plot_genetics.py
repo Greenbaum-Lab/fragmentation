@@ -50,9 +50,9 @@ def process_data_for_single_type(frag_data, measure: str):
     df_stat = calculate_statistics(df)
 
     df_res = normalize_steps(df_stat)
-    breaking_point = mean(find_breakink_point_list(access_networks(frag_data)))
+    # breaking_point = mean(find_breakink_point_list(access_networks(frag_data)))
 
-    return df_res, breaking_point
+    return df_res #,breaking_point
 
 def plot_all_fragmentation_types(data, measure: str):
     """Plot data for all fragmentation types with mean and 95% confidence interval and breaking point.
@@ -61,23 +61,24 @@ def plot_all_fragmentation_types(data, measure: str):
         measure: The measure to plot ('fst' or 'het')."""
 
     color_palette = plt.get_cmap('tab10')
-    plt.figure()
+    plt.figure(figsize=(10, 6))
 
     # i-index; frag_type-string of fragmentation type; df-dataframe of avg fst\het
     for i, (frag_type, df) in enumerate(data.items()):
 
         color = color_palette(i)
 
-        df_stat, breaking_point = process_data_for_single_type(data[frag_type], measure)
+        df_stat = process_data_for_single_type(data[frag_type], measure)
 
-        plt.plot(df_stat['avg_mean'], label=frag_type, color=color)
-        plt.fill_between(df_stat.index, df_stat['avg_mean'] - df_stat['avg_ci'], df_stat['avg_mean'] + df_stat['avg_ci'],
+        plt.plot(df_stat['mean'], label=frag_type, color=color)
+        plt.fill_between(df_stat.index, df_stat['mean'] - df_stat['sd'], df_stat['mean'] + df_stat['sd'],
                          alpha=0.2)
-        plt.axvline(x=breaking_point, color=color, ymax=0.05, linewidth=4)
+        # plt.axvline(x=breaking_point, color=color, ymax=0.05, linewidth=4)
 
-    plt.xlabel('Fragmentation (%)', fontsize=16)
-    plt.ylabel(measure, fontsize=16)
-    plt.legend()
+    plt.xlabel('Fragmentation (%)', fontsize=34)
+    plt.ylabel(measure, fontsize=34)
+    # plt.legend()
+    plt.tick_params(axis='both', which='major', labelsize=25)
     plt.savefig(f'./figs/genetics_general_{measure}.svg', format="svg")
     plt.show()
 
@@ -390,15 +391,12 @@ def plot_variance(df):
 
 #######################
 ####################### plot data
-# fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt','wrst']
+fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt','wrst']
 # fragmentation_types = ['cor']
-# data = load_data(fragmentation_types)
+data = load_data(fragmentation_types)
 
-# with open(f'cor_d0.6_r1000.pickle', 'rb') as file:
-#     cor = pickle.load(file)
-# print('finish')
-# plot_all_fragmentation_types(data, measure='fst')
-# plot_all_fragmentation_types(data, measure='het')
+plot_all_fragmentation_types(data, measure='fst')
+plot_all_fragmentation_types(data, measure='het')
 
 
 ##############plot distributions
