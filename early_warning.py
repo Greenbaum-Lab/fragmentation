@@ -99,7 +99,7 @@ def export_het_csv(data, frag: str):
     :param frag: fragmentation type
     :return: csv file
     """
-    data = assign_node_numbers(cor)
+    data = assign_node_numbers(data)
     surviving_nodes = get_max_het_nodes(data, num_nodes=10)
     final_df = extract_steps_for_nodes(data, surviving_nodes)
     final_df.to_csv(f'{frag}_het.csv')
@@ -120,9 +120,19 @@ def export_het_csv(data, frag: str):
 
 ######## read the file with RGG (d-0.6) data
 
-with open(f'cor_d0.6_r1000.pickle', 'rb') as file:
-    cor = pickle.load(file)
-print('finish')
+# with open(f'cor_d0.6_r1000.pickle', 'rb') as file:
+#     cor = pickle.load(file)
+# print('finish')
+#
+# frag = 'cor_d0.6_r1000'
+########## plot het for a specific node
+# df = assign_node_numbers(cor)
+# df = df[(df['replica'] == 99) & (df['node_number'] == 40)]
+# plt.plot(df['step'], df['het'])
+# plt.show()
+# #
+# export_het_csv(cor, frag)
+
 
 
 # follow the largest component in the network for each replica across the fragmentation procss
@@ -145,6 +155,7 @@ def get_largest_component(nets):
     return pd.DataFrame(components)
 
 
+# load the data
 nets = access_networks(cor)
 het = assign_node_numbers(cor)
 components = get_largest_component(nets)
@@ -152,14 +163,23 @@ components = get_largest_component(nets)
 # get the heterozygosity data for the corresponding largest component
 component_data = pd.merge(het, components, on=['replica', 'step', 'node_number'])
 component_data = component_data.sort_values(by=['replica', 'step', 'node_number'])
-# component_data = component_data[component_data['replica'].between(0, 10)]
+component_data = component_data[component_data['replica'].between(0, 2)]
 
 # plot the heterozygosity data of all nodes of replica 0 with step on x axis and het as y axis
-# df = full_data[(full_data['replica'] == 0) & (full_data['node_number'] == 43)]
+# df = component_data[(component_data['replica'] == 0) & (component_data['node_number'] == 43)]
 # # print(df)
 # plt.plot(df['step'], df['het'])
 # plt.show()
 
+# steps_to_plot = [0, 300, 600, 700]
+# for step in steps_to_plot:
+#     df = component_data[(component_data['replica'] == 0) & (component_data['step'] == step)]
+#     plt.figure()
+#     plt.hist(df['het'], bins=15, alpha=0.7)
+#     plt.title(f'Histogram of het at step {step}')
+#     plt.xlabel('het')
+#     plt.ylabel('Frequency')
+#     plt.show()
 ####### calculate the sd skewness and kurtosis for the heterozygosity data
 
 
@@ -222,65 +242,57 @@ def calculate_indicators(data):
     return indicators
 
 
-indicators = calculate_indicators(component_data)
-print(indicators)
-# save info to csv
+# indicators = calculate_indicators(component_data)
+
+# save csv
 # indicators.to_csv(f'indicators.csv', index=False)
-# df = indicators[(indicators['replica'] == 0)]
+# indicators = pd.read_csv(f'indicators.csv')
+# df = indicators[(indicators['replica'] == 5)]
 # print(df)
-# plt.plot(df['step'], df['std'])
+# plt.plot(df['step'], df['skew'])
 # plt.show()
 
 
 
-summary = indicators.groupby('step').agg(
-    mean_std=('std', 'mean'),
-    mean_skew=('skew', 'mean'),
-    mean_kurt=('kurt', 'mean'),
-    ci95_std=('std', lambda x: 1.96 * x.std() / (len(x)**0.5)),
-    ci95_skew=('skew', lambda x: 1.96 * x.std() / (len(x)**0.5)),
-    ci95_kurt=('kurt', lambda x: 1.96 * x.std() / (len(x)**0.5))
-).reset_index()
-
-print(summary)
-
-
-plt.plot(summary['step'], summary['mean_std'])
-plt.fill_between(summary['step'],
-                 summary['mean_std'] - summary['ci95_std'],
-                 summary['mean_std'] + summary['ci95_std'],
-                  alpha=0.2)
-plt.xlabel('Step')
-plt.ylabel('Standard Deviation')
-plt.savefig(f'./figs/ews_std.svg', format="svg")
-plt.show()
-
-plt.plot(summary['step'], summary['mean_skew'])
-plt.fill_between(summary['step'],
-                 summary['mean_skew'] - summary['ci95_skew'],
-                 summary['mean_skew'] + summary['ci95_skew'],
-                  alpha=0.2)
-plt.xlabel('Step')
-plt.ylabel('skew')
-plt.savefig(f'./figs/ews_skew.svg', format="svg")
-plt.show()
-
-plt.plot(summary['step'], summary['mean_kurt'])
-plt.fill_between(summary['step'],
-                 summary['mean_kurt'] - summary['ci95_kurt'],
-                 summary['mean_kurt'] + summary['ci95_kurt'],
-                  alpha=0.2)
-plt.xlabel('Step')
-plt.ylabel('kurt')
-plt.savefig(f'./figs/ews_kurt.svg', format="svg")
-plt.show()
-
-########## plot het for a specific node
-# df = assign_node_numbers(cor)
-# df = df[(df['replica'] == 99) & (df['node_number'] == 40)]
-# plt.plot(df['step'], df['het'])
+# summary = indicators.groupby('step').agg(
+#     mean_std=('std', 'mean'),
+#     mean_skew=('skew', 'mean'),
+#     mean_kurt=('kurt', 'mean'),
+#     ci95_std=('std', lambda x: 1.96 * x.std() / (len(x)**0.5)),
+#     ci95_skew=('skew', lambda x: 1.96 * x.std() / (len(x)**0.5)),
+#     ci95_kurt=('kurt', lambda x: 1.96 * x.std() / (len(x)**0.5))
+# ).reset_index()
+#
+# print(summary)
+#
+#
+# plt.plot(summary['step'], summary['mean_std'])
+# plt.fill_between(summary['step'],
+#                  summary['mean_std'] - summary['ci95_std'],
+#                  summary['mean_std'] + summary['ci95_std'],
+#                   alpha=0.2)
+# plt.xlabel('Step')
+# plt.ylabel('Standard Deviation')
+# plt.savefig(f'./figs/ews_std.svg', format="svg")
 # plt.show()
-# #
-# export_het_csv(rand, frag)
-
+#
+# plt.plot(summary['step'], summary['mean_skew'])
+# plt.fill_between(summary['step'],
+#                  summary['mean_skew'] - summary['ci95_skew'],
+#                  summary['mean_skew'] + summary['ci95_skew'],
+#                   alpha=0.2)
+# plt.xlabel('Step')
+# plt.ylabel('skew')
+# plt.savefig(f'./figs/ews_skew.svg', format="svg")
+# plt.show()
+#
+# plt.plot(summary['step'], summary['mean_kurt'])
+# plt.fill_between(summary['step'],
+#                  summary['mean_kurt'] - summary['ci95_kurt'],
+#                  summary['mean_kurt'] + summary['ci95_kurt'],
+#                   alpha=0.2)
+# plt.xlabel('Step')
+# plt.ylabel('kurt')
+# plt.savefig(f'./figs/ews_kurt.svg', format="svg")
+# plt.show()
 
