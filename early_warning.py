@@ -4,8 +4,10 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 from statsmodels.tsa.ar_model import AutoReg
+import random
 
-from funcs import access_het_dist, access_networks
+from funcs import access_het_dist, access_networks, normalize_steps
+
 
 #show the first 1000 rows
 # pd.set_option('display.max_rows', None)
@@ -118,22 +120,21 @@ def export_het_csv(data, frag: str):
 ####################################################
 ######################### analysis #################
 
-######## read the file with RGG (d-0.6) data
+######## read the pickle file with RGG (d-0.6) data
 
 # with open(f'cor_d0.6_r1000.pickle', 'rb') as file:
 #     cor = pickle.load(file)
 # print('finish')
-#
 # frag = 'cor_d0.6_r1000'
-########## plot het for a specific node
-# df = assign_node_numbers(cor)
-# df = df[(df['replica'] == 99) & (df['node_number'] == 40)]
-# plt.plot(df['step'], df['het'])
-# plt.show()
-# #
+#save the heterozygosity data to a csv file
 # export_het_csv(cor, frag)
 
 
+
+#plot nodes
+# cor= pd.read_csv('cor_d0.6_r1000_het.csv')
+# print(cor)
+# plot_random_nodes(cor, num_nodes=10)
 
 # follow the largest component in the network for each replica across the fragmentation procss
 def get_largest_component(nets):
@@ -156,14 +157,14 @@ def get_largest_component(nets):
 
 
 # load the data
-nets = access_networks(cor)
-het = assign_node_numbers(cor)
-components = get_largest_component(nets)
-
-# get the heterozygosity data for the corresponding largest component
-component_data = pd.merge(het, components, on=['replica', 'step', 'node_number'])
-component_data = component_data.sort_values(by=['replica', 'step', 'node_number'])
-component_data = component_data[component_data['replica'].between(0, 2)]
+# nets = access_networks(cor)
+# het = assign_node_numbers(cor)
+# components = get_largest_component(nets)
+#
+# # get the heterozygosity data for the corresponding largest component
+# component_data = pd.merge(het, components, on=['replica', 'step', 'node_number'])
+# component_data = component_data.sort_values(by=['replica', 'step', 'node_number'])
+# component_data = component_data[component_data['replica'].between(0, 2)]
 
 # plot the heterozygosity data of all nodes of replica 0 with step on x axis and het as y axis
 # df = component_data[(component_data['replica'] == 0) & (component_data['node_number'] == 43)]
@@ -233,6 +234,7 @@ def calculate_indicators(data):
     grouped = data.groupby(['replica', 'step'])['het']
     indicators = grouped.agg(['std', 'skew']).reset_index()
     indicators['kurt'] = grouped.apply(pd.Series.kurtosis).values
+    indicators.to_csv(f'indicators.csv', index=False)
 
     # Calculate return rates
     # rr_df = calculate_return_rate(data)
@@ -244,55 +246,123 @@ def calculate_indicators(data):
 
 # indicators = calculate_indicators(component_data)
 
-# save csv
-# indicators.to_csv(f'indicators.csv', index=False)
-# indicators = pd.read_csv(f'indicators.csv')
-# df = indicators[(indicators['replica'] == 5)]
-# print(df)
-# plt.plot(df['step'], df['skew'])
-# plt.show()
+
+#### final plot
 
 
 
-# summary = indicators.groupby('step').agg(
-#     mean_std=('std', 'mean'),
-#     mean_skew=('skew', 'mean'),
-#     mean_kurt=('kurt', 'mean'),
-#     ci95_std=('std', lambda x: 1.96 * x.std() / (len(x)**0.5)),
-#     ci95_skew=('skew', lambda x: 1.96 * x.std() / (len(x)**0.5)),
-#     ci95_kurt=('kurt', lambda x: 1.96 * x.std() / (len(x)**0.5))
-# ).reset_index()
-#
-# print(summary)
-#
-#
-# plt.plot(summary['step'], summary['mean_std'])
-# plt.fill_between(summary['step'],
-#                  summary['mean_std'] - summary['ci95_std'],
-#                  summary['mean_std'] + summary['ci95_std'],
-#                   alpha=0.2)
-# plt.xlabel('Step')
-# plt.ylabel('Standard Deviation')
-# plt.savefig(f'./figs/ews_std.svg', format="svg")
-# plt.show()
-#
-# plt.plot(summary['step'], summary['mean_skew'])
-# plt.fill_between(summary['step'],
-#                  summary['mean_skew'] - summary['ci95_skew'],
-#                  summary['mean_skew'] + summary['ci95_skew'],
-#                   alpha=0.2)
-# plt.xlabel('Step')
-# plt.ylabel('skew')
-# plt.savefig(f'./figs/ews_skew.svg', format="svg")
-# plt.show()
-#
-# plt.plot(summary['step'], summary['mean_kurt'])
-# plt.fill_between(summary['step'],
-#                  summary['mean_kurt'] - summary['ci95_kurt'],
-#                  summary['mean_kurt'] + summary['ci95_kurt'],
-#                   alpha=0.2)
-# plt.xlabel('Step')
-# plt.ylabel('kurt')
-# plt.savefig(f'./figs/ews_kurt.svg', format="svg")
-# plt.show()
+def plot_het_indicator(cor: pd.DataFrame,
+                                indicators: pd.DataFrame,
+                                indicator: str,
+                                n_samples: int = 10) -> None:
+    """
+    Creates a combined plot with two y-axes:
+      - Left y-axis: overall mean and standard deviation (SD) of heterozygosity (het) across all replicates,
+        plus n_samples random individual replica curves for het.
+      - Right y-axis: overall mean and SD of the specified indicator across all replicates,
+        plus n_samples random individual replica curves for that indicator.
+
+    The x-axis shows the 'step' converted to a percentage (% fragmentation).
+
+    Parameters:
+    -----------
+    cor : pd.DataFrame
+        DataFrame containing columns: ['step', 'het', 'replica', 'node_number'].
+    indicators : pd.DataFrame
+        DataFrame containing columns: ['replica', 'step', 'std', 'skew', 'kurt'].
+    indicator : str
+        The indicator to plot (e.g. 'skew', 'std', or 'kurt').
+    n_samples : int, optional
+        Number of random individual replica curves to plot for each metric. Default is 10.
+
+    Returns:
+    --------
+    None
+        Displays the combined plot.
+    """
+    # Use a common scaling for the x-axis: convert 'step' to % fragmentation.
+    global_max = max(cor['step'].max(), indicators['step'].max())
+
+    # ---------------------------
+    # Overall Heterozygosity Stats
+    # ---------------------------
+    stats_het = cor.groupby('step')['het'].agg(mean='mean', std='std').reset_index()
+    stats_het['step_pct'] = stats_het['step'] / global_max * 100
+
+    # ---------------------------
+    # Overall Indicator Stats
+    # ---------------------------
+    stats_ind = indicators.groupby('step')[indicator].agg(mean='mean', std='std').reset_index()
+    stats_ind['step_pct'] = stats_ind['step'] / global_max * 100
+
+    # ---------------------------
+    # Set up the figure with two y-axes
+    # ---------------------------
+    plt.style.use('seaborn-v0_8-whitegrid')
+    fig, ax1 = plt.subplots(figsize=(12, 8))
+    ax2 = ax1.twinx()
+    color_het = 'darkorange'
+    color_ind = 'forestgreen'
+
+    # Plot overall het mean and SD on left axis (ax1)
+    ax1.plot(stats_het['step_pct'], stats_het['mean'],
+             color=color_het)
+    ax1.fill_between(stats_het['step_pct'],
+                     stats_het['mean'] - stats_het['std'],
+                     stats_het['mean'] + stats_het['std'],
+                     color=color_het, alpha=0.2)
+
+    # Plot overall indicator mean and SD on right axis (ax2)
+    ax2.plot(stats_ind['step_pct'], stats_ind['mean'],
+              color=color_ind)
+    ax2.fill_between(stats_ind['step_pct'],
+                     stats_ind['mean'] - stats_ind['std'],
+                     stats_ind['mean'] + stats_ind['std'],
+                     color=color_ind, alpha=0.2)
+
+    # ---------------------------
+    # Plot individual sample curves for both het and indicator
+    # ---------------------------
+    # Identify replicas present in both DataFrames.
+    common_replicas = list(set(cor['replica'].unique()).intersection(set(indicators['replica'].unique())))
+    selected_replicas = random.sample(common_replicas, n_samples)
+
+    for i, replica in enumerate(selected_replicas):
+        # --- Heterozygosity for this replica ---
+        rep_cor = cor[cor['replica'] == replica]
+        rep_het = rep_cor.groupby('step', as_index=False)['het'].mean()
+        rep_het['step_pct'] = rep_het['step'] / global_max * 100
+
+        # --- Indicator for this replica ---
+        rep_ind = indicators[indicators['replica'] == replica].sort_values('step')
+        rep_ind['step_pct'] = rep_ind['step'] / global_max * 100
+
+        # Plot sample curves with lower opacity.
+        ax1.plot(rep_het['step_pct'], rep_het['het'], color=color_het, alpha=0.5)
+        ax2.plot(rep_ind['step_pct'], rep_ind[indicator], color=color_ind, alpha=0.5)
+
+
+    ax1.set_xlabel('% fragmentation', fontsize=32)
+    ax1.set_ylabel('Heterozygosity', color=color_het, fontsize=32)
+    ax2.set_ylabel("Variance", color=color_ind, fontsize=32)
+
+    ax1.tick_params(axis='y', labelsize=28, labelcolor=color_het)
+    ax2.tick_params(axis='y', labelsize=28, labelcolor=color_ind)
+    ax1.tick_params(axis='x', labelsize=28)
+
+    plt.savefig(f'./figs/het_{indicator}_metapop.svg', format='svg')
+    plt.show()
+
+
+# run the function
+# set random seed for reproducibility
+random.seed(1)
+cor = pd.read_csv('cor_d0.6_r1000_het.csv')
+indicators = pd.read_csv('indicators.csv')
+
+plot_het_indicator(cor, indicators, indicator='std', n_samples=10)
+
+
+
+
 
