@@ -20,15 +20,13 @@ def load_data(fragmentation_types):
 
 
 def calculate_statistics(df):
-    """Calculate mean and 95% confidence interval."""
+    """Calculate mean and standard deviation."""
     column = df.columns.difference(['replica', 'step']).values.tolist()
     if len(column) > 1:
         column = column[0]
-    mean_values = df.groupby('step')[column].mean()
-    sem = df.groupby('step')[column].sem()  # Standard error of the mean
-    confidence_interval = 1.96 * sem  # 95% confidence interval
-    combined = pd.merge(mean_values, confidence_interval, on='step',
-                        suffixes=('_mean', '_ci'))
+    mean = df.groupby('step')[column].mean().rename('mean')
+    sd = df.groupby('step')[column].std().rename('sd')
+    combined = pd.merge(mean, sd, on='step')
     return pd.DataFrame(combined)
 
 def access_het_dist(frag_data:list):
@@ -62,16 +60,7 @@ def normalize_steps(data):
     data.index = data.index / data.index.max() * 100
     return data
 
-def compute_modularity(net):
 
-    im = Infomap(silent=True, markov_time=1, variable_markov_time=True,flow_model='undirected',num_trials=10)
-
-    # Add edges to the Infomap instance
-    for edge in net.edges():
-        im.add_link(*edge)
-    im.run()
-
-    return im.codelength
 
 def measure_giant_component(network: nx.Graph, min_size: int = 4):
     """
@@ -144,6 +133,17 @@ def calculate_centrality(all_nets: list,
 
 
 ########### extra functions
+
+def compute_modularity(net):
+
+    im = Infomap(silent=True, markov_time=1, variable_markov_time=True,flow_model='undirected',num_trials=10)
+
+    # Add edges to the Infomap instance
+    for edge in net.edges():
+        im.add_link(*edge)
+    im.run()
+
+    return im.codelength
 def plot_fragmentation(data, replica: int):
     """
     Plots network snapshot across fragmentation processes.

@@ -78,6 +78,7 @@ def plot_all_fragmentation_types(data, measure: str):
     plt.xlabel('Fragmentation (%)', fontsize=34)
     plt.ylabel(measure, fontsize=34)
     # plt.legend()
+    plt.ylim(-0.05, 1.05)
     plt.tick_params(axis='both', which='major', labelsize=25)
     plt.savefig(f'./figs/genetics_general_{measure}.svg', format="svg")
     plt.show()
@@ -338,6 +339,7 @@ def plot_nodes_all(data):
     plt.show()
 
 
+############### variance ####################
 def calculate_variance(data, fragmentation_types: list):
     """
     This function calculates the variance of heterozygosity for each node in the network
@@ -357,8 +359,8 @@ def calculate_variance(data, fragmentation_types: list):
                 variance = replica_data['het'].var()
                 all_replicas.append(variance)
             mean_variance = np.mean(all_replicas)
-            ci_95 = 1.96 * np.std(all_replicas) / np.sqrt(len(all_replicas))
-            all_data.append({'fragmentation_type': frag_type, 'step': step, 'variance': mean_variance, 'ci_95': ci_95})
+            sd = np.std(all_replicas)
+            all_data.append({'fragmentation_type': frag_type, 'step': step, 'variance': mean_variance, 'sd': sd})
 
     df = pd.DataFrame(all_data)
     df.to_csv('./variance.csv', index=False)
@@ -379,12 +381,12 @@ def plot_variance(df):
         frag_df['step'] = ((frag_df['step'] - frag_df['step'].min()) /
                            (frag_df['step'].max() - frag_df['step'].min()) * 100)
         plt.plot(frag_df['step'], frag_df['variance'], label=frag_type, color=color)
-        plt.fill_between(frag_df['step'], frag_df['variance'] - frag_df['ci_95'], frag_df['variance'] + frag_df['ci_95'],
+        plt.fill_between(frag_df['step'], frag_df['variance'] - frag_df['sd'], frag_df['variance'] + frag_df['sd'],
                          alpha=0.2, color=color)
 
-    plt.xlabel('Fragmentation (%)', fontsize=16)
-    plt.ylabel('Variance', fontsize=16)
-    plt.tick_params(axis='both', which='major', labelsize=16)
+    plt.xlabel('Fragmentation (%)', fontsize=20)
+    plt.ylabel('Variance', fontsize=20)
+    plt.tick_params(axis='both', which='major', labelsize=20)
     plt.savefig('./figs/paper figs/SUP_variance.svg', format='svg')
     plt.show()
 
@@ -421,7 +423,7 @@ plot_all_fragmentation_types(data, measure='het')
 # plot_nodes_all(data)
 
 
-# calculate variance across nodes in the network
+############# calculate and plot variance across nodes in the network
 # fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt','wrst']
 # data = load_data(fragmentation_types)
 # calculate_variance(data, fragmentation_types)
