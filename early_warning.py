@@ -5,6 +5,7 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from statsmodels.tsa.ar_model import AutoReg
 import random
+from scipy.stats import skew, kurtosis
 
 from funcs import access_het_dist, access_networks, normalize_steps
 
@@ -27,11 +28,10 @@ def assign_node_numbers(df, nodes_per_step=50):
         df_replica = df[df['replica'] == replica]
         for index in range(nodes_per_step):
             node_rows = df_replica.iloc[index::nodes_per_step].copy()
-            node_rows['node_number'] = index   # Assign node number
+            node_rows['node_number'] = index  # Assign node number
             dfs.append(node_rows)
     df_with_node_numbers = pd.concat(dfs, ignore_index=True)  # Concatenate all DataFrames at once
     return df_with_node_numbers
-
 
 
 def get_focal_step(df, num_nodes=10):
@@ -51,7 +51,6 @@ def get_focal_step(df, num_nodes=10):
     max_steps = het_counts.reset_index(level='step').groupby('replica')['step'].max()
 
     return max_steps.to_dict()
-
 
 
 def get_max_het_nodes(df, num_nodes=10):
@@ -75,6 +74,7 @@ def get_max_het_nodes(df, num_nodes=10):
 
     return top_nodes
 
+
 def extract_steps_for_nodes(df, max_het_nodes):
     """
     Extracts all steps for each node in its corresponding replica from the DataFrame.
@@ -88,7 +88,6 @@ def extract_steps_for_nodes(df, max_het_nodes):
     for replica, all_nodes in max_het_nodes.items():
 
         for node_number in all_nodes:
-
             df_replica_node = df[(df['replica'] == replica) & (df['node_number'] == node_number)]
             extracted_rows = pd.concat([extracted_rows, df_replica_node], ignore_index=True)
     return extracted_rows
@@ -109,14 +108,6 @@ def export_het_csv(data, frag: str):
     return final_df
 
 
-
-
-
-
-
-
-
-
 ####################################################
 ######################### analysis #################
 
@@ -128,7 +119,6 @@ def export_het_csv(data, frag: str):
 # frag = 'cor_d0.6_r1000'
 #save the heterozygosity data to a csv file
 # export_het_csv(cor, frag)
-
 
 
 #plot nodes
@@ -215,10 +205,10 @@ def calculate_return_rate(df):
 
     return results_df
 
+
 #
 # rr = calculate_return_rate(x)
 # print(rr)
-#
 # plt.plot(rr['step'], rr['returnrate'])
 # plt.ylim(-10, 10)
 # plt.show()
@@ -250,11 +240,10 @@ def calculate_indicators(data):
 #### final plot
 
 
-
 def plot_het_indicator(cor: pd.DataFrame,
-                                indicators: pd.DataFrame,
-                                indicator: str,
-                                n_samples: int = 10) -> None:
+                       indicators: pd.DataFrame,
+                       indicator: str,
+                       n_samples: int = 10) -> None:
     """
     Creates a combined plot with two y-axes:
       - Left y-axis: overall mean and standard deviation (SD) of heterozygosity (het) across all replicates,
@@ -314,7 +303,7 @@ def plot_het_indicator(cor: pd.DataFrame,
 
     # Plot overall indicator mean and SD on right axis (ax2)
     ax2.plot(stats_ind['step_pct'], stats_ind['mean'],
-              color=color_ind)
+             color=color_ind)
     ax2.fill_between(stats_ind['step_pct'],
                      stats_ind['mean'] - stats_ind['std'],
                      stats_ind['mean'] + stats_ind['std'],
@@ -341,28 +330,221 @@ def plot_het_indicator(cor: pd.DataFrame,
         ax1.plot(rep_het['step_pct'], rep_het['het'], color=color_het, alpha=0.5)
         ax2.plot(rep_ind['step_pct'], rep_ind[indicator], color=color_ind, alpha=0.5)
 
-
     ax1.set_xlabel('% fragmentation', fontsize=32)
     ax1.set_ylabel('Heterozygosity', color=color_het, fontsize=32)
-    ax2.set_ylabel("Variance", color=color_ind, fontsize=32)
+    ax2.set_ylabel("Kurtosis", color=color_ind, fontsize=32)
 
     ax1.tick_params(axis='y', labelsize=28, labelcolor=color_het)
     ax2.tick_params(axis='y', labelsize=28, labelcolor=color_ind)
     ax1.tick_params(axis='x', labelsize=28)
 
-    plt.savefig(f'./figs/het_{indicator}_metapop.svg', format='svg')
+    plt.savefig(f'./figs/het_{indicator}_singlepop.svg', format='svg')
     plt.show()
 
 
-# run the function
+# plot het+indicators of metapopilation data-change y label
 # set random seed for reproducibility
-random.seed(1)
+# random.seed(1)
+# cor = pd.read_csv('cor_d0.6_r1000_het.csv')
+# indicators = pd.read_csv('indicators.csv')
+# plot_het_indicator(cor, indicators, indicator='std', n_samples=10)
+
+# plot het+indicators of single population data-change y label
+# set random seed for reproducibility
+# random.seed(5)
+# cor = pd.read_csv('cor_d0.6_r1000_het.csv')
+# indicators = pd.read_csv('indicators_singlepop.csv')
+
+# plot_het_indicator(cor, indicators, indicator='kurt', n_samples=10)
+
+
+
+with open(f'cor_d0.6_r1000.pickle', 'rb') as file:
+    cor = pickle.load(file)
+print('finish')
+nets = access_networks(cor)
+het = assign_node_numbers(cor)
+components = get_largest_component(nets)
+# get the heterozygosity data for the corresponding largest component
+component_data = pd.merge(het, components, on=['replica', 'step', 'node_number'])
+component_data = component_data.sort_values(by=['replica', 'step', 'node_number'])
+print(component_data)
+mean_het_per_step_replica = component_data.groupby(['replica', 'step'])['het'].mean()
+
+# Save the resulting DataFrame to a CSV file
+mean_het_per_step_replica.reset_index().to_csv('cor_d0.6_r1000_mean_het.csv', index=False)
+print(mean_het_per_step_replica.reset_index())
+
+######## truncate data before tipping point
+# cor = pd.read_csv('cor_d0.6_r1000_het.csv')
+# Initialize a list to store the results
+# results = []
+# for replica in cor['replica'].unique():
+#     # Get the data for the current replica
+#     replica_data = cor[cor['replica'] == replica]
+#     # Loop over each unique node_number for the current replica
+#     for node in replica_data['node_number'].unique():
+#         # Get the data for the current node in the replica
+#         node_data = replica_data[replica_data['node_number'] == node]
+#         # Extract step and het values
+#         time = node_data['step']
+#         het = node_data['het']
+#         # Compute the first derivative (slope) and second derivative (acceleration)
+#         slope = np.gradient(het, time)
+#         acceleration = np.gradient(slope, time)
+#         # Find the step where acceleration is minimum
+#         min_accel_index = np.argmin(acceleration)
+#         min_accel_step = time.iloc[min_accel_index]  # Get the corresponding step
+#         # Store the result in the results list
+#         results.append({
+#             'replica': replica,
+#             'node_number': node,
+#             'min_acceleration_step': min_accel_step
+#         })
+#
+# results_df = pd.DataFrame(results)
+# cor = pd.merge(cor, results_df, on=['replica', 'node_number'], how='left')
+# cor_truncated = cor[cor['step'] < cor['min_acceleration_step']]
+# cor_truncated = cor_truncated.drop(columns=['min_acceleration_step'])
+# cor_truncated.to_csv('test.csv', index=False)
+
+
+
+
+########## plot distribution of indicators of single pop
+# indicators = pd.read_csv('kendall_singlepop_truncated.csv')
+# indicator_columns = ['kurt.tau', 'kurt.p', 'sk.tau','sk.p', 'sd.tau', 'sd.p', 'returnrate.tau', 'returnrate.p']
+#
+# # Create a figure with 2 columns and 4 rows
+# fig, axes = plt.subplots(4, 2, figsize=(15, 20))
+# axes = axes.flatten()
+#
+# # Iterate over each indicator column and plot
+# for i, col in enumerate(indicator_columns):
+#     ax = axes[i]
+#     ax.hist(indicators[col], bins=30, color='skyblue', edgecolor='black', alpha=0.7)
+#     median_value = indicators[col].median()
+#     ax.axvline(median_value, color='red', linestyle='dashed', linewidth=1.5)
+#     # ax.set_xlabel('Kendall tau', fontsize=14)
+#     ax.set_ylabel('Frequency', fontsize=14)
+#     ax.set_title(f'{col}', fontsize=16)
+#     ax.tick_params(axis='both', labelsize=12)
+#
+# # Adjust layout and show the plots
+# plt.tight_layout()
+# plt.show()
+#
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Define the logistic function with added noise
+# def noisy_logistic_function(x, L=1, k=1, x0=0, noise_level=0.1):
+#     logistic = L / (1 + np.exp(-k * (x - x0)))
+#     noise = np.random.normal(0, noise_level, size=x.shape)
+#     return logistic + noise
+#
+# x = np.linspace(-10, 10, 400)
+# y = noisy_logistic_function(x, L=-1, k=3, x0=1, noise_level=0.1)
+# plt.figure(figsize=(10, 6))
+# plt.plot(x, y, label='Noisy Logistic Function', color='grey')
+# plt.xlabel('Time', fontsize=30)
+# plt.ylabel('Genetic diversity', fontsize=30)
+# plt.tick_params(axis='both', labelsize=26)
+# plt.savefig('./figs/logistic_func.svg', format='svg')
+# plt.show()
+
+
+# Create a Random Geometric Graph with 10 nodes
+# num_nodes = 10
+# radius = 0.5  # Radius within which nodes are connected
+# rgg = nx.random_geometric_graph(num_nodes, radius)
+# pos = nx.get_node_attributes(rgg, 'pos')
+# nx.draw(rgg, pos, node_size=500)
+# plt.savefig('./figs/ews_rgg.svg', format='svg')
+# plt.show()
+
+
+
+
+#need 0 skewness and 0 kurtosis and low variance
+# Load the DataFrame
 cor = pd.read_csv('cor_d0.6_r1000_het.csv')
-indicators = pd.read_csv('indicators.csv')
 
-plot_het_indicator(cor, indicators, indicator='std', n_samples=10)
-
-
+# Filter the DataFrame for step 600 and the first 10 replicas
+# filtered_cor = cor[(cor['step'] == 720) & (cor['replica'] < 100)]
 
 
+
+
+
+# Plot the distribution of 'het' values
+# plt.figure(figsize=(10, 6))
+# plt.hist(filtered_cor['het'], bins=30, color='skyblue', edgecolor='black', alpha=0.7)
+# plt.ylabel('Frequency', fontsize=30)
+# plt.xlabel('Genetic diversity', fontsize=30)
+# plt.tick_params(axis='both', labelsize=25)
+# plt.savefig('./figs/ews_dist2.svg', format='svg')
+# plt.show()
+# #calculate skewness and kurtosis
+# skewness = filtered_cor['het'].skew()
+# kurtosis = filtered_cor['het'].kurtosis()
+# sd= filtered_cor['het'].std()
+# print("Skewness:", skewness)
+# print("Kurtosis:", kurtosis)
+# print("Standard Deviation:", sd)
+
+
+
+
+# Parameters for the normal distribution
+# mean = 0
+# std_dev = 0.5  # Low standard deviation for low variance
+# size = 1000  # Number of samples
+#
+# # Generate the data
+# data = np.random.normal(loc=mean, scale=std_dev, size=size)
+#
+# # Calculate skewness, kurtosis, and standard deviation
+# data_skewness = skew(data)
+# data_kurtosis = kurtosis(data)  # Excess kurtosis
+# data_std = np.std(data)
+#
+# # Plot the distribution
+# plt.figure(figsize=(10, 6))
+# plt.hist(data, bins=30, color='skyblue', edgecolor='black', alpha=0.7)
+# plt.title(f'Distribution with Skewness: {data_skewness:.2f}, Kurtosis: {data_kurtosis:.2f}, Std Dev: {data_std:.2f}')
+# plt.xlabel('Value')
+# plt.ylabel('Frequency')
+# plt.savefig('./figs/ews_dist1.svg', format='svg')
+# plt.show()
 

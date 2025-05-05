@@ -149,21 +149,24 @@ fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt', 'wrst
 #     results_df.to_csv(f'./csv/bet_het_{frag}_cor.csv', index=False)
 
 
-##### plot single degree-het correlation
-# df = pd.read_csv(f'./csv/degree_het_dist.csv')
-# df = (df[(df['step'] == 168) & (df['replica'] == 37)])
-# # df = np.log10(df)
-# ax = sns.regplot(x='central', y='het', data=df,
-#             fit_reg=True, order=1)
-# plt.ylabel('Heterozygosity', fontsize=20)
-# plt.xlabel('degree', fontsize=20)
-# plt.tick_params(axis='both', labelsize=16)
-# # plt.legend(title='Fragmentation Type')
-# plt.savefig(f'./figs/degree_het_singlecor.svg', format="svg")
+##### plot single correlation, degree-heterozygosity or betweenness-heterozygosity
+# df = pd.read_csv(f'./csv/bet_het_dist.csv')
+#
+# steps = [0, 75, 150]
+# fig, axes = plt.subplots(1, 3, figsize=(18, 7), sharey=True)
+#
+# for i, step in enumerate(steps):
+#     df_step = df[(df['step'] == step) & (df['replica'] == 11)]
+#     sns.regplot(x='central', y='het', data=df_step, fit_reg=True, order=1, ax=axes[i])
+#     cor, pval = pearsonr(df_step['central'], df_step['het'])
+#     axes[i].set_xlabel('Population betweenness', fontsize=30)
+#     axes[i].set_ylabel('Heterozygosity' if i == 0 else '', fontsize=30)
+#     axes[i].tick_params(axis='both', labelsize=25)
+#     axes[i].set_ylim(0, 1.4)
+#     axes[i].text(0.05, 1.2, f'r={cor:.2f}\np={pval:.2e}', fontsize=20, transform=axes[i].transAxes)
+# plt.tight_layout()
+# plt.savefig(f'./figs/degree_bet_steps.svg', format="svg")
 # plt.show()
-# cor, pval = pearsonr(df['central'], df['het'])
-# print(cor, pval)
-
 
 
 
@@ -171,12 +174,25 @@ fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt', 'wrst
 # plt.figure(figsize=(10, 6))
 # for frag in fragmentation_types:
 #     df = pd.read_csv(f'./csv/bet_het_{frag}_cor.csv')
-#     # df = np.log10(df)
-#     sns.lineplot(x='step', y='cor',data=df)
-# plt.xlabel('Step', fontsize=20)
-# plt.ylabel('Correlation (r)-betweenness', fontsize=20)
-# plt.ylim(0,1)
-# plt.legend()
-# plt.tick_params(axis='both', labelsize=16)
+#     # df = df[df['pval'] < 0.05]  # Filter rows with pval < 0.05
+#     df['step'] = df['step'] / df['step'].max() * 100  # Normalize steps to percentage
+#     # Filter steps with at least 5 unique replicas
+#     valid_steps = df.groupby('step')['replica'].nunique()
+#     valid_steps = valid_steps[valid_steps >= 5].index
+#     df = df[df['step'].isin(valid_steps)]
+#     sns.lineplot(x='step', y='cor', data=df, errorbar='sd')
+#
+# plt.xlabel('% fragmentation', fontsize=28)
+# plt.ylabel('Correlation (r)', fontsize=28)
+# plt.tick_params(axis='both', labelsize=25)
+# plt.ylim(-1.1, 1.1)
 # plt.savefig(f'./figs/bet_het_cor.svg', format="svg")
 # plt.show()
+
+
+
+
+
+
+
+
