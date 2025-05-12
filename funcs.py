@@ -5,47 +5,110 @@ import numpy as np
 import pandas as pd
 from infomap import Infomap
 from matplotlib import pyplot as plt
+from dataclasses import dataclass
+from typing import Dict, List
+import pickle
+import os
+
+import networkx as nx
+import pandas as pd
+import numpy as np
+import logging
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+logger = logging.getLogger(__name__)
+
+@dataclass
+class FragmentationResult:
+    """
+    Container for results of a fragmentation simulation.
+    """
+    n_steps: int
+    networks: List[nx.Graph]
+    het_dist: pd.DataFrame
+    het_stat: pd.DataFrame
+    fst_dist: pd.DataFrame
+    fst_stat: pd.DataFrame
+    coalescence_list: List[np.ndarray]
+    fst_matrices: List[np.ndarray]
+
+def load_data(fragmentation_types: List[str],
+              base_path: str = ".",
+              extension: str = "pickle"
+             ) -> Dict[str, FragmentationResult]:
+    """
+    Load fragmentation results for specified types, wrapping each in a dataclass.
+
+    :param fragmentation_types: List of fragmentation type identifiers (e.g., ["cor", "rand"]).
+    :param base_path: Directory where the files are stored.
+    :param extension: File extension of the pickled results.
+    :return: Dict mapping frag_type -> FragmentationResult.
+    """
+    results: Dict[str, FragmentationResult] = {}
+    for ft in fragmentation_types:
+        file_path = os.path.join(base_path, f"{ft}.{extension}")
+        with open(file_path, "rb") as f:
+            raw = pickle.load(f)
+        results[ft] = FragmentationResult(
+            n_steps         = raw[0],
+            networks        = raw[1],
+            het_dist        = raw[2],
+            het_stat        = raw[3],
+            fst_dist        = raw[4],
+            fst_stat        = raw[5],
+            coalescence_list= raw[6],
+            fst_matrices    = raw[7],
+        )
+    logger.info(f"Finished loading fragmentation types: {fragmentation_types}")
+
+    return results
+
+
+fragmetation_types = ['cor','rand']
+# load the data
+data = load_data(fragmetation_types)
+cor: FragmentationResult = data['cor']
 
 
 ########## general functions
 
-def load_data(fragmentation_types):
-    data = {}
-    for frag_type in fragmentation_types:
-        filename = f'{frag_type}.pickle'
-        with open(filename, 'rb') as file:
-            data[frag_type] = pickle.load(file)
-    print("I finished loading!")
-    return data
+# def load_data(fragmentation_types):
+#     data = {}
+#     for frag_type in fragmentation_types:
+#         filename = f'{frag_type}.pickle'
+#         with open(filename, 'rb') as file:
+#             data[frag_type] = pickle.load(file)
+#     print("I finished loading!")
+#     return data
 
 
-def calculate_statistics(df):
-    """Calculate mean and standard deviation."""
-    column = df.columns.difference(['replica', 'step']).values.tolist()
-    if len(column) > 1:
-        column = column[0]
-    mean = df.groupby('step')[column].mean().rename('mean')
-    sd = df.groupby('step')[column].std().rename('sd')
-    combined = pd.merge(mean, sd, on='step')
-    return pd.DataFrame(combined)
+# def calculate_statistics(df):
+#     """Calculate mean and standard deviation."""
+#     column = df.columns.difference(['replica', 'step']).values.tolist()
+#     if len(column) > 1:
+#         column = column[0]
+#     mean = df.groupby('step')[column].mean().rename('mean')
+#     sd = df.groupby('step')[column].std().rename('sd')
+#     combined = pd.merge(mean, sd, on='step')
+#     return pd.DataFrame(combined)
 
-def access_het_dist(frag_data:list):
-    return frag_data[2]
-
-def access_fst_dist(frag_data:list):
-    return frag_data[4]
-
-def access_het_mean(frag_data:list):
-    return frag_data[3]
-
-def access_fst_mean(frag_data:list):
-    return frag_data[5]
-
-def access_networks(frag_data:list):
-    return frag_data[1]
-
-def access_fst_matrices(frag_data:list):
-    return frag_data[7]
+# def access_het_dist(frag_data:list):
+#     return frag_data[2]
+#
+# def access_fst_dist(frag_data:list):
+#     return frag_data[4]
+#
+# def access_het_mean(frag_data:list):
+#     return frag_data[3]
+#
+# def access_fst_mean(frag_data:list):
+#     return frag_data[5]
+#
+# def access_networks(frag_data:list):
+#     return frag_data[1]
+#
+# def access_fst_matrices(frag_data:list):
+#     return frag_data[7]
 
 
 def normalize_steps(data):
@@ -110,8 +173,6 @@ def calculate_centrality(all_nets: list,
 
                 record['modularity'] = compute_modularity(net)
 
-            # if 'connectivity' in measure:
-            #     record['connectivity'] = weighted_algebraic_connectivity(net)
 
             if 'component' in measure:
                 record['component'] = measure_giant_component(net)
@@ -122,11 +183,16 @@ def calculate_centrality(all_nets: list,
 
     return df
 
-# # Calculate the means and standard deviations for the specified centrality measures
-# mean_centrality = df.groupby('step').mean().drop(columns='replicate')
-# std_centrality = df.groupby('step').std().drop(columns='replicate')
-#
-# return mean_centrality, std_centrality
+
+
+
+
+
+
+
+
+
+
 
 
 
