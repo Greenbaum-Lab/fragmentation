@@ -64,11 +64,6 @@ def load_data(fragmentation_types: List[str],
     return results
 
 
-fragmetation_types = ['cor','rand']
-# load the data
-data = load_data(fragmetation_types)
-cor: FragmentationResult = data['cor']
-
 
 ########## general functions
 
