@@ -78,6 +78,25 @@ def fraction_largest_component(
     return len(largest) / G.number_of_nodes()
 
 
+def giant_component_over_steps(
+    all_nets: List[List[nx.Graph]]  # list of replicates, each a list of step‐graphs
+) -> pd.DataFrame:
+    """
+    For each replicate and step, compute the fraction of nodes in the
+    largest connected component.
+
+    :param all_nets: nested list of networks: all_nets[replica][step] → Graph
+    :return: DataFrame with columns ['replica', 'step', 'component']
+    """
+    records = []
+    for replica, nets in enumerate(all_nets):
+        for step, net in enumerate(nets):
+            records.append({
+                'replica': replica,
+                'step':    step,
+                'component': fraction_largest_component(net)
+            })
+    return pd.DataFrame.from_records(records)
 
 ########## general functions
 
@@ -145,52 +164,52 @@ def fraction_largest_component(
 #         return 0
 #     return len(largest_component) / len(network)
 
-def calculate_centrality(all_nets: list,
-                         measure: list = ['clustering', 'degree', 'component',
-                                          'modularity', 'transitivity',
-                                          'connectivity', 'connect']) -> (
-        pd.DataFrame, pd.DataFrame):
-    """
-    Calculate specified centrality measures of networks over multiple replicates.
-
-    :param all_nets: list of lists of migration networks
-    :param measures: list of centrality measures to compute ('clustering', 'path', 'degree' or any combination)
-
-    :return: two dataframes - one with the average values for the specified centrality measures at each step
-             and the other with the standard deviations of these values.
-    """
-    data = []
-    for replica, nets in enumerate(all_nets):
-        for step, net in enumerate(nets):
-            record = {'replica': replica, 'step': step}
-
-            if 'clustering' in measure:
-                record['clustering'] = nx.average_clustering(net)
-
-            if 'transitivity' in measure:
-                record['transitivity'] = nx.transitivity(net)
-
-            if 'degree' in measure:
-                degree = sum(nx.degree_centrality(net).values()) / len(net.nodes)
-                record['degree'] = degree
-
-            if 'connect' in measure:
-                record['connect'] = nx.average_node_connectivity(net)
-
-            if 'modularity' in measure:
-                # partition = community_louvain.best_partition(net, resolution=1)
-
-                record['modularity'] = compute_modularity(net)
-
-
-            if 'component' in measure:
-                record['component'] = measure_giant_component(net)
-
-            data.append(record)
-
-    df = pd.DataFrame(data)
-
-    return df
+# def calculate_centrality(all_nets: list,
+#                          measure: list = ['clustering', 'degree', 'component',
+#                                           'modularity', 'transitivity',
+#                                           'connectivity', 'connect']) -> (
+#         pd.DataFrame, pd.DataFrame):
+#     """
+#     Calculate specified centrality measures of networks over multiple replicates.
+#
+#     :param all_nets: list of lists of migration networks
+#     :param measures: list of centrality measures to compute ('clustering', 'path', 'degree' or any combination)
+#
+#     :return: two dataframes - one with the average values for the specified centrality measures at each step
+#              and the other with the standard deviations of these values.
+#     """
+#     data = []
+#     for replica, nets in enumerate(all_nets):
+#         for step, net in enumerate(nets):
+#             record = {'replica': replica, 'step': step}
+#
+#             if 'clustering' in measure:
+#                 record['clustering'] = nx.average_clustering(net)
+#
+#             if 'transitivity' in measure:
+#                 record['transitivity'] = nx.transitivity(net)
+#
+#             if 'degree' in measure:
+#                 degree = sum(nx.degree_centrality(net).values()) / len(net.nodes)
+#                 record['degree'] = degree
+#
+#             if 'connect' in measure:
+#                 record['connect'] = nx.average_node_connectivity(net)
+#
+#             if 'modularity' in measure:
+#                 # partition = community_louvain.best_partition(net, resolution=1)
+#
+#                 record['modularity'] = compute_modularity(net)
+#
+#
+#             if 'component' in measure:
+#                 record['component'] = measure_giant_component(net)
+#
+#             data.append(record)
+#
+#     df = pd.DataFrame(data)
+#
+#     return df
 
 
 
