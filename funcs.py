@@ -59,6 +59,25 @@ def load_data(fragmentation_types: List[str],
     return results
 
 
+def percent_step(df, step_col='step', pct_col='step_pct'):
+    df[pct_col] = df[step_col] / df[step_col].max() * 100
+    return df
+
+
+def fraction_largest_component(
+    G: nx.Graph
+) -> float:
+    """
+    Compute the fraction of nodes in the largest connected component of G.
+
+    :param G: A NetworkX graph.
+    :return: Size of the largest connected component divided by total number of nodes.
+    """
+    # Find all components, pick the largest by cardinality
+    largest = max(nx.connected_components(G), key=len)
+    return len(largest) / G.number_of_nodes()
+
+
 
 ########## general functions
 
@@ -101,30 +120,30 @@ def load_data(fragmentation_types: List[str],
 #     return frag_data[7]
 
 
-def normalize_steps(data):
-    """
-    Normalize the step index to a percentage scale from 0 to 100,
-     reflecting fragmnetation.
-    Parameters:
-    data: A Pandas DataFrame with a 'step' column.
-    Returns:
-    pd.Series or pd.DataFrame: A new Pandas Series with normalized step indices or a DataFrame with a normalized 'step' column.
-    """
-    data.index = data.index / data.index.max() * 100
-    return data
+# def normalize_steps(data):
+#     """
+#     Normalize the step index to a percentage scale from 0 to 100,
+#      reflecting fragmnetation.
+#     Parameters:
+#     data: A Pandas DataFrame with a 'step' column.
+#     Returns:
+#     pd.Series or pd.DataFrame: A new Pandas Series with normalized step indices or a DataFrame with a normalized 'step' column.
+#     """
+#     data.index = data.index / data.index.max() * 100
+#     return data
 
 
 
-def measure_giant_component(network: nx.Graph, min_size: int = 4):
-    """
-    measure the no. of nodes in the giant component
-    :param network:
-    :return: length of giant components
-    """
-    largest_component = max(nx.connected_components(network), key=len)
-    if len(largest_component) <= min_size:
-        return 0
-    return len(largest_component) / len(network)
+# def measure_giant_component(network: nx.Graph, min_size: int = 4):
+#     """
+#     measure the no. of nodes in the giant component
+#     :param network:
+#     :return: length of giant components
+#     """
+#     largest_component = max(nx.connected_components(network), key=len)
+#     if len(largest_component) <= min_size:
+#         return 0
+#     return len(largest_component) / len(network)
 
 def calculate_centrality(all_nets: list,
                          measure: list = ['clustering', 'degree', 'component',
