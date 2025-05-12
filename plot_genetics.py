@@ -9,6 +9,8 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from typing import Dict
 from funcs import FragmentationResult, percent_step, load_data
+from typing import Literal
+import numpy as np
 
 
 def process_frag_types(
@@ -75,15 +77,48 @@ def plot_genetics(
     plt.savefig(f'./figs/genetics_{measure}.svg', format="svg")
     plt.show()
 
-#plot data
-fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt','wrst']
-# fragmentation_types = ['rand']
 
-data = load_data(fragmentation_types, extension='pickle')
+###### distributions
+def filter_intervals(
+    frag_res: FragmentationResult,
+    measure: Literal['het', 'fst'],
+    interval_pct: int = 25
+) -> pd.DataFrame:
+    """
+    Select node-level measure data at fixed fragmentation-percent intervals
+    (e.g. interval_pct=25 → steps at exactly 0, 25, 50, 75, 100).
 
-plot_genetics(data, measure='het')
+    :param frag_res: One fragmentation result.
+    :param measure: Which column to filter ('het' or 'fst').
+    :param interval_pct: Percentage spacing of intervals (must divide 100 evenly).
+    :return: DataFrame with columns ['step_pct','replica', measure].
+    """
+    # 1. Pick the genetic data distribution
+    df = frag_res.het_dist if measure == 'het' else frag_res.fst_dist
 
-# all data is a dictionary with keys as fragmentation types and values as lists of dataframes\lists
+    # 2. Compute continuous 0–100 step_pct
+    df = percent_step(df, step_col='step', pct_col='step_pct')
+
+    # 3. Snap to nearest interval_pct multiple
+    df['step_pct'] = (
+        (df['step_pct'] / interval_pct)
+        .round()              # round to nearest integer multiple
+        .astype(int)          # cast to int
+        * interval_pct
+    )
+
+    # 4. Define the exact allowed intervals
+    allowed = set(range(0, 100, interval_pct))
+
+    # 5. Filter to only those snapped intervals
+    sel = df[df['step_pct'].isin(allowed)].copy()
+
+    # 6. Return only the clean columns
+    return sel[['step_pct', 'replica', measure]]
+
+
+
+#all data is a dictionary with keys as fragmentation types and values as lists of dataframes\lists
 # def process_data_for_single_type(frag_data, measure: str):
 #     """process data for plotting of single fragmentation type.
 #      calculate the mean and 95% confidence interval and breaking point of a network.
@@ -135,84 +170,49 @@ plot_genetics(data, measure='het')
 
 
 ################### distribution ####################
-def filter_intervals(data, interval_percentage=25,measure='het' or 'fst'):
-    """
-    Filter the DataFrame to include only specific intervals of steps.
+# def filter_intervals(data, interval_percentage=25,measure='het' or 'fst'):
+#     """
+#     Filter the DataFrame to include only specific intervals of steps.
+#
+#     Args:
+#     data: dict of fragmetatation type.
+#     interval_percentage (int): The percentage interval for filtering steps.
+#
+#     Returns:
+#     pd.DataFrame: Filtered DataFrame.
+#     """
+#     if measure == 'fst':
+#         df = access_fst_dist(data)
+#     else:
+#         df = access_het_dist(data)
+#     # Determine the maximum step value
+#     max_step = df['step'].max()
+#
+#     # Calculate interval step based on the percentage
+#     interval_step = max_step * interval_percentage // 100
+#
+#     # Create a list of steps to include
+#     steps_to_include = list(range(0, max_step, interval_step))
+#     steps_to_include = steps_to_include[:4]
+#
+#     # Filter the DataFrame to include only these steps
+#     filtered_df = df[df['step'].isin(steps_to_include)]
+#     return filtered_df
 
-    Args:
-    data: dict of fragmetatation type.
-    interval_percentage (int): The percentage interval for filtering steps.
-
-    Returns:
-    pd.DataFrame: Filtered DataFrame.
-    """
-    if measure == 'fst':
-        df = access_fst_dist(data)
-    else:
-        df = access_het_dist(data)
-    # Determine the maximum step value
-    max_step = df['step'].max()
-
-    # Calculate interval step based on the percentage
-    interval_step = max_step * interval_percentage // 100
-
-    # Create a list of steps to include
-    steps_to_include = list(range(0, max_step, interval_step))
-    steps_to_include = steps_to_include[:4]
-
-    # Filter the DataFrame to include only these steps
-    filtered_df = df[df['step'].isin(steps_to_include)]
-    return filtered_df
-
-
-def plot_distribution(df, measure='het' or 'fst', type=str):
-    """ Plot the distribution of a given measure across different steps.
-    """
-    # Create a figure and axes
-    fig, ax = plt.subplots()
-    # Get unique steps
-    unique_steps = df['step'].unique()
-
-    # Generate reversed color gradient
-    colors = plt.cm.YlGnBu(np.linspace(0, 1, len(unique_steps)))[::-1]
-
-    # Plot histogram for each step with increasing alpha
-    for i, step in enumerate(unique_steps):
-        if measure == 'fst':
-            values = df[df['step'] == step]['fst']
-        if measure == 'het':
-            values = df[df['step'] == step]['het']
-
-        ax.hist(values, bins=40, alpha=0.4, label=f'Step {step}', density=True,
-                color=colors[i], edgecolor='black')
-
-    # Set titles and labels
-    ax.set_xlabel('Fst' if measure == 'fst' else 'Heterozygosity', fontsize=20)
-    ax.set_ylabel('Density (%) ',fontsize=20)
-    ax.legend()
-
-    # Optional: set x and y limits
-    if measure == 'het':
-        ax.set_xlim(0, 1.4)
-    ax.set_ylim(0, 15)
-
-    # Show the plot
-    plt.savefig(f'./figs/dist_{measure}_{type}.svg', format="svg")
-    plt.show()
 
 def plot_distribution_het(df, type=str):
     """ Plot the distribution of heterozygosity across different steps as a ridgeline plot. """
     # Create a figure and axes
     fig, ax = plt.subplots()
     # Get unique steps
-    unique_steps = df['step'].unique()
+    unique_steps = df['step_pct'].unique()
 
     # Generate reversed color gradient
     colors = plt.cm.YlGnBu(np.linspace(0, 1, len(unique_steps)))[::-1]
 
     # Plot histogram for each step with increasing alpha
     for i, step in enumerate(unique_steps):
-        values = df[df['step'] == step]['het']
+        values = df[df['step_pct'] == step]['het']
         ax.hist(values, bins=40, alpha=0.6, label=f'Step {step}', color=colors[i], edgecolor='black', density=True)
 
         if i < len(unique_steps) - 1:
@@ -241,7 +241,7 @@ def plot_distribution_het(df, type=str):
     ax.spines['left'].set_visible(False)
     plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.12)
 
-    plt.savefig(f'./figs/dist_het_{type}.svg', format="svg")
+    # plt.savefig(f'./figs/dist_het_{type}.svg', format="svg")
     plt.show()
 
 def plot_distribution_fst(df, type=str):
@@ -285,6 +285,12 @@ def plot_distribution_fst(df, type=str):
     plt.savefig(f'./figs/dist_fst_{type}.svg', format="svg")
     plt.show()
 
+#plot data
+fragmentation_types = ['rand']
+data = load_data(fragmentation_types)
+df = filter_intervals(data['rand'], measure='het', interval_pct=25)
+print(df)
+plot_distribution_het(df, 'rand')
 
 ############### individual nodes ####################
 def select_nodes(df, num_nodes=1):
@@ -443,12 +449,8 @@ def plot_variance(df):
 #######################
 ####################### plot data
 # fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt','wrst']
-# # fragmentation_types = ['cor']
 # data = load_data(fragmentation_types)
-#
-# plot_all_fragmentation_types(data, measure='fst')
-# plot_all_fragmentation_types(data, measure='het')
-
+# plot_genetics(data, measure='het')
 
 ##############plot distributions
 ##### one frag type each time
