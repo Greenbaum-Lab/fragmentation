@@ -1,37 +1,18 @@
 import pickle
 from statistics import mean
+##############
+#i removed calculate statistics so i need to swith to plotting with sns
+
 
 import networkx as nx
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
-from funcs import calculate_statistics, access_het_dist, access_fst_dist, normalize_steps, load_data, access_fst_mean, \
-    access_het_mean, access_networks
+from funcs import
 
 # pd.set_option('display.max_rows', None)
 
-def find_breaking_point(networks):
-    """
-    find the index of the list where the network is no longer connected
-    param: networks: list of networks across fragmentation for single replica
-    """
-
-    num_edges = networks[0].number_of_edges()
-
-    for index, network in enumerate(networks):
-        if not nx.is_connected(network):
-            return index/num_edges * 100
-    return None
-
-
-def find_breakink_point_list(networks_list: list):
-    """get the breaking point for all replicas"""
-    breaking_point = []
-    for net_list in networks_list:
-        x = find_breaking_point(net_list)
-        breaking_point.append(x)
-    return breaking_point
 
 
 # all data is a dictionary with keys as fragmentation types and values as lists of dataframes\lists
