@@ -174,43 +174,49 @@ def get_largest_component(nets):
 ####### calculate the sd skewness and kurtosis for the heterozygosity data
 
 
-def calculate_return_rate(df):
+import warnings
+warnings.filterwarnings('ignore', category=Warning, module='statsmodels')
+
+from statsmodels.tsa.ar_model import AutoReg
+
+
+def calculate_return_rate(window_data):
     """
-    Calculate return rates (inverse of AR(1) coefficients) for each 'step'.
-    :param df: DataFrame with 'step', 'het', and 'net' columns.
+    Calculate return rate from the AR(1) coefficient.
     """
-    ar1_coefficients, return_rates, time_indices = [], [], []
+    # Fit AR(1) model
+    model = AutoReg(window_data, lags=1, trend='n').fit()
+    ar1 = model.params[0]  # AR(1) coefficient
 
-    for step, group in df.groupby('step'):
-        window_data = group['het']
-        window_data_demeaned = window_data - np.mean(window_data)  # Demean the data
+    return 1 / ar1  # Return rate is the inverse of the AR(1) coefficient
 
-        if len(window_data) < 3:
-            continue
 
-        # Fit an AR(1) model with no intercept
-        model = AutoReg(window_data_demeaned, lags=1, trend='n').fit()
-        ar1 = model.params[0]
-        return_rate = 1 / ar1
+def calculate_return_rate_df(df):
+    """
+    Process the DataFrame to calculate AR(1) and return rate for each step and replica.
+    """
+    results = []
 
-        ar1_coefficients.append(ar1)
-        return_rates.append(return_rate)
-        time_indices.append(group['step'].iloc[-1])
+    for replica, group in df.groupby('replica'):
+        for step in group['step'].unique():
+            window_data = group[group['step'] == step]['het'].values
+            # Ensure there are enough data points for AR(1)
+            if len(window_data) < 3:
+                continue  # Skip if less than 3 data points
+            # Calculate return rate
+            return_rate = calculate_return_rate(window_data)
+            results.append({'replica': replica, 'step': step, 'returnrate': return_rate})
 
-    # Create a DataFrame to store the results
-    results_df = pd.DataFrame({
-        'step': time_indices,
-        'returnrate': return_rates
-    })
-
+    # Create a DataFrame with results
+    results_df = pd.DataFrame(results)
     return results_df
 
 
+# cor = pd.read_csv('cor_d0.6_r1000_component.csv')
 #
-# rr = calculate_return_rate(x)
+# rr = process_df(cor)
 # print(rr)
 # plt.plot(rr['step'], rr['returnrate'])
-# plt.ylim(-10, 10)
 # plt.show()
 
 
@@ -227,14 +233,22 @@ def calculate_indicators(data):
     indicators.to_csv(f'indicators.csv', index=False)
 
     # Calculate return rates
-    # rr_df = calculate_return_rate(data)
-    # print(rr_df)
-    # indicators = pd.merge(indicators, rr_df, on='step', how='left')
+    rr_df = calculate_return_rate_df(data)
+    print(rr_df)
+    indicators = pd.merge(indicators, rr_df, on=['step', 'replica'], how='left')
 
     return indicators
 
+# cor = pd.read_csv('cor_d0.6_r1000_component_truncated.csv')
+# indicators = calculate_indicators(cor)
+# indicators.to_csv('indicators_metapop_truncated.csv', index=False)
 
-# indicators = calculate_indicators(component_data)
+# Truncate the DataFrame at step 650
+# indicators = pd.read_csv('indicators_singlepop.csv')
+# truncated_indicators = indicators[indicators['step'] < 650]
+# # Save the truncated DataFrame to a new CSV file
+# truncated_indicators.to_csv('truncated_indicators.csv', index=False)
+# print("Truncated DataFrame saved as 'truncated_indicators.csv'")
 
 
 #### final plot
@@ -330,15 +344,15 @@ def plot_het_indicator(cor: pd.DataFrame,
         ax1.plot(rep_het['step_pct'], rep_het['het'], color=color_het, alpha=0.5)
         ax2.plot(rep_ind['step_pct'], rep_ind[indicator], color=color_ind, alpha=0.5)
 
-    ax1.set_xlabel('% fragmentation', fontsize=32)
-    ax1.set_ylabel('Heterozygosity', color=color_het, fontsize=32)
-    ax2.set_ylabel("Kurtosis", color=color_ind, fontsize=32)
+    ax1.set_xlabel('% fragmentation', fontsize=36)
+    ax1.set_ylabel('Heterozygosity', color=color_het, fontsize=36)
+    ax2.set_ylabel("Kurtosis", color=color_ind, fontsize=36)
 
-    ax1.tick_params(axis='y', labelsize=28, labelcolor=color_het)
-    ax2.tick_params(axis='y', labelsize=28, labelcolor=color_ind)
-    ax1.tick_params(axis='x', labelsize=28)
+    ax1.tick_params(axis='y', labelsize=32, labelcolor=color_het)
+    ax2.tick_params(axis='y', labelsize=32, labelcolor=color_ind)
+    ax1.tick_params(axis='x', labelsize=32)
 
-    plt.savefig(f'./figs/het_{indicator}_singlepop.svg', format='svg')
+    plt.savefig(f'./figs/het_{indicator}_metapop.svg', format='svg')
     plt.show()
 
 
@@ -346,38 +360,42 @@ def plot_het_indicator(cor: pd.DataFrame,
 # set random seed for reproducibility
 # random.seed(1)
 # cor = pd.read_csv('cor_d0.6_r1000_het.csv')
-# indicators = pd.read_csv('indicators.csv')
-# plot_het_indicator(cor, indicators, indicator='std', n_samples=10)
+# indicators = pd.read_csv('indicators_metapop.csv')
+# plot_het_indicator(cor, indicators, indicator='kurt', n_samples=10)
 
 # plot het+indicators of single population data-change y label
 # set random seed for reproducibility
-# random.seed(5)
+# random.seed(1)
 # cor = pd.read_csv('cor_d0.6_r1000_het.csv')
 # indicators = pd.read_csv('indicators_singlepop.csv')
-
-# plot_het_indicator(cor, indicators, indicator='kurt', n_samples=10)
-
+# plot_het_indicator(cor, indicators, indicator='returnrate', n_samples=10)
 
 
-with open(f'cor_d0.6_r1000.pickle', 'rb') as file:
-    cor = pickle.load(file)
-print('finish')
-nets = access_networks(cor)
-het = assign_node_numbers(cor)
-components = get_largest_component(nets)
-# get the heterozygosity data for the corresponding largest component
-component_data = pd.merge(het, components, on=['replica', 'step', 'node_number'])
-component_data = component_data.sort_values(by=['replica', 'step', 'node_number'])
-print(component_data)
-mean_het_per_step_replica = component_data.groupby(['replica', 'step'])['het'].mean()
+#### get the heterozygosity data for the corresponding largest component into csv
+# with open(f'cor_d0.6_r1000.pickle', 'rb') as file:
+#     cor = pickle.load(file)
+# print('finish')
+# nets = access_networks(cor)
+# het = assign_node_numbers(cor)
+# print(het)
+# components = get_largest_component(nets)
+# print(components)
+# # get the heterozygosity data for the corresponding largest component
+# component_data = pd.merge(het, components, on=['replica', 'step', 'node_number'])
+# component_data = component_data.sort_values(by=['replica', 'step', 'node_number'])
+# component_data.reset_index().to_csv('cor_d0.6_r1000_full.csv', index=False)
 
-# Save the resulting DataFrame to a CSV file
-mean_het_per_step_replica.reset_index().to_csv('cor_d0.6_r1000_mean_het.csv', index=False)
-print(mean_het_per_step_replica.reset_index())
+# print(component_data)
+# mean_het_per_step_replica = component_data.groupby(['replica', 'step'])['het'].mean()
+# pd.set_option('display.float_format', '{:.10f}'.format)
+#
+# print(mean_het_per_step_replica)
+# # Save the resulting DataFrame to a CSV file
+# mean_het_per_step_replica.reset_index().to_csv('cor_d0.6_r1000_mean_het.csv', index=False)
+# print(mean_het_per_step_replica.reset_index())
 
 ######## truncate data before tipping point
-# cor = pd.read_csv('cor_d0.6_r1000_het.csv')
-# Initialize a list to store the results
+# cor = pd.read_csv('cor_d0.6_r1000_full.csv')
 # results = []
 # for replica in cor['replica'].unique():
 #     # Get the data for the current replica
@@ -401,18 +419,19 @@ print(mean_het_per_step_replica.reset_index())
 #             'node_number': node,
 #             'min_acceleration_step': min_accel_step
 #         })
-#
+
 # results_df = pd.DataFrame(results)
 # cor = pd.merge(cor, results_df, on=['replica', 'node_number'], how='left')
 # cor_truncated = cor[cor['step'] < cor['min_acceleration_step']]
 # cor_truncated = cor_truncated.drop(columns=['min_acceleration_step'])
-# cor_truncated.to_csv('test.csv', index=False)
+# cor_truncated.to_csv('test2.csv', index=False)
 
 
 
 
 ########## plot distribution of indicators of single pop
-# indicators = pd.read_csv('kendall_singlepop_truncated.csv')
+# indicators = pd.read_csv('TESTkendall_metapop_truncated.csv')
+# print(indicators)
 # indicator_columns = ['kurt.tau', 'kurt.p', 'sk.tau','sk.p', 'sd.tau', 'sd.p', 'returnrate.tau', 'returnrate.p']
 #
 # # Create a figure with 2 columns and 4 rows
@@ -422,129 +441,21 @@ print(mean_het_per_step_replica.reset_index())
 # # Iterate over each indicator column and plot
 # for i, col in enumerate(indicator_columns):
 #     ax = axes[i]
-#     ax.hist(indicators[col], bins=30, color='skyblue', edgecolor='black', alpha=0.7)
 #     median_value = indicators[col].median()
 #     ax.axvline(median_value, color='red', linestyle='dashed', linewidth=1.5)
-#     # ax.set_xlabel('Kendall tau', fontsize=14)
-#     ax.set_ylabel('Frequency', fontsize=14)
-#     ax.set_title(f'{col}', fontsize=16)
-#     ax.tick_params(axis='both', labelsize=12)
+#     # Set x-axis limits based on the index
+#     if i in [0, 2, 4, 6]:  # i = 1, 3, 5, 7 (0-based indexing)
+#         ax.set_xlim(-1, 1)
+#         ax.hist(indicators[col], bins=np.linspace(-1, 1, 31), color='skyblue', edgecolor='black', alpha=0.7)
+#
+#     elif i in [1, 3, 5, 7]:  # i = 2, 4, 6, 8 (0-based indexing)
+#         ax.set_xlim(0, 0.5)
+#         ax.hist(indicators[col], bins=np.linspace(0, 0.5, 31), color='skyblue', edgecolor='black', alpha=0.7)
+#     ax.set_ylabel('Frequency', fontsize=30)
+#     ax.set_title(f'{col}', fontsize=30)
+#     ax.tick_params(axis='both', labelsize=24)
 #
 # # Adjust layout and show the plots
 # plt.tight_layout()
+# # plt.savefig('./figs/kendall_metapop.svg', format='svg')
 # plt.show()
-#
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Define the logistic function with added noise
-# def noisy_logistic_function(x, L=1, k=1, x0=0, noise_level=0.1):
-#     logistic = L / (1 + np.exp(-k * (x - x0)))
-#     noise = np.random.normal(0, noise_level, size=x.shape)
-#     return logistic + noise
-#
-# x = np.linspace(-10, 10, 400)
-# y = noisy_logistic_function(x, L=-1, k=3, x0=1, noise_level=0.1)
-# plt.figure(figsize=(10, 6))
-# plt.plot(x, y, label='Noisy Logistic Function', color='grey')
-# plt.xlabel('Time', fontsize=30)
-# plt.ylabel('Genetic diversity', fontsize=30)
-# plt.tick_params(axis='both', labelsize=26)
-# plt.savefig('./figs/logistic_func.svg', format='svg')
-# plt.show()
-
-
-# Create a Random Geometric Graph with 10 nodes
-# num_nodes = 10
-# radius = 0.5  # Radius within which nodes are connected
-# rgg = nx.random_geometric_graph(num_nodes, radius)
-# pos = nx.get_node_attributes(rgg, 'pos')
-# nx.draw(rgg, pos, node_size=500)
-# plt.savefig('./figs/ews_rgg.svg', format='svg')
-# plt.show()
-
-
-
-
-#need 0 skewness and 0 kurtosis and low variance
-# Load the DataFrame
-cor = pd.read_csv('cor_d0.6_r1000_het.csv')
-
-# Filter the DataFrame for step 600 and the first 10 replicas
-# filtered_cor = cor[(cor['step'] == 720) & (cor['replica'] < 100)]
-
-
-
-
-
-# Plot the distribution of 'het' values
-# plt.figure(figsize=(10, 6))
-# plt.hist(filtered_cor['het'], bins=30, color='skyblue', edgecolor='black', alpha=0.7)
-# plt.ylabel('Frequency', fontsize=30)
-# plt.xlabel('Genetic diversity', fontsize=30)
-# plt.tick_params(axis='both', labelsize=25)
-# plt.savefig('./figs/ews_dist2.svg', format='svg')
-# plt.show()
-# #calculate skewness and kurtosis
-# skewness = filtered_cor['het'].skew()
-# kurtosis = filtered_cor['het'].kurtosis()
-# sd= filtered_cor['het'].std()
-# print("Skewness:", skewness)
-# print("Kurtosis:", kurtosis)
-# print("Standard Deviation:", sd)
-
-
-
-
-# Parameters for the normal distribution
-# mean = 0
-# std_dev = 0.5  # Low standard deviation for low variance
-# size = 1000  # Number of samples
-#
-# # Generate the data
-# data = np.random.normal(loc=mean, scale=std_dev, size=size)
-#
-# # Calculate skewness, kurtosis, and standard deviation
-# data_skewness = skew(data)
-# data_kurtosis = kurtosis(data)  # Excess kurtosis
-# data_std = np.std(data)
-#
-# # Plot the distribution
-# plt.figure(figsize=(10, 6))
-# plt.hist(data, bins=30, color='skyblue', edgecolor='black', alpha=0.7)
-# plt.title(f'Distribution with Skewness: {data_skewness:.2f}, Kurtosis: {data_kurtosis:.2f}, Std Dev: {data_std:.2f}')
-# plt.xlabel('Value')
-# plt.ylabel('Frequency')
-# plt.savefig('./figs/ews_dist1.svg', format='svg')
-# plt.show()
-

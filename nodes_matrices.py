@@ -171,23 +171,24 @@ fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt', 'wrst
 
 
 #### plot correlation het-degree for all replicates during fragmetiaon
-# plt.figure(figsize=(10, 6))
-# for frag in fragmentation_types:
-#     df = pd.read_csv(f'./csv/bet_het_{frag}_cor.csv')
-#     # df = df[df['pval'] < 0.05]  # Filter rows with pval < 0.05
-#     df['step'] = df['step'] / df['step'].max() * 100  # Normalize steps to percentage
-#     # Filter steps with at least 5 unique replicas
-#     valid_steps = df.groupby('step')['replica'].nunique()
-#     valid_steps = valid_steps[valid_steps >= 5].index
-#     df = df[df['step'].isin(valid_steps)]
-#     sns.lineplot(x='step', y='cor', data=df, errorbar='sd')
-#
-# plt.xlabel('% fragmentation', fontsize=28)
-# plt.ylabel('Correlation (r)', fontsize=28)
-# plt.tick_params(axis='both', labelsize=25)
-# plt.ylim(-1.1, 1.1)
-# plt.savefig(f'./figs/bet_het_cor.svg', format="svg")
-# plt.show()
+plt.figure(figsize=(10, 6))
+for frag in fragmentation_types:
+    df = pd.read_csv(f'./csv/bet_het_{frag}_cor.csv')
+    df['step'] = df['step'] / df['step'].max() * 100  # Normalize steps to percentage
+
+    df = df[df['pval'] < 0.05]  # Filter rows with pval < 0.05
+    # Filter steps with at least 5 unique replicas
+    valid_steps = df.groupby('step')['replica'].nunique()
+    valid_steps = valid_steps[valid_steps >= 5].index
+    df = df[df['step'].isin(valid_steps)]
+    sns.lineplot(x='step', y='cor', data=df, errorbar='sd')
+
+plt.xlabel('% fragmentation', fontsize=28)
+plt.ylabel('Correlation (r)', fontsize=28)
+plt.tick_params(axis='both', labelsize=25)
+plt.ylim(-1.05, 1.1)
+# plt.savefig(f'./figs/bet_het_cor_pval.svg', format="svg")
+plt.show()
 
 
 
