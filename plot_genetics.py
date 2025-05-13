@@ -9,9 +9,8 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from typing import Dict
 from funcs import FragmentationResult, percent_step, load_data
-from typing import Literal
+from typing import Literal, List, Tuple
 import numpy as np
-
 
 def process_frag_types(
     data: Dict[str, FragmentationResult],
@@ -78,7 +77,7 @@ def plot_genetics(
     plt.show()
 
 
-###### distributions
+########### distributions ###########
 def filter_intervals(
     frag_res: FragmentationResult,
     measure: Literal['het', 'fst'],
@@ -200,97 +199,81 @@ def filter_intervals(
 #     return filtered_df
 
 
-def plot_distribution_het(df, type=str):
-    """ Plot the distribution of heterozygosity across different steps as a ridgeline plot. """
-    # Create a figure and axes
-    fig, ax = plt.subplots()
-    # Get unique steps
-    unique_steps = df['step_pct'].unique()
 
-    # Generate reversed color gradient
-    colors = plt.cm.YlGnBu(np.linspace(0, 1, len(unique_steps)))[::-1]
+def compute_histogram(
+    df: pd.DataFrame,
+    measure: str,
+) -> Tuple[List[int], np.ndarray, List[np.ndarray]]:
+    """
+    Prepare histogram data for each step_pct layer.
 
-    # Plot histogram for each step with increasing alpha
-    for i, step in enumerate(unique_steps):
-        values = df[df['step_pct'] == step]['het']
-        ax.hist(values, bins=40, alpha=0.6, label=f'Step {step}', color=colors[i], edgecolor='black', density=True)
+    :param df: DataFrame with columns ['step_pct', measure].
+    :param measure: Column to histogram ('het' or 'fst').
+    :return:
+      - steps: sorted unique step_pct values
+      - bin_edges: array of length bins+1
+      - hist_counts: list of count arrays for each step
+    """
+    steps = sorted(df['step_pct'].unique(), reverse=True)
+    hist_counts = []
+    bin_edges = None
 
-        if i < len(unique_steps) - 1:
-        # Offset each step's histogram by a certain amount
-            for rect in ax.patches:
-                rect.set_y(rect.get_y() + 6)  # Adjust this value to change the vertical spacing between histograms
-                ax.axhline(y=rect.get_y(), color='black', linewidth=0.5)  # Add a line below the histogram
+    for step in steps:
+        values = df.loc[df['step_pct'] == step, measure].values
+        counts, edges = np.histogram(values, bins=40, density=True)
+        hist_counts.append(counts)
+        bin_edges = edges
 
-        else:
-            rect.set_y(0)
+    return steps, bin_edges, hist_counts
 
-    ax.set_xlabel('Heterozygosity', fontsize=20)
-    ax.set_ylabel('Density', fontsize=20)
+
+def plot_distribution(
+    df: pd.DataFrame,
+    measure: str,
+    frag_type: str,
+) -> None:
+    """
+    Plot a ridgeline histogram of heterozygosity for one fragmentation type.
+
+    :param df: DataFrame with columns ['step_pct', 'het'].
+    :param frag_type: Identifier for the fragmentation type.
+    """
+    # 1. Compute histogram layers (reversed so lowest step at top)
+    steps, bin_edges, hist_counts = compute_histogram(df, measure=measure)
+    # 2. Colors reversed for top-down
+    n = len(steps)
+    if measure == 'het':
+        cmap = plt.get_cmap('YlGnBu')(np.linspace(0, 1, n))
+    else:
+        cmap = plt.get_cmap('YlOrRd')(np.linspace(0, 1, n))
+    # 3. Plot bars with offsets
+    fig, ax = plt.subplots(figsize=(4, 2 + 0.5 * n))
+    bin_width = bin_edges[1] - bin_edges[0]
+    for i, (step, counts) in enumerate(zip(steps, hist_counts)):
+        base = i * 6
+        ax.bar(
+            bin_edges[:-1],
+            counts,
+            width=bin_width,
+            bottom=base,
+            color=cmap[i],
+            edgecolor='black',
+            alpha=0.6,
+            align='edge'
+        )
+        ax.hlines(base, bin_edges[0], bin_edges[-1], color='black', linewidth=0.5)
+
     ax.set_yticks([])
-    ax.legend()
+    ax.set_xlabel('Heterozygosity', fontsize=14)
+    ax.set_xlim(bin_edges[0], bin_edges[-1])
+    ax.set_ylim(0, 6 * n + max(cnt.max() for cnt in hist_counts))
+    ax.tick_params(axis='both', labelsize=12)
+    for spine in ['top', 'right', 'left']:
+        ax.spines[spine].set_visible(False)
 
-    ax.set_xlim(0, 1.4)
-    ax.set_ylim(0, (4 + len(unique_steps) * 6)) # Adjust this value to match the vertical spacing between histograms
-    # Increase tick labels size
-    ax.tick_params(axis='x', labelsize=16)  # Increase x-axis tick labels size
-    ax.tick_params(axis='y', labelsize=16)  # Increase y-axis tick labels size
-
-    # Remove the box (rectangle) around the plot
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.spines['left'].set_visible(False)
-    plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.12)
-
-    # plt.savefig(f'./figs/dist_het_{type}.svg', format="svg")
+    plt.title(f"{frag_type}")
     plt.show()
 
-def plot_distribution_fst(df, type=str):
-    """ Plot the distribution of heterozygosity across different steps as a ridgeline plot. """
-    # Create a figure and axes
-    fig, ax = plt.subplots()
-    # Get unique steps
-    unique_steps = df['step'].unique()
-
-    # Generate reversed color gradient
-    colors = plt.cm.YlOrRd(np.linspace(0, 1, len(unique_steps)))[::-1]
-
-    # Plot histogram for each step with increasing alpha
-    for i, step in enumerate(unique_steps):
-        values = df[df['step'] == step]['fst']
-        ax.hist(values, bins=40, alpha=0.8, label=f'Step {step}', color=colors[i], edgecolor='black', density=True)
-
-        if i < len(unique_steps) - 1:
-        # Offset each step's histogram by a certain amount
-            for rect in ax.patches:
-                rect.set_y(rect.get_y() + 6)  # Adjust this value to change the vertical spacing between histograms
-                ax.axhline(y=rect.get_y(), color='black', linewidth=0.5)  # Add a line below the histogram
-        else:
-            ax.axhline(y=rect.get_y(), color='black', linewidth=0.5)  # Add a line below the histogram
-
-    ax.set_xlabel('Fst', fontsize=20)
-    ax.set_ylabel('Density', fontsize=20)
-    ax.set_yticks([])
-    ax.legend()
-
-    ax.set_ylim(0, (4 + len(unique_steps) * 6 + 4))  # vertical spacing between histograms
-    plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.12)
-    # Increase tick labels size
-    ax.tick_params(axis='x', labelsize=16)  # Increase x-axis tick labels size
-    ax.tick_params(axis='y', labelsize=16)  # Increase y-axis tick labels size
-
-    # Remove the box (rectangle) around the plot
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.spines['left'].set_visible(False)
-    plt.savefig(f'./figs/dist_fst_{type}.svg', format="svg")
-    plt.show()
-
-#plot data
-fragmentation_types = ['rand']
-data = load_data(fragmentation_types)
-df = filter_intervals(data['rand'], measure='het', interval_pct=25)
-print(df)
-plot_distribution_het(df, 'rand')
 
 ############### individual nodes ####################
 def select_nodes(df, num_nodes=1):
@@ -454,17 +437,10 @@ def plot_variance(df):
 
 ##############plot distributions
 ##### one frag type each time
-# fragmentation_types = ['rand', 'cor', 'intr', 'dist', 'reg', 'div', 'opt','wrst']
-# fragmentation_types = ['reg']
-# frag_type = fragmentation_types[0]
-#
+# fragmentation_types = ['rand']
 # data = load_data(fragmentation_types)
-#
-# df = filter_intervals(data[frag_type],measure='het')
-# plot_distribution_het(df,type=frag_type)
-# df = filter_intervals(data[frag_type],measure='fst')
-# plot_distribution_fst(df,type=frag_type)
-
+# df = filter_intervals(data['rand'], measure='fst', interval_pct=25)
+# plot_distribution(df,measure='fst', frag_type='rand')
 
 ####################### plot individual nodes
 ################
