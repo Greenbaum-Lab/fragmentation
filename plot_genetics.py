@@ -195,19 +195,7 @@ def plot_distribution(
 
 
 
-def assign_node_numbers(df: pd.DataFrame, nodes_per_step: int = 50) -> pd.DataFrame:
-    """
-    Assigns node numbers for each node in each replica using a vectorized approach.
 
-    :param df: DataFrame containing the heterozygosity data.
-    :param nodes_per_step: Number of nodes per step (i.e., number of nodes in the network).
-    :return: DataFrame with the original data and an additional 'node_number' column.
-    """
-    # Ensure that 'step' and 'replica' are in the DataFrame
-    # Create an array of node numbers for each replica
-    df['node_number'] = df.groupby('replica').cumcount() % nodes_per_step
-
-    return df
 
 def select_random_nodes(
     df: pd.DataFrame,
