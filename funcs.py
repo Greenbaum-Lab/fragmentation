@@ -20,9 +20,9 @@ class FragmentationResult:
     n_steps: int
     networks: List[nx.Graph]
     het_dist: pd.DataFrame
-    het_stat: pd.DataFrame
+    het_mean: pd.DataFrame
     fst_dist: pd.DataFrame
-    fst_stat: pd.DataFrame
+    fst_mean: pd.DataFrame
     coalescence_list: List[np.ndarray]
     fst_matrices: List[np.ndarray]
 
@@ -48,9 +48,9 @@ def load_data(fragmentation_types: List[str],
             n_steps         = raw[0],
             networks        = raw[1],
             het_dist        = raw[2],
-            het_stat        = raw[3],
+            het_mean        = raw[3],
             fst_dist        = raw[4],
-            fst_stat        = raw[5],
+            fst_mean        = raw[5],
             coalescence_list= raw[6],
             fst_matrices    = raw[7],
         )
