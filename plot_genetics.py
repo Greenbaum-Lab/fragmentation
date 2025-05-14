@@ -191,7 +191,7 @@ def plot_distribution(
     plt.show()
 
 
-############### individual nodes ####################
+############### individual nodes ########################
 def select_nodes(df, num_nodes=1):
     """
     Selects a specified number of random node indices for each replica.
