@@ -604,9 +604,16 @@ def calculate_mantel_all(data, perms, dist_type='euclidean'):
     cor_data = pd.concat(results)
 
     # write data as csv
-    cor_data.to_csv(f'./corl_fst_{dist_type}_all.csv', index=False)
+    cor_data.to_csv(f'./TEST-corl_fst_{dist_type}_all.csv', index=False)
     return cor_data
 
+
+
+### calculate mantel for all for euclidean
+fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt', 'wrst']
+data = load_data(fragmentation_types)
+perms = 999
+cor_data = calculate_mantel_all(data, perms, dist_type='path')
 
 def plot_cor_fst(df):
     """
@@ -625,53 +632,62 @@ def plot_mantel_all(df):
     plot mantel correlation for all fragmentation types.
     """
     df['step'] = df['step'] / df['step'].max() * 100  # Normalize steps to percentage
+    df = df[df['p_val'] < 0.05]  # Filter rows with pval < 0.05
+    # Filter steps with at least 5 unique replicas
+
+    df = (
+        df
+        .groupby(['fragmentation_type', 'step'])
+        .filter(lambda g: g['replica'].nunique() >= 5)
+    )
     plt.figure(figsize=(10, 6))
     sns.lineplot(x='step', y='r_val', hue='fragmentation_type', data=df, errorbar='sd', legend=False)
     plt.xlabel('% fragmentation', fontsize=28)
     plt.ylabel('Correlation (r)', fontsize=28)
     plt.tick_params(axis='both', labelsize=25)
-    plt.ylim(-0.1, 1.1)
-    plt.savefig(f'./figs/cor_fst_path.svg', format="svg")
+    plt.ylim(-0.05, 1.1)
+    plt.savefig(f'./figs/cor_fst_euclidean_pval.svg', format="svg")
     plt.show()
 
 
 
 #### plot single correlation fst-distance
-fragmentation_types = ['wrst']
-data = load_data(fragmentation_types)
-data = data[fragmentation_types[0]]
+# fragmentation_types = ['wrst']
+# data = load_data(fragmentation_types)
+# data = data[fragmentation_types[0]]
+#
+# steps = [0, 75, 150]
+# fig, axes = plt.subplots(1, 3, figsize=(18, 7), sharey=True)
+#
+# for i, step in enumerate(steps):
+#     net = data[1][5][step]
+#     fst = data[7][5][step]
+#     distance_matrix = get_random_walk_matrix(net)
+#     r, p = calculate_mantel(net=net, fst_matrix=fst, dist_type='random', perms=999)
+#     print(r, p)
+#
+#     flat_matrix1 = distance_matrix.flatten()
+#     flat_matrix2 = fst.flatten()
+#     flat_matrix1 = flat_matrix1[flat_matrix1 != 0]
+#     flat_matrix2 = flat_matrix2[flat_matrix2 != 0]
+#     df = pd.DataFrame({'distance': flat_matrix1, 'fst': flat_matrix2})
+#     df = df.dropna()
+#     # filter inf
+#     df = df[~df['distance'].isin([np.inf, -np.inf])]
+#     print(df)
+#
+#     sns.regplot(x='distance', y='fst', data=df, fit_reg=True, order=1, ax=axes[i])
+#     axes[i].set_xlabel('Distance', fontsize=30)
+#     axes[i].set_ylabel(r'Pairwise $F_{ST}$' if i == 0 else '', fontsize=30)
+#     axes[i].tick_params(axis='both', labelsize=25)
+#     axes[i].set_ylim(0, 0.5)
+#     axes[i].text(0.05, 1.2, f'r={r:.2f}\np={p:.2e}', fontsize=20, transform=axes[i].transAxes)
+#
+# plt.tight_layout()
+# plt.savefig(f'./figs/random_fst_steps.svg', format="svg")
+# plt.show()
 
-steps = [0, 75, 150]
-fig, axes = plt.subplots(1, 3, figsize=(18, 7), sharey=True)
-
-for i, step in enumerate(steps):
-    net = data[1][5][step]
-    fst = data[7][5][step]
-    distance_matrix = get_random_walk_matrix(net)
-    r, p = calculate_mantel(net=net, fst_matrix=fst, dist_type='random', perms=999)
-    print(r, p)
-
-    flat_matrix1 = distance_matrix.flatten()
-    flat_matrix2 = fst.flatten()
-    flat_matrix1 = flat_matrix1[flat_matrix1 != 0]
-    flat_matrix2 = flat_matrix2[flat_matrix2 != 0]
-    df = pd.DataFrame({'distance': flat_matrix1, 'fst': flat_matrix2})
-    df = df.dropna()
-    # filter inf
-    df = df[~df['distance'].isin([np.inf, -np.inf])]
-    print(df)
-
-    sns.regplot(x='distance', y='fst', data=df, fit_reg=True, order=1, ax=axes[i])
-    axes[i].set_xlabel('Distance', fontsize=30)
-    axes[i].set_ylabel(r'Pairwise $F_{ST}$' if i == 0 else '', fontsize=30)
-    axes[i].tick_params(axis='both', labelsize=25)
-    axes[i].set_ylim(0, 0.5)
-    axes[i].text(0.05, 1.2, f'r={r:.2f}\np={p:.2e}', fontsize=20, transform=axes[i].transAxes)
-
-plt.tight_layout()
-plt.savefig(f'./figs/random_fst_steps.svg', format="svg")
-plt.show()
-
-# df = pd.read_csv('./csv/cor_fst_path.csv')
+# df = pd.read_csv('./TEST-corl_fst_euclidean_all.csv')
 # print(df)
 # plot_mantel_all(df)
+

@@ -1,239 +1,193 @@
 import pickle
 from statistics import mean
+##############
+#i removed calculate statistics so i need to swith to plotting with sns
 
-import networkx as nx
-import numpy as np
+
 import pandas as pd
-from matplotlib import pyplot as plt
+import seaborn as sns
+import matplotlib.pyplot as plt
+from typing import Dict
+from funcs import FragmentationResult, percent_step, load_data
+from typing import Literal, List, Tuple
+import numpy as np
 
-from funcs import calculate_statistics, access_het_dist, access_fst_dist, normalize_steps, load_data, access_fst_mean, \
-    access_het_mean, access_networks
-
-# pd.set_option('display.max_rows', None)
-
-def find_breaking_point(networks):
+def process_frag_types(
+    data: Dict[str, FragmentationResult],
+    measure: str
+) -> pd.DataFrame:
     """
-    find the index of the list where the network is no longer connected
-    param: networks: list of networks across fragmentation for single replica
+    Combine and normalize replicate-level mean data for all fragmentation types.
+
+    :param data: Mapping from frag_type to FragmentationResult.
+    :param measure: 'het' or 'fst'.
+    :return: DataFrame with columns ['step_pct', 'avg', 'replica', 'frag_type'].
     """
-
-    num_edges = networks[0].number_of_edges()
-
-    for index, network in enumerate(networks):
-        if not nx.is_connected(network):
-            return index/num_edges * 100
-    return None
-
-
-def find_breakink_point_list(networks_list: list):
-    """get the breaking point for all replicas"""
-    breaking_point = []
-    for net_list in networks_list:
-        x = find_breaking_point(net_list)
-        breaking_point.append(x)
-    return breaking_point
-
-
-# all data is a dictionary with keys as fragmentation types and values as lists of dataframes\lists
-def process_data_for_single_type(frag_data, measure: str):
-    """process data for plotting of single fragmentation type.
-     calculate the mean and 95% confidence interval and breaking point of a network.
-     Args:
-        frag_data: dictionary of all data, keyed by fragmentation type.
-        measure: The measure to plot ('fst' or 'het')."""
-
-    if measure == 'fst':
-        df = access_fst_mean(frag_data)
-    if measure == 'het':
-        df = access_het_mean(frag_data)
-
-    df_stat = calculate_statistics(df)
-
-    df_res = normalize_steps(df_stat)
-    # breaking_point = mean(find_breakink_point_list(access_networks(frag_data)))
-
-    return df_res #,breaking_point
-
-def plot_all_fragmentation_types(data, measure: str):
-    """Plot data for all fragmentation types with mean and 95% confidence interval and breaking point.
-    Args:
-        data: A dictionary of all data, keyed by fragmentation type.
-        measure: The measure to plot ('fst' or 'het')."""
-
-    color_palette = plt.get_cmap('tab10')
-    plt.figure(figsize=(10, 6))
-
-    # i-index; frag_type-string of fragmentation type; df-dataframe of avg fst\het
-    for i, (frag_type, df) in enumerate(data.items()):
-
-        color = color_palette(i)
-
-        df_stat = process_data_for_single_type(data[frag_type], measure)
-
-        plt.plot(df_stat['mean'], label=frag_type, color=color)
-        plt.fill_between(df_stat.index, df_stat['mean'] - df_stat['sd'], df_stat['mean'] + df_stat['sd'],
-                         alpha=0.2)
-        # plt.axvline(x=breaking_point, color=color, ymax=0.05, linewidth=4)
-
-    plt.xlabel('Fragmentation (%)', fontsize=34)
-    plt.ylabel(measure, fontsize=34)
-    # plt.legend()
-    plt.ylim(-0.05, 1.05)
-    plt.tick_params(axis='both', which='major', labelsize=25)
-    plt.savefig(f'./figs/genetics_general_{measure}.svg', format="svg")
-    plt.show()
-
-
-
-################### distribution ####################
-def filter_intervals(data, interval_percentage=25,measure='het' or 'fst'):
-    """
-    Filter the DataFrame to include only specific intervals of steps.
-
-    Args:
-    data: dict of fragmetatation type.
-    interval_percentage (int): The percentage interval for filtering steps.
-
-    Returns:
-    pd.DataFrame: Filtered DataFrame.
-    """
-    if measure == 'fst':
-        df = access_fst_dist(data)
-    else:
-        df = access_het_dist(data)
-    # Determine the maximum step value
-    max_step = df['step'].max()
-
-    # Calculate interval step based on the percentage
-    interval_step = max_step * interval_percentage // 100
-
-    # Create a list of steps to include
-    steps_to_include = list(range(0, max_step, interval_step))
-    steps_to_include = steps_to_include[:4]
-
-    # Filter the DataFrame to include only these steps
-    filtered_df = df[df['step'].isin(steps_to_include)]
-    return filtered_df
-
-
-def plot_distribution(df, measure='het' or 'fst', type=str):
-    """ Plot the distribution of a given measure across different steps.
-    """
-    # Create a figure and axes
-    fig, ax = plt.subplots()
-    # Get unique steps
-    unique_steps = df['step'].unique()
-
-    # Generate reversed color gradient
-    colors = plt.cm.YlGnBu(np.linspace(0, 1, len(unique_steps)))[::-1]
-
-    # Plot histogram for each step with increasing alpha
-    for i, step in enumerate(unique_steps):
-        if measure == 'fst':
-            values = df[df['step'] == step]['fst']
+    all_types = []
+    for frag_type, frag_res in data.items():
+        # Select the appropriate summary stats for each frag_type
         if measure == 'het':
-            values = df[df['step'] == step]['het']
+            df = frag_res.het_mean.copy()
+        elif measure == 'fst':
+            df = frag_res.fst_mean.copy()
+        else:
+            raise ValueError(f"Unknown measure {measure!r}, expected 'het' or 'fst'.")
 
-        ax.hist(values, bins=40, alpha=0.4, label=f'Step {step}', density=True,
-                color=colors[i], edgecolor='black')
+        # Compute fragmentation percentage (0–100)
+        df = percent_step(df, step_col='step', pct_col='step_pct')
 
-    # Set titles and labels
-    ax.set_xlabel('Fst' if measure == 'fst' else 'Heterozygosity', fontsize=20)
-    ax.set_ylabel('Density (%) ',fontsize=20)
-    ax.legend()
+        # Tag the fragmentation type
+        df['frag_type'] = frag_type
+        # Keep only relevant columns
+        all_types.append(df[['step_pct', 'avg', 'replica', 'frag_type']])
 
-    # Optional: set x and y limits
+    # Concatenate all types into one DataFrame
+    return pd.concat(all_types, ignore_index=True)
+
+
+def plot_genetics(
+    data: Dict[str, FragmentationResult],
+    measure: str
+):
+    """
+    Plot mean ± SD of the specified measure across all fragmentation types.
+
+    :param data: Mapping from frag_type to FragmentationResult.
+    :param measure: 'het' or 'fst'.
+    """
+    # Process all frag types to get a unified DataFrame
+    df = process_frag_types(data, measure)
+
+    # Plot using seaborn's built-in estimator for mean ± SD
+    plt.figure(figsize=(10, 6))
+    sns.lineplot(
+        data=df,
+        x='step_pct',
+        y='avg',
+        hue='frag_type',
+        estimator='mean',
+        errorbar='sd'
+    )
+    plt.xlabel('% fragmentation', fontsize=30)
+    plt.ylabel(measure.capitalize(), fontsize=30)
+    plt.tick_params(axis='both', labelsize=25)
+    plt.legend(title='Type')
+    plt.tight_layout()
+    plt.savefig(f'./figs/genetics_{measure}.svg', format="svg")
+    plt.show()
+
+
+########### distributions ###########
+def filter_intervals(
+    frag_res: FragmentationResult,
+    measure: Literal['het', 'fst'],
+    interval_pct: int = 25
+) -> pd.DataFrame:
+    """
+    Select node-level measure data at fixed fragmentation-percent intervals
+    (e.g. interval_pct=25 → steps at exactly 0, 25, 50, 75, 100).
+
+    :param frag_res: One fragmentation result.
+    :param measure: Which column to filter ('het' or 'fst').
+    :param interval_pct: Percentage spacing of intervals (must divide 100 evenly).
+    :return: DataFrame with columns ['step_pct','replica', measure].
+    """
+    # 1. Pick the genetic data distribution
+    df = frag_res.het_dist if measure == 'het' else frag_res.fst_dist
+
+    # 2. Compute continuous 0–100 step_pct
+    df = percent_step(df, step_col='step', pct_col='step_pct')
+
+    # 3. Snap to nearest interval_pct multiple
+    df['step_pct'] = (
+        (df['step_pct'] / interval_pct)
+        .round()              # round to nearest integer multiple
+        .astype(int)          # cast to int
+        * interval_pct
+    )
+
+    # 4. Define the exact allowed intervals
+    allowed = set(range(0, 100, interval_pct))
+
+    # 5. Filter to only those snapped intervals
+    sel = df[df['step_pct'].isin(allowed)].copy()
+
+    # 6. Return only the clean columns
+    return sel[['step_pct', 'replica', measure]]
+
+
+def compute_histogram(
+    df: pd.DataFrame,
+    measure: str,
+) -> Tuple[List[int], np.ndarray, List[np.ndarray]]:
+    """
+    Prepare histogram data for each step_pct layer.
+
+    :param df: DataFrame with columns ['step_pct', measure].
+    :param measure: Column to histogram ('het' or 'fst').
+    :return:
+      - steps: sorted unique step_pct values
+      - bin_edges: array of length bins+1
+      - hist_counts: list of count arrays for each step
+    """
+    steps = sorted(df['step_pct'].unique(), reverse=True)
+    hist_counts = []
+    bin_edges = None
+
+    for step in steps:
+        values = df.loc[df['step_pct'] == step, measure].values
+        counts, edges = np.histogram(values, bins=40, density=True)
+        hist_counts.append(counts)
+        bin_edges = edges
+
+    return steps, bin_edges, hist_counts
+
+
+def plot_distribution(
+    df: pd.DataFrame,
+    measure: str,
+    frag_type: str,
+) -> None:
+    """
+    Plot a ridgeline histogram of heterozygosity for one fragmentation type.
+
+    :param df: DataFrame with columns ['step_pct', 'het'].
+    :param frag_type: Identifier for the fragmentation type.
+    """
+    # 1. Compute histogram layers (reversed so lowest step at top)
+    steps, bin_edges, hist_counts = compute_histogram(df, measure=measure)
+    # 2. Colors reversed for top-down
+    n = len(steps)
     if measure == 'het':
-        ax.set_xlim(0, 1.4)
-    ax.set_ylim(0, 15)
+        cmap = plt.get_cmap('YlGnBu')(np.linspace(0, 1, n))
+    else:
+        cmap = plt.get_cmap('YlOrRd')(np.linspace(0, 1, n))
+    # 3. Plot bars with offsets
+    fig, ax = plt.subplots(figsize=(4, 2 + 0.5 * n))
+    bin_width = bin_edges[1] - bin_edges[0]
+    for i, (step, counts) in enumerate(zip(steps, hist_counts)):
+        base = i * 6
+        ax.bar(
+            bin_edges[:-1],
+            counts,
+            width=bin_width,
+            bottom=base,
+            color=cmap[i],
+            edgecolor='black',
+            alpha=0.6,
+            align='edge'
+        )
+        ax.hlines(base, bin_edges[0], bin_edges[-1], color='black', linewidth=0.5)
 
-    # Show the plot
-    plt.savefig(f'./figs/dist_{measure}_{type}.svg', format="svg")
-    plt.show()
-
-def plot_distribution_het(df, type=str):
-    """ Plot the distribution of heterozygosity across different steps as a ridgeline plot. """
-    # Create a figure and axes
-    fig, ax = plt.subplots()
-    # Get unique steps
-    unique_steps = df['step'].unique()
-
-    # Generate reversed color gradient
-    colors = plt.cm.YlGnBu(np.linspace(0, 1, len(unique_steps)))[::-1]
-
-    # Plot histogram for each step with increasing alpha
-    for i, step in enumerate(unique_steps):
-        values = df[df['step'] == step]['het']
-        ax.hist(values, bins=40, alpha=0.6, label=f'Step {step}', color=colors[i], edgecolor='black', density=True)
-
-        if i < len(unique_steps) - 1:
-        # Offset each step's histogram by a certain amount
-            for rect in ax.patches:
-                rect.set_y(rect.get_y() + 6)  # Adjust this value to change the vertical spacing between histograms
-                ax.axhline(y=rect.get_y(), color='black', linewidth=0.5)  # Add a line below the histogram
-
-        else:
-            rect.set_y(0)
-
-    ax.set_xlabel('Heterozygosity', fontsize=20)
-    ax.set_ylabel('Density', fontsize=20)
     ax.set_yticks([])
-    ax.legend()
+    ax.set_xlabel('Heterozygosity', fontsize=14)
+    ax.set_xlim(bin_edges[0], bin_edges[-1])
+    ax.set_ylim(0, 6 * n + max(cnt.max() for cnt in hist_counts))
+    ax.tick_params(axis='both', labelsize=12)
+    for spine in ['top', 'right', 'left']:
+        ax.spines[spine].set_visible(False)
 
-    ax.set_xlim(0, 1.4)
-    ax.set_ylim(0, (4 + len(unique_steps) * 6)) # Adjust this value to match the vertical spacing between histograms
-    # Increase tick labels size
-    ax.tick_params(axis='x', labelsize=16)  # Increase x-axis tick labels size
-    ax.tick_params(axis='y', labelsize=16)  # Increase y-axis tick labels size
-
-    # Remove the box (rectangle) around the plot
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.spines['left'].set_visible(False)
-    plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.12)
-
-    plt.savefig(f'./figs/dist_het_{type}.svg', format="svg")
-    plt.show()
-
-def plot_distribution_fst(df, type=str):
-    """ Plot the distribution of heterozygosity across different steps as a ridgeline plot. """
-    # Create a figure and axes
-    fig, ax = plt.subplots()
-    # Get unique steps
-    unique_steps = df['step'].unique()
-
-    # Generate reversed color gradient
-    colors = plt.cm.YlOrRd(np.linspace(0, 1, len(unique_steps)))[::-1]
-
-    # Plot histogram for each step with increasing alpha
-    for i, step in enumerate(unique_steps):
-        values = df[df['step'] == step]['fst']
-        ax.hist(values, bins=40, alpha=0.8, label=f'Step {step}', color=colors[i], edgecolor='black', density=True)
-
-        if i < len(unique_steps) - 1:
-        # Offset each step's histogram by a certain amount
-            for rect in ax.patches:
-                rect.set_y(rect.get_y() + 6)  # Adjust this value to change the vertical spacing between histograms
-                ax.axhline(y=rect.get_y(), color='black', linewidth=0.5)  # Add a line below the histogram
-        else:
-            ax.axhline(y=rect.get_y(), color='black', linewidth=0.5)  # Add a line below the histogram
-
-    ax.set_xlabel('Fst', fontsize=20)
-    ax.set_ylabel('Density', fontsize=20)
-    ax.set_yticks([])
-    ax.legend()
-
-    ax.set_ylim(0, (4 + len(unique_steps) * 6 + 4))  # vertical spacing between histograms
-    plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.12)
-    # Increase tick labels size
-    ax.tick_params(axis='x', labelsize=16)  # Increase x-axis tick labels size
-    ax.tick_params(axis='y', labelsize=16)  # Increase y-axis tick labels size
-
-    # Remove the box (rectangle) around the plot
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.spines['left'].set_visible(False)
-    plt.savefig(f'./figs/dist_fst_{type}.svg', format="svg")
+    plt.title(f"{frag_type}")
     plt.show()
 
 
@@ -393,27 +347,16 @@ def plot_variance(df):
 
 #######################
 ####################### plot data
-fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt','wrst']
-# fragmentation_types = ['cor']
-data = load_data(fragmentation_types)
-
-plot_all_fragmentation_types(data, measure='fst')
-plot_all_fragmentation_types(data, measure='het')
-
+# fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt','wrst']
+# data = load_data(fragmentation_types)
+# plot_genetics(data, measure='het')
 
 ##############plot distributions
 ##### one frag type each time
-# fragmentation_types = ['rand', 'cor', 'intr', 'dist', 'reg', 'div', 'opt','wrst']
-# fragmentation_types = ['reg']
-# frag_type = fragmentation_types[0]
-#
+# fragmentation_types = ['rand']
 # data = load_data(fragmentation_types)
-#
-# df = filter_intervals(data[frag_type],measure='het')
-# plot_distribution_het(df,type=frag_type)
-# df = filter_intervals(data[frag_type],measure='fst')
-# plot_distribution_fst(df,type=frag_type)
-
+# df = filter_intervals(data['rand'], measure='fst', interval_pct=25)
+# plot_distribution(df,measure='fst', frag_type='rand')
 
 ####################### plot individual nodes
 ################
