@@ -3,7 +3,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from typing import Dict
 
-from data_manipulation.genetics import process_frag_types, compute_histogram
+from data_manipulation.manp_genetics import process_frag_types, compute_histogram
 from funcs import FragmentationResult, percent_step
 import numpy as np
 
