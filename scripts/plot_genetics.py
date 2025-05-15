@@ -1,7 +1,6 @@
-
-from funcs import FragmentationResult, percent_step, load_data, assign_node_numbers
-from viz_genetics import plot_genetics, plot_distribution, plot_het_nodes, plot_variance
-
+from data_manipulation.genetics import filter_intervals, select_random_nodes, extract_nodes, process_variance
+from funcs import  load_data
+from viz_funcs.viz_genetics import plot_genetics, plot_distribution, plot_het_nodes, plot_variance
 
 ######################
 ###################### plot data

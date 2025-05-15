@@ -7,31 +7,31 @@ from statsmodels.tsa.ar_model import AutoReg
 import random
 from scipy.stats import skew, kurtosis
 
-from funcs import access_het_dist, access_networks, normalize_steps
+# from funcs import access_het_dist, access_networks, normalize_steps
 
 
 #show the first 1000 rows
 # pd.set_option('display.max_rows', None)
 
-
-def assign_node_numbers(df, nodes_per_step=50):
-    """
-    Assigns node numbers for each node in each replica.
-
-    :param df: DataFrame containing the heterozygosity data (dat[2]).
-    :param nodes_per_step: Number of nodes in each step. i.e. the number of nodes in the network.
-    :return: DataFrame with the original data and an additional 'node_number' column.
-    """
-    dfs = []  # List to collect DataFrames
-    df = access_het_dist(df)
-    for replica in df['replica'].unique():
-        df_replica = df[df['replica'] == replica]
-        for index in range(nodes_per_step):
-            node_rows = df_replica.iloc[index::nodes_per_step].copy()
-            node_rows['node_number'] = index  # Assign node number
-            dfs.append(node_rows)
-    df_with_node_numbers = pd.concat(dfs, ignore_index=True)  # Concatenate all DataFrames at once
-    return df_with_node_numbers
+##################to remove this func
+# def assign_node_numbers(df, nodes_per_step=50):
+#     """
+#     Assigns node numbers for each node in each replica.
+#
+#     :param df: DataFrame containing the heterozygosity data (dat[2]).
+#     :param nodes_per_step: Number of nodes in each step. i.e. the number of nodes in the network.
+#     :return: DataFrame with the original data and an additional 'node_number' column.
+#     """
+#     dfs = []  # List to collect DataFrames
+#     df = access_het_dist(df)
+#     for replica in df['replica'].unique():
+#         df_replica = df[df['replica'] == replica]
+#         for index in range(nodes_per_step):
+#             node_rows = df_replica.iloc[index::nodes_per_step].copy()
+#             node_rows['node_number'] = index  # Assign node number
+#             dfs.append(node_rows)
+#     df_with_node_numbers = pd.concat(dfs, ignore_index=True)  # Concatenate all DataFrames at once
+#     return df_with_node_numbers
 
 
 def get_focal_step(df, num_nodes=10):
@@ -346,13 +346,13 @@ def plot_het_indicator(cor: pd.DataFrame,
 
     ax1.set_xlabel('% fragmentation', fontsize=36)
     ax1.set_ylabel('Heterozygosity', color=color_het, fontsize=36)
-    ax2.set_ylabel("Kurtosis", color=color_ind, fontsize=36)
+    ax2.set_ylabel("returnrate", color=color_ind, fontsize=36)
 
     ax1.tick_params(axis='y', labelsize=32, labelcolor=color_het)
     ax2.tick_params(axis='y', labelsize=32, labelcolor=color_ind)
     ax1.tick_params(axis='x', labelsize=32)
 
-    plt.savefig(f'./figs/het_{indicator}_metapop.svg', format='svg')
+    # plt.savefig(f'./figs/het_{indicator}_metapop.svg', format='svg')
     plt.show()
 
 
@@ -365,10 +365,10 @@ def plot_het_indicator(cor: pd.DataFrame,
 
 # plot het+indicators of single population data-change y label
 # set random seed for reproducibility
-# random.seed(1)
-# cor = pd.read_csv('cor_d0.6_r1000_het.csv')
-# indicators = pd.read_csv('indicators_singlepop.csv')
-# plot_het_indicator(cor, indicators, indicator='returnrate', n_samples=10)
+random.seed(1)
+cor = pd.read_csv('cor_d0.6_r1000_het.csv')
+indicators = pd.read_csv('indicators_singlepop_25.csv')
+plot_het_indicator(cor, indicators, indicator='returnrate', n_samples=10)
 
 
 #### get the heterozygosity data for the corresponding largest component into csv

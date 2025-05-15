@@ -2,6 +2,8 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 from typing import Dict
+
+from data_manipulation.genetics import process_frag_types, compute_histogram
 from funcs import FragmentationResult, percent_step
 import numpy as np
 
