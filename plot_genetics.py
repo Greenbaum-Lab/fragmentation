@@ -8,7 +8,7 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 from typing import Dict
-from funcs import FragmentationResult, percent_step, load_data
+from funcs import FragmentationResult, percent_step, load_data, assign_node_numbers
 from typing import Literal, List, Tuple
 import numpy as np
 
@@ -193,10 +193,6 @@ def plot_distribution(
 
 ############### individual nodes ########################
 
-
-
-
-
 def select_random_nodes(
     df: pd.DataFrame,
     per_replica: int = 1,
@@ -245,7 +241,7 @@ def extract_nodes(
     return pd.concat(out, ignore_index=True).drop(columns=['replica', 'node_number'])
 
 
-def plot_nodes(
+def plot_het_nodes(
     df: pd.DataFrame,
     n_nodes: int = 10,
 ) -> None:
@@ -279,12 +275,7 @@ def plot_nodes(
     ax.tick_params(axis='both', which='major', labelsize=14)
     plt.show()
 
-fragmentation_types = ['rand']
-data = load_data(fragmentation_types)
-df = data.get('rand').het_dist
-x=select_random_nodes(df, per_replica=1)
-df_selected = extract_nodes(df, x)
-plot_nodes(df_selected, n_nodes=10)
+
 
 
 ############### variance ####################
@@ -355,10 +346,12 @@ plot_nodes(df_selected, n_nodes=10)
 ####################### plot individual nodes
 ################
 # fragmentation_types = ['rand', 'cor', 'intr', 'dist', 'reg', 'div', 'opt', 'wrst']
-# # fragmentation_types = ['rand']
+# fragmentation_types = ['rand']
 # data = load_data(fragmentation_types)
-# plot_nodes_all(data)
-
+# df = data.get('rand').het_dist
+# x=select_random_nodes(df, per_replica=1)
+# df_selected = extract_nodes(df, x)
+# plot_het_nodes(df_selected, n_nodes=10)
 
 ############# calculate and plot variance across nodes in the network
 # fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt','wrst']
