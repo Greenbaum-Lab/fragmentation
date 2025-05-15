@@ -1,3 +1,5 @@
+############
+# filter giant component smaller than 4 in stack plot
 from random import random
 
 import networkx as nx

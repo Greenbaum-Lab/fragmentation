@@ -101,7 +101,6 @@ def make_het_central_all(data, centrality: str):
 
 def plot_node_centrality(df, step: int, centrality: str, frag: str, log=bool):
 
-
     sns.regplot(x='central', y='het', data=df, fit_reg=True, order=1,logistic=True,
                 scatter_kws={'s': 50, 'alpha': 0.7, 'color': 'blue'})
     plt.ylabel("Heterozygosity", fontsize=18)
