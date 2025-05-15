@@ -1,7 +1,6 @@
 import pickle
 from statistics import mean
 ##############
-#i removed calculate statistics so i need to swith to plotting with sns
 
 
 import pandas as pd
@@ -276,8 +275,6 @@ def plot_het_nodes(
     plt.show()
 
 
-
-
 ############### variance ####################
 # def calculate_variance(data, fragmentation_types: list):
 #     """
@@ -330,6 +327,78 @@ def plot_het_nodes(
 #     plt.show()
 
 
+
+
+
+
+def variance_per_replica_step(
+    data: Dict[str, FragmentationResult],
+    frag_type: str
+) -> pd.DataFrame:
+    """
+    Calculate heterozygosity variance per (replica, step) for a given frag_type.
+
+    :param data: Dict of fragmentation results.
+    :param frag_type: Fragmentation type key.
+    :return: DataFrame with columns ['replica', 'step', 'variance'].
+    """
+    frag_res = data[frag_type]
+    df = frag_res.het_dist
+    return (
+        df.groupby(['replica', 'step'])['het']
+          .var(ddof=1)
+          .reset_index(name='variance')
+    )
+
+
+def process_variance(
+    data: Dict[str, FragmentationResult],
+    fragmentation_types: List[str]
+) -> pd.DataFrame:
+    """
+    Prepare concatenated per-replica variance data for Seaborn.
+
+    :param data: Dict of frag_type → FragmentationResult.
+    :param fragmentation_types: List of frag_types to process.
+    :return: DataFrame with columns ['fragmentation_type', 'replica', 'step', 'variance'].
+    """
+    dfs = []
+    for frag_type in fragmentation_types:
+        var_df = variance_per_replica_step(data, frag_type)
+        var_df['frag_type'] = frag_type
+        dfs.append(var_df)
+    return pd.concat(dfs, ignore_index=True)
+
+
+def plot_variance(df: pd.DataFrame) -> None:
+    """
+    Plot variance using Seaborn’s estimator and errorbar.
+
+    :param df: DataFrame with columns ['fragmentation_type', 'replica', 'step', 'variance'].
+    :param step_col: Column name for x axis.
+    :param var_col: Column name for variance values.
+    :param frag_type_col: Column name for hue.
+    :param output_path: Path to save the figure.
+    """
+    plt.figure(figsize=(10, 6))
+    # Normalize step to percentage
+    df = percent_step(df, step_col='step', pct_col='step_pct')
+    sns.lineplot(
+        data=df,
+        x='step_pct',
+        y='variance',
+        hue='frag_type',
+        estimator='mean',
+        errorbar='sd'
+    )
+    plt.xlabel('% fragmentation', fontsize=25)
+    plt.ylabel('Variance', fontsize=25)
+    plt.tick_params(axis='both', labelsize=20)
+    plt.savefig('./figs/variance.svg', format='svg', dpi=300)
+    plt.show()
+
+
+
 #######################
 ####################### plot data
 # fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt','wrst']
@@ -354,8 +423,8 @@ def plot_het_nodes(
 # plot_het_nodes(df_selected, n_nodes=10)
 
 ############# calculate and plot variance across nodes in the network
-# fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt','wrst']
-# data = load_data(fragmentation_types)
-# calculate_variance(data, fragmentation_types)
-# df = pd.read_csv('./variance.csv')
-# plot_variance(df)
+fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt','wrst']
+data = load_data(fragmentation_types)
+#for single frag type use fragmentation_types[x]
+var = process_variance(data, fragmentation_types)
+plot_variance(var)
