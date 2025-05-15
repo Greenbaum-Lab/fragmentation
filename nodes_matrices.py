@@ -1,6 +1,7 @@
 import math
 import pickle
 from statistics import mean
+from typing import List, Dict
 
 import networkx as nx
 import numpy as np
@@ -13,130 +14,205 @@ from mantel import test
 from scipy.stats import pearsonr
 from scipy.stats import norm
 
-from funcs import load_data, access_networks, access_het_dist
+from funcs import load_data, FragmentationResult
 
 
-def add_nodes(data, nodes=50):
+def compute_centrality_graph(graph: nx.Graph) -> pd.DataFrame:
     """
-    Add a 'node' column to the DataFrame for each replica, considering up to the first 50 rows for each replica.
+    Compute degree and betweenness centrality for all nodes in a graph.
 
-    Parameters:
-    - data (pd.DataFrame): DataFrame with columns ['replica', 'step', 'het'].
-    - nodes (int): Number of nodes to consider for each replica. Default is 50.
-
-    Returns:
-    - pd.DataFrame: Processed DataFrame with an additional 'node' column.
+    :param graph: NetworkX graph instance.
+    :return: DataFrame with columns ['node_number', 'degree_centrality', 'betweenness_centrality'].
     """
+    # degree_centrality = nx.degree_centrality(graph)
+    betweenness_centrality = nx.betweenness_centrality(graph)
+    degree_centrality = dict(nx.degree(graph))
 
-    all_het = []
-    df = access_het_dist(data)
-    steps = df['step'].max()
+    #         'degree': lambda net: dict(nx.degree(net))
 
-    for replica in df['replica'].unique():
-        for step in range(steps):
-            # Select rows based on the 'step' value and up to the first 50 rows for the current replica
-            replica_net = df[(df['replica'] == replica) & (df['step'] == step)].head(nodes)
-            # Generate a sequence for the 'node' column within each replica slice
-            replica_net['node'] = range(replica_net.shape[0])
-            all_het.append(replica_net)
-    # Concatenate all processed slices into a single DataFrame and reset the index
-    het_df = pd.concat(all_het).reset_index(drop=True)
-    return het_df
+    df = pd.DataFrame({
+        'node_number': list(degree_centrality.keys()),
+        'degree': list(degree_centrality.values()),
+        'betweenness': list(betweenness_centrality.values())
+    })
 
-def calculate_node_centrality(data, centrality: str):
+    return df
+
+
+def compute_centrality_replicates(
+    networks: List[List[nx.Graph]]
+) -> pd.DataFrame:
     """
-    Calculate the specified centrality for each network in each replica and organize the results into a DataFrame.
+    Compute node centralities for all replicate-step graphs.
 
-    Parameters:
-    - data (list): A nested list where data[1] contains replicas, and each replica contains networks.
-    - centrality (str): The type of centrality to calculate. Can be 'bet' for betweenness or 'degree' for degree centrality.
-
-    Returns:
-    - pd.DataFrame: DataFrame with columns ['node', 'central', 'step', 'replica'] containing the centrality values.
+    :param networks: Nested list of graphs [replicate][step].
+    :return: DataFrame with columns ['replica', 'step', 'node_number', 'degree', 'betweenness'].
     """
-    centrality_funcs = {
-        'bet': nx.betweenness_centrality,
-        'degree': lambda net: dict(nx.degree(net))
-    }
+    records = []
 
-    nets = access_networks(data)
-    central_list = []
+    for replica_idx, replicate_graphs in enumerate(networks):
+        for step_idx, graph in enumerate(replicate_graphs):
+            centralities_df = compute_centrality_graph(graph)
+            centralities_df['replica'] = replica_idx
+            centralities_df['step'] = step_idx
+            records.append(centralities_df)
 
-    for replica in range(len(nets)):
-        for step in range(len(nets[0])):
-            net = nets[replica][step]
-            central = centrality_funcs[centrality](net)
-            central_df = pd.DataFrame.from_dict(central, orient='index', columns=['central'])
-            central_df['step'] = step
-            central_df['replica'] = replica
-            central_df = central_df.reset_index().rename(columns={'index': 'node'})
-            central_list.append(central_df)
-
-    return pd.concat(central_list)
+    return pd.concat(records, ignore_index=True)
 
 
-def make_het_central(data, centrality: str,):
+def compute_centralities_types(
+    data: Dict[str, FragmentationResult],
+    frag_types: list[str]
+) -> pd.DataFrame:
     """
-    merge heterozygosity and centrality data into a single DataFrame.
-    remove centrality-zero values
+    Compute degree and betweenness centralities for all graphs across multiple fragmentation types.
+
+    :param data: Mapping from frag_type to FragmentationResult.
+    :param frag_types: List of fragmentation type keys to process.
+    :return: DataFrame with columns ['fragmentation_type', 'replica', 'step', 'node_number', 'degree_centrality', 'betweenness_centrality'].
     """
-    het = add_nodes(data)
-    central = calculate_node_centrality(data, centrality)
-    final_df = pd.merge(het, central, on=['node', 'step', 'replica'])
-    final_df = final_df[final_df['central'] > 0]
+    all_dfs = []
+    for frag_type in frag_types:
+        frag_res = data[frag_type]
+        df = compute_centrality_replicates(frag_res.networks)
+        df['frag_type'] = frag_type
+        all_dfs.append(df)
 
-    return final_df
+    combined_df = pd.concat(all_dfs, ignore_index=True)
+    cols = ['frag', 'replica', 'step', 'node_number', 'degree', 'betweenness']
+    combined_df.to_csv(f'./csv_new/centrality.csv', index=False)
+    return combined_df[cols]
 
-def make_het_central_all(data, centrality: str):
-    """
-    get ehterozygosity and centrality data for all fragmentation types
-    """
-    for frag, data in data.items():
-        final_df = make_het_central(data, centrality)
-        # write csv
-        final_df.to_csv(f'./csv/{centrality}_het_{frag}.csv', index=False)
-    return final_df
+fragmentation_types = ['rand', 'cor']
+data = load_data(fragmentation_types)
+# networks = data.get('rand').networks
+# centrality_df = compute_centrality_replicates(networks)
+# centrality_df.to_csv('./csv_new/centrality.csv', index=False)
 
+centrality_df = compute_centralities_types(data, fragmentation_types)
+print(centrality_df)
 
-
-def plot_node_centrality(df, step: int, centrality: str, frag: str, log=bool):
-
-    sns.regplot(x='central', y='het', data=df, fit_reg=True, order=1,logistic=True,
-                scatter_kws={'s': 50, 'alpha': 0.7, 'color': 'blue'})
-    plt.ylabel("Heterozygosity", fontsize=18)
-
-    plt.tick_params(axis='both', labelsize=16)
-    plt.savefig(f'./figs/node_{centrality}_{step}_{frag}.svg', format="svg")
-    plt.show()
-
-
-def compute_correlation(df):
-    """
-    Calculate the Pearson correlation coefficient between 'het' and 'central'
-    for each combination of 'step' and 'replica' in the DataFrame.
-
-    Parameters:
-        df (pd.DataFrame): Input DataFrame containing 'step', 'het', 'replica', and 'central' columns.
-
-    Returns:
-        pd.DataFrame: DataFrame with columns 'step', 'replica', and 'cor', containing the correlation values.
-    """
-    results = []
-    grouped = df.groupby(['step', 'replica'])
-
-    for (step, replica), group in grouped:
-        if len(group) < 2: # need at least 2 data points to calculate correlation
-            continue
-        cor, pval = pearsonr(group['het'], group['central'])
-        results.append({'step': step, 'replica': replica, 'cor': cor, 'pval': pval})
-
-    results_df = pd.DataFrame(results)
-    return results_df
+# def add_nodes(data, nodes=50):
+#     """
+#     Add a 'node' column to the DataFrame for each replica, considering up to the first 50 rows for each replica.
+#
+#     Parameters:
+#     - data (pd.DataFrame): DataFrame with columns ['replica', 'step', 'het'].
+#     - nodes (int): Number of nodes to consider for each replica. Default is 50.
+#
+#     Returns:
+#     - pd.DataFrame: Processed DataFrame with an additional 'node' column.
+#     """
+#
+#     all_het = []
+#     df = access_het_dist(data)
+#     steps = df['step'].max()
+#
+#     for replica in df['replica'].unique():
+#         for step in range(steps):
+#             # Select rows based on the 'step' value and up to the first 50 rows for the current replica
+#             replica_net = df[(df['replica'] == replica) & (df['step'] == step)].head(nodes)
+#             # Generate a sequence for the 'node' column within each replica slice
+#             replica_net['node'] = range(replica_net.shape[0])
+#             all_het.append(replica_net)
+#     # Concatenate all processed slices into a single DataFrame and reset the index
+#     het_df = pd.concat(all_het).reset_index(drop=True)
+#     return het_df
+#
+# def calculate_node_centrality(data, centrality: str):
+#     """
+#     Calculate the specified centrality for each network in each replica and organize the results into a DataFrame.
+#
+#     Parameters:
+#     - data (list): A nested list where data[1] contains replicas, and each replica contains networks.
+#     - centrality (str): The type of centrality to calculate. Can be 'bet' for betweenness or 'degree' for degree centrality.
+#
+#     Returns:
+#     - pd.DataFrame: DataFrame with columns ['node', 'central', 'step', 'replica'] containing the centrality values.
+#     """
+#     centrality_funcs = {
+#         'bet': nx.betweenness_centrality,
+#         'degree': lambda net: dict(nx.degree(net))
+#     }
+#
+#     nets = access_networks(data)
+#     central_list = []
+#
+#     for replica in range(len(nets)):
+#         for step in range(len(nets[0])):
+#             net = nets[replica][step]
+#             central = centrality_funcs[centrality](net)
+#             central_df = pd.DataFrame.from_dict(central, orient='index', columns=['central'])
+#             central_df['step'] = step
+#             central_df['replica'] = replica
+#             central_df = central_df.reset_index().rename(columns={'index': 'node'})
+#             central_list.append(central_df)
+#
+#     return pd.concat(central_list)
+#
+#
+# def make_het_central(data, centrality: str,):
+#     """
+#     merge heterozygosity and centrality data into a single DataFrame.
+#     remove centrality-zero values
+#     """
+#     het = add_nodes(data)
+#     central = calculate_node_centrality(data, centrality)
+#     final_df = pd.merge(het, central, on=['node', 'step', 'replica'])
+#     final_df = final_df[final_df['central'] > 0]
+#
+#     return final_df
+#
+# def make_het_central_all(data, centrality: str):
+#     """
+#     get ehterozygosity and centrality data for all fragmentation types
+#     """
+#     for frag, data in data.items():
+#         final_df = make_het_central(data, centrality)
+#         # write csv
+#         final_df.to_csv(f'./csv/{centrality}_het_{frag}.csv', index=False)
+#     return final_df
+#
+#
+#
+# def plot_node_centrality(df, step: int, centrality: str, frag: str, log=bool):
+#
+#     sns.regplot(x='central', y='het', data=df, fit_reg=True, order=1,logistic=True,
+#                 scatter_kws={'s': 50, 'alpha': 0.7, 'color': 'blue'})
+#     plt.ylabel("Heterozygosity", fontsize=18)
+#
+#     plt.tick_params(axis='both', labelsize=16)
+#     plt.savefig(f'./figs/node_{centrality}_{step}_{frag}.svg', format="svg")
+#     plt.show()
+#
+#
+# def compute_correlation(df):
+#     """
+#     Calculate the Pearson correlation coefficient between 'het' and 'central'
+#     for each combination of 'step' and 'replica' in the DataFrame.
+#
+#     Parameters:
+#         df (pd.DataFrame): Input DataFrame containing 'step', 'het', 'replica', and 'central' columns.
+#
+#     Returns:
+#         pd.DataFrame: DataFrame with columns 'step', 'replica', and 'cor', containing the correlation values.
+#     """
+#     results = []
+#     grouped = df.groupby(['step', 'replica'])
+#
+#     for (step, replica), group in grouped:
+#         if len(group) < 2: # need at least 2 data points to calculate correlation
+#             continue
+#         cor, pval = pearsonr(group['het'], group['central'])
+#         results.append({'step': step, 'replica': replica, 'cor': cor, 'pval': pval})
+#
+#     results_df = pd.DataFrame(results)
+#     return results_df
 
 
 ##### plot heterozygisuty vs. node centrality
 
-fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt', 'wrst']
+# fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt', 'wrst']
 # data = load_data(fragmentation_types)
 
 ### compute correlation between heterozygosity and centrality for all processes
@@ -170,25 +246,25 @@ fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt', 'wrst
 
 
 #### plot correlation het-degree for all replicates during fragmetiaon
-plt.figure(figsize=(10, 6))
-for frag in fragmentation_types:
-    df = pd.read_csv(f'./csv/bet_het_{frag}_cor.csv')
-    df['step'] = df['step'] / df['step'].max() * 100  # Normalize steps to percentage
-
-    df = df[df['pval'] < 0.05]  # Filter rows with pval < 0.05
-    # Filter steps with at least 5 unique replicas
-    valid_steps = df.groupby('step')['replica'].nunique()
-    valid_steps = valid_steps[valid_steps >= 5].index
-    df = df[df['step'].isin(valid_steps)]
-    sns.lineplot(x='step', y='cor', data=df, errorbar='sd')
-
-plt.xlabel('% fragmentation', fontsize=28)
-plt.ylabel('Correlation (r)', fontsize=28)
-plt.tick_params(axis='both', labelsize=25)
-plt.ylim(-1.05, 1.1)
-# plt.savefig(f'./figs/bet_het_cor_pval.svg', format="svg")
-plt.show()
-
+# plt.figure(figsize=(10, 6))
+# for frag in fragmentation_types:
+#     df = pd.read_csv(f'./csv/bet_het_{frag}_cor.csv')
+#     df['step'] = df['step'] / df['step'].max() * 100  # Normalize steps to percentage
+#
+#     df = df[df['pval'] < 0.05]  # Filter rows with pval < 0.05
+#     # Filter steps with at least 5 unique replicas
+#     valid_steps = df.groupby('step')['replica'].nunique()
+#     valid_steps = valid_steps[valid_steps >= 5].index
+#     df = df[df['step'].isin(valid_steps)]
+#     sns.lineplot(x='step', y='cor', data=df, errorbar='sd')
+#
+# plt.xlabel('% fragmentation', fontsize=28)
+# plt.ylabel('Correlation (r)', fontsize=28)
+# plt.tick_params(axis='both', labelsize=25)
+# plt.ylim(-1.05, 1.1)
+# # plt.savefig(f'./figs/bet_het_cor_pval.svg', format="svg")
+# plt.show()
+#
 
 
 

@@ -28,7 +28,7 @@ class FragmentationResult:
 
 
 def load_data(fragmentation_types: List[str],
-              base_path: str = ".",
+              base_path: str = "./pickles/",
               extension: str = "pickle"
              ) -> Dict[str, FragmentationResult]:
     """
