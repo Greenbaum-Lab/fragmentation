@@ -276,60 +276,6 @@ def plot_het_nodes(
 
 
 ############### variance ####################
-# def calculate_variance(data, fragmentation_types: list):
-#     """
-#     This function calculates the variance of heterozygosity for each node in the network
-#     across all steps for each fragmentation type. The calculation is performed separately
-#     for each replica, and then the mean variance is calculated across replicas for each step.
-#     """
-#     all_data = []
-#
-#     for frag_type in fragmentation_types:
-#         frag_data = access_het_dist(data[f'{frag_type}'])
-#
-#         steps = frag_data['step'].unique()
-#         for step in steps:
-#             all_replicas = []
-#             for replica in frag_data['replica'].unique():
-#                 replica_data = frag_data[(frag_data['replica'] == replica) & (frag_data['step'] == step)]
-#                 variance = replica_data['het'].var()
-#                 all_replicas.append(variance)
-#             mean_variance = np.mean(all_replicas)
-#             sd = np.std(all_replicas)
-#             all_data.append({'fragmentation_type': frag_type, 'step': step, 'variance': mean_variance, 'sd': sd})
-#
-#     df = pd.DataFrame(all_data)
-#     df.to_csv('./variance.csv', index=False)
-#     return df
-#
-#
-# def plot_variance(df):
-#     """
-#     Plot the variance of heterozygosity for each fragmentation type across all steps.
-#     """
-#     color_palette = plt.get_cmap('tab10')
-#     plt.figure(figsize=(10, 6))
-#
-#     fragmentation_types = df['fragmentation_type'].unique()
-#     for i, frag_type in enumerate(fragmentation_types):
-#         color = color_palette(i)
-#         frag_df = df[df['fragmentation_type'] == frag_type]
-#         frag_df['step'] = ((frag_df['step'] - frag_df['step'].min()) /
-#                            (frag_df['step'].max() - frag_df['step'].min()) * 100)
-#         plt.plot(frag_df['step'], frag_df['variance'], label=frag_type, color=color)
-#         plt.fill_between(frag_df['step'], frag_df['variance'] - frag_df['sd'], frag_df['variance'] + frag_df['sd'],
-#                          alpha=0.2, color=color)
-#
-#     plt.xlabel('Fragmentation (%)', fontsize=20)
-#     plt.ylabel('Variance', fontsize=20)
-#     plt.tick_params(axis='both', which='major', labelsize=20)
-#     plt.savefig('./figs/paper figs/SUP_variance.svg', format='svg')
-#     plt.show()
-
-
-
-
-
 
 def variance_per_replica_step(
     data: Dict[str, FragmentationResult],
