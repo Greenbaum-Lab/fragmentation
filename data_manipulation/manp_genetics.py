@@ -7,6 +7,7 @@ from calculations.general import variance_per_replica_step
 from funcs import FragmentationResult, assign_node_numbers, percent_step
 
 
+####### main plotting of heterozygosity and fst across fragmentation types #######
 def process_frag_types(
     data: Dict[str, FragmentationResult],
     measure: str
@@ -38,6 +39,9 @@ def process_frag_types(
 
     # Concatenate all types into one DataFrame
     return pd.concat(all_types, ignore_index=True)
+
+
+####### distributions of heterozygosity and fst for single fragmentation type #######
 
 def filter_intervals(
     frag_res: FragmentationResult,
@@ -104,6 +108,7 @@ def compute_histogram(
     return steps, bin_edges, hist_counts
 
 
+####### plotting of individual nodes heterozygosity for single fragmentation type #######
 
 def select_random_nodes(
     df: pd.DataFrame,
@@ -153,6 +158,7 @@ def extract_nodes(
     return pd.concat(out, ignore_index=True).drop(columns=['replica', 'node_number'])
 
 
+####### variance of heterozygosity for single fragmentation type #######
 
 def process_variance(
     data: Dict[str, FragmentationResult],
