@@ -14,7 +14,7 @@ from mantel import test
 from scipy.stats import pearsonr
 from scipy.stats import norm
 
-from funcs import load_data, FragmentationResult, assign_node_numbers
+from funcs import load_data, FragmentationResult, assign_node_numbers, percent_step
 
 
 def compute_centrality_network(graph: nx.Graph) -> pd.DataFrame:
@@ -129,16 +129,6 @@ def merge_centrality_het(
 
 # fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt', 'wrst']
 # data = load_data(fragmentation_types)
-
-### compute correlation between heterozygosity and centrality for all processes
-### change centrality name
-# make_het_central_all(data, 'bet')
-# for frag in fragmentation_types:
-#     df = pd.read_csv(f'./csv/bet_het_{frag}.csv')
-#     results_df = compute_correlation(df)
-#     results_df.to_csv(f'./csv/bet_het_{frag}_cor.csv', index=False)
-
-
 
 #### plot correlation het-degree for all replicates during fragmetiaon
 # plt.figure(figsize=(10, 6))
@@ -299,9 +289,16 @@ def compute_het_central_correlation(
     """
     results = []
 
+    # Ensure frag_type maintains its order
+    frag_type_order = df['frag_type'].unique()
+    df['frag_type'] = pd.Categorical(df['frag_type'], categories=frag_type_order, ordered=True)
+
     grouped = df.groupby(['frag_type', 'replica', 'step'])
 
     for (frag_type, replica, step), group in grouped:
+        group = group[group[centrality] != 0]  # Exclude rows where centrality is 0
+        if group.empty:
+            continue
         r, p = pearsonr(group[centrality], group['het'])
         results.append({
             'frag_type': frag_type,
@@ -312,9 +309,69 @@ def compute_het_central_correlation(
         })
 
     corr_df = pd.DataFrame(results)
-    corr_df.to_csv(f'./csv_new/het_bet_correlation.csv', index=False)
+    corr_df.to_csv(f'./csv_new/het_degree_correlation.csv', index=False)
     return pd.DataFrame(results)
 
+
+def plot_correlation(
+    corr_df,
+    output_path='./figs/corr_degree.svg'
+):
+    """
+    Plot correlation coefficient r over steps using Seaborn to compute mean ± SD.
+
+    :param corr_df: DataFrame with columns ['frag_type', 'replica', 'step', 'r', 'p'].
+    :param frag_type_col: Column name for fragmentation type.
+    :param step_col: Column name for step.
+    :param r_col: Column name for correlation coefficient.
+    :param output_path: Path to save plot.
+    """
+    # Convert step to percentage using func percent_step
+    corr_df = percent_step(corr_df, step_col='step', pct_col='step_pct')
+
+    plt.figure(figsize=(6, 4))
+    sns.lineplot(
+        data=corr_df,
+        x='step_pct',
+        y='r',
+        hue='frag_type',
+        estimator='mean',
+        errorbar='sd',
+    )
+    plt.xlabel('% fragmentation', fontsize=16)
+    plt.ylabel('Correlation (r)', fontsize=16)
+    plt.tick_params(axis='both', labelsize=14)
+    plt.ylim(-0.05, 1.1)
+    plt.legend().set_visible(False)
+    plt.savefig(output_path, format='svg')
+    plt.show()
+
+
+
+def filter_correlations(
+    corr_df: pd.DataFrame,
+    min_replicates: int
+) -> pd.DataFrame:
+    """
+    Filter correlation DataFrame to include only significant results (p < threshold)
+    and groups with more than min_replicates.
+
+    :param corr_df: DataFrame with correlation results, including p-values.
+    :param min_replicates: Minimum number of replicates required per (frag_type, step).
+    :return: Filtered DataFrame.
+    """
+    df_filtered = corr_df[(corr_df['p'] < 0.05) & (corr_df['p'] > 0)]
+    # Identify valid (frag_type, step) groups with enough replicates
+    valid_groups = (
+        df_filtered
+        .groupby(['frag_type', 'step'])['replica']
+        .nunique()
+        .reset_index()
+        .query(f"replica >= {min_replicates}")
+        [['frag_type', 'step']]
+    )
+
+    return df_filtered.merge(valid_groups, on=['frag_type', 'step'], how='inner')
 
 ###scripts
 ###### compute centrality for all fragmentation types
@@ -342,11 +399,21 @@ def compute_het_central_correlation(
 #     output_path='./figs/het_bet_steps.svg'
 # )
 
-centrality_df = pd.read_csv('./csv_new/centrality_het.csv')
 
+##### compute correlation between centrality and heterozygosity
+centrality_df = pd.read_csv('./csv_new/centrality_het.csv')
 corr_df = compute_het_central_correlation(
     df=centrality_df,
     centrality='betweenness',
 )
 
-print(corr_df)
+
+
+##### plot correlation between centrality and heterozygosity
+# corr_df = pd.read_csv('./csv_new/het_bet_correlation.csv')
+# filtered_corr_df = filter_correlations(corr_df, min_replicates=50)
+# print(filtered_corr_df)
+# plot_correlation(
+#     corr_df=filtered_corr_df,
+#     output_path='./figs/corr_degree.svg'
+# )
