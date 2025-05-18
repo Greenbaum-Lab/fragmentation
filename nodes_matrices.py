@@ -122,29 +122,7 @@ def merge_centrality_het(
 
     return final_df
 
-#
-# def compute_correlation(df):
-#     """
-#     Calculate the Pearson correlation coefficient between 'het' and 'central'
-#     for each combination of 'step' and 'replica' in the DataFrame.
-#
-#     Parameters:
-#         df (pd.DataFrame): Input DataFrame containing 'step', 'het', 'replica', and 'central' columns.
-#
-#     Returns:
-#         pd.DataFrame: DataFrame with columns 'step', 'replica', and 'cor', containing the correlation values.
-#     """
-#     results = []
-#     grouped = df.groupby(['step', 'replica'])
-#
-#     for (step, replica), group in grouped:
-#         if len(group) < 2: # need at least 2 data points to calculate correlation
-#             continue
-#         cor, pval = pearsonr(group['het'], group['central'])
-#         results.append({'step': step, 'replica': replica, 'cor': cor, 'pval': pval})
-#
-#     results_df = pd.DataFrame(results)
-#     return results_df
+
 
 
 ##### plot heterozygisuty vs. node centrality
@@ -304,6 +282,40 @@ def plot_correlation_steps(
     plt.show()
 
 
+def compute_het_central_correlation(
+    df: pd.DataFrame,
+    centrality: Literal['degree', 'betweenness'],
+) -> pd.DataFrame:
+    """
+    Compute Pearson correlation (r) and p-value between centrality and heterozygosity
+    for each (fragmentation_type, replica, step) group.
+
+    :param df: DataFrame containing columns:
+               ['frag_type', 'replica', 'step', centrality_col, heterozygosity_col]
+    :param centrality_col: Name of centrality measure column ('degree' or 'betweenness')
+    :param heterozygosity_col: Name of heterozygosity column (default 'het')
+    :return: DataFrame with columns:
+             ['frag_type', 'replica', 'step', 'r', 'p']
+    """
+    results = []
+
+    grouped = df.groupby(['frag_type', 'replica', 'step'])
+
+    for (frag_type, replica, step), group in grouped:
+        r, p = pearsonr(group[centrality], group['het'])
+        results.append({
+            'frag_type': frag_type,
+            'replica': replica,
+            'step': step,
+            'r': r,
+            'p': p
+        })
+
+    corr_df = pd.DataFrame(results)
+    corr_df.to_csv(f'./csv_new/het_bet_correlation.csv', index=False)
+    return pd.DataFrame(results)
+
+
 ###scripts
 ###### compute centrality for all fragmentation types
 # fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt', 'wrst']
@@ -329,3 +341,12 @@ def plot_correlation_steps(
 #     measure='betweenness',
 #     output_path='./figs/het_bet_steps.svg'
 # )
+
+centrality_df = pd.read_csv('./csv_new/centrality_het.csv')
+
+corr_df = compute_het_central_correlation(
+    df=centrality_df,
+    centrality='betweenness',
+)
+
+print(corr_df)
