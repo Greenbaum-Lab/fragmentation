@@ -122,20 +122,6 @@ def merge_centrality_het(
 
     return final_df
 
-
-#
-#
-#
-# def plot_node_centrality(df, step: int, centrality: str, frag: str, log=bool):
-#
-#     sns.regplot(x='central', y='het', data=df, fit_reg=True, order=1,logistic=True,
-#                 scatter_kws={'s': 50, 'alpha': 0.7, 'color': 'blue'})
-#     plt.ylabel("Heterozygosity", fontsize=18)
-#
-#     plt.tick_params(axis='both', labelsize=16)
-#     plt.savefig(f'./figs/node_{centrality}_{step}_{frag}.svg', format="svg")
-#     plt.show()
-#
 #
 # def compute_correlation(df):
 #     """
@@ -173,26 +159,6 @@ def merge_centrality_het(
 #     df = pd.read_csv(f'./csv/bet_het_{frag}.csv')
 #     results_df = compute_correlation(df)
 #     results_df.to_csv(f'./csv/bet_het_{frag}_cor.csv', index=False)
-
-
-##### plot single correlation, degree-heterozygosity or betweenness-heterozygosity
-# df = pd.read_csv(f'./csv/bet_het_dist.csv')
-#
-# steps = [0, 75, 150]
-# fig, axes = plt.subplots(1, 3, figsize=(18, 7), sharey=True)
-#
-# for i, step in enumerate(steps):
-#     df_step = df[(df['step'] == step) & (df['replica'] == 11)]
-#     sns.regplot(x='central', y='het', data=df_step, fit_reg=True, order=1, ax=axes[i])
-#     cor, pval = pearsonr(df_step['central'], df_step['het'])
-#     axes[i].set_xlabel('Population betweenness', fontsize=30)
-#     axes[i].set_ylabel('Heterozygosity' if i == 0 else '', fontsize=30)
-#     axes[i].tick_params(axis='both', labelsize=25)
-#     axes[i].set_ylim(0, 1.4)
-#     axes[i].text(0.05, 1.2, f'r={cor:.2f}\np={pval:.2e}', fontsize=20, transform=axes[i].transAxes)
-# plt.tight_layout()
-# plt.savefig(f'./figs/degree_bet_steps.svg', format="svg")
-# plt.show()
 
 
 
