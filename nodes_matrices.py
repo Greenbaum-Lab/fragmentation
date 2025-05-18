@@ -1,7 +1,7 @@
 import math
 import pickle
 from statistics import mean
-from typing import List, Dict
+from typing import List, Dict, Literal
 
 import networkx as nx
 import numpy as np
@@ -14,7 +14,7 @@ from mantel import test
 from scipy.stats import pearsonr
 from scipy.stats import norm
 
-from funcs import load_data, FragmentationResult
+from funcs import load_data, FragmentationResult, assign_node_numbers
 
 
 def compute_centrality_network(graph: nx.Graph) -> pd.DataFrame:
@@ -84,7 +84,7 @@ def compute_centrality_types(
     return combined_df[cols]
 
 
-def preprocess_and_merge_data(
+def merge_centrality_het(
         centrality_df: pd.DataFrame,
         data: Dict[str, FragmentationResult],
         frag_types: list[str]
@@ -103,6 +103,7 @@ def preprocess_and_merge_data(
     for frag_type in frag_types:
         # Get the heterozygosity data from FragmentationResult
         frag_res = data[frag_type]
+        assign_node_numbers(frag_res.het_dist)
         het_df = frag_res.het_dist
 
         # Merge the centrality and heterozygosity data on ['replica', 'step', 'node_number']
@@ -113,37 +114,15 @@ def preprocess_and_merge_data(
             how='left'  # 'left' join keeps all centrality data and adds 'het' where possible
         )
 
-        # Add the fragmentation type to the merged data
-        merged_df['frag_type'] = frag_type
         all_data.append(merged_df)
 
     # Concatenate all fragmentation types into a single DataFrame
     final_df = pd.concat(all_data, ignore_index=True)
+    final_df.to_csv(f'./csv_new/centrality_het.csv', index=False)
 
     return final_df
 
-#
-# def make_het_central(data, centrality: str,):
-#     """
-#     merge heterozygosity and centrality data into a single DataFrame.
-#     remove centrality-zero values
-#     """
-#     het = add_nodes(data)
-#     central = calculate_node_centrality(data, centrality)
-#     final_df = pd.merge(het, central, on=['node', 'step', 'replica'])
-#     final_df = final_df[final_df['central'] > 0]
-#
-#     return final_df
-#
-# def make_het_central_all(data, centrality: str):
-#     """
-#     get ehterozygosity and centrality data for all fragmentation types
-#     """
-#     for frag, data in data.items():
-#         final_df = make_het_central(data, centrality)
-#         # write csv
-#         final_df.to_csv(f'./csv/{centrality}_het_{frag}.csv', index=False)
-#     return final_df
+
 #
 #
 #
@@ -240,12 +219,67 @@ def preprocess_and_merge_data(
 
 
 
+def plot_correlation(
+    df: pd.DataFrame,
+    measure: Literal['degree', 'betweenness'],
+    frag_type_col: str = 'fragmentation_type',
+    output_path: str = './figs/correlation_plot.svg'
+) -> None:
+    """
+    Plot the correlation between a centrality measure and heterozygosity for
+     fragmentation type-step-replica.
+
+    :param df: DataFrame containing the centrality and heterozygosity data.
+    :param measure: The centrality measure to correlate ('degree_centrality' or 'betweenness_centrality').
+    :param output_path: Path to save the plot.
+    """
+    # 1. Compute the correlation coefficient (Pearson)
+    r, p = pearsonr(df[measure], df['het'])
+
+    plt.figure(figsize=(6, 4))
+    sns.regplot(data=df, x=measure, y='het', fit_reg=True)
+
+    # 3. Annotate the plot with r and p-value
+    plt.annotate(
+        f'r = {r:.2f}\np = {p:.2e}',
+        xy=(0.05, 0.95),  # Position (x, y) as relative plot coordinates
+        xycoords='axes fraction',  # Use axes fraction for relative positioning
+        fontsize=14,
+        color='black',
+        ha='left',
+        va='top',  # Align to the top-left corner
+        bbox=dict(facecolor='white', alpha=0.7, edgecolor='none', boxstyle='round,pad=0.5')
+    )
+
+    # 3. Add the correlation coefficient to the plot
+     plt.xlabel('Degree', fontsize=18)
+    plt.ylabel('Heterozygosity', fontsize=18)
+    plt.tick_params(axis='both', which='major', labelsize=14)
+
+    # plt.savefig(output_path, format='svg')
+    plt.show()
 
 
 
 
 ###scripts
+###### compute centrality for all fragmentation types
 # fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt', 'wrst']
 # data = load_data(fragmentation_types)
-#
 # centrality_df = compute_centralities_types(data, fragmentation_types)
+
+
+##### merge centrality with heterozygosity data
+# frag_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt', 'wrst']
+# data = load_data(frag_types)
+# centrality_df = pd.read_csv('./csv_new/centrality.csv')
+# merged_df = merge_centrality_het(centrality_df, data, frag_types)
+
+
+##### plot centrality vs. heterozygosity
+centrality_df = pd.read_csv('./csv_new/centrality_het.csv')
+#filter data for random replica and step and frag type
+centrality_df = centrality_df[(centrality_df['replica'] == 0) & (centrality_df['step'] == 0)]
+centrality_df = centrality_df[centrality_df['frag_type'] == 'rand']
+
+plot_correlation(centrality_df, measure='degree', frag_type_col='frag_type')
