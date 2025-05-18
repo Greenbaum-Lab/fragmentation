@@ -17,9 +17,9 @@ from scipy.stats import norm
 from funcs import load_data, FragmentationResult
 
 
-def compute_centrality_graph(graph: nx.Graph) -> pd.DataFrame:
+def compute_centrality_network(graph: nx.Graph) -> pd.DataFrame:
     """
-    Compute degree and betweenness centrality for all nodes in a graph.
+    Compute degree and betweenness centrality for all nodes in a network.
 
     :param graph: NetworkX graph instance.
     :return: DataFrame with columns ['node_number', 'degree_centrality', 'betweenness_centrality'].
@@ -43,7 +43,7 @@ def compute_centrality_replicates(
     networks: List[List[nx.Graph]]
 ) -> pd.DataFrame:
     """
-    Compute node centralities for all replicate-step graphs.
+    Compute node centralities for all replicate-step networks.
 
     :param networks: Nested list of graphs [replicate][step].
     :return: DataFrame with columns ['replica', 'step', 'node_number', 'degree', 'betweenness'].
@@ -52,7 +52,7 @@ def compute_centrality_replicates(
 
     for replica_idx, replicate_graphs in enumerate(networks):
         for step_idx, graph in enumerate(replicate_graphs):
-            centralities_df = compute_centrality_graph(graph)
+            centralities_df = compute_centrality_network(graph)
             centralities_df['replica'] = replica_idx
             centralities_df['step'] = step_idx
             records.append(centralities_df)
@@ -60,7 +60,7 @@ def compute_centrality_replicates(
     return pd.concat(records, ignore_index=True)
 
 
-def compute_centralities_types(
+def compute_centrality_types(
     data: Dict[str, FragmentationResult],
     frag_types: list[str]
 ) -> pd.DataFrame:
@@ -79,77 +79,49 @@ def compute_centralities_types(
         all_dfs.append(df)
 
     combined_df = pd.concat(all_dfs, ignore_index=True)
-    cols = ['frag', 'replica', 'step', 'node_number', 'degree', 'betweenness']
+    cols = ['frag_type', 'replica', 'step', 'node_number', 'degree', 'betweenness']
     combined_df.to_csv(f'./csv_new/centrality.csv', index=False)
     return combined_df[cols]
 
-fragmentation_types = ['rand', 'cor']
-data = load_data(fragmentation_types)
-# networks = data.get('rand').networks
-# centrality_df = compute_centrality_replicates(networks)
-# centrality_df.to_csv('./csv_new/centrality.csv', index=False)
 
-centrality_df = compute_centralities_types(data, fragmentation_types)
-print(centrality_df)
+def preprocess_and_merge_data(
+        centrality_df: pd.DataFrame,
+        data: Dict[str, FragmentationResult],
+        frag_types: list[str]
+) -> pd.DataFrame:
+    """
+    Preprocess and merge the centrality data with heterozygosity data for each fragmentation type.
 
-# def add_nodes(data, nodes=50):
-#     """
-#     Add a 'node' column to the DataFrame for each replica, considering up to the first 50 rows for each replica.
-#
-#     Parameters:
-#     - data (pd.DataFrame): DataFrame with columns ['replica', 'step', 'het'].
-#     - nodes (int): Number of nodes to consider for each replica. Default is 50.
-#
-#     Returns:
-#     - pd.DataFrame: Processed DataFrame with an additional 'node' column.
-#     """
-#
-#     all_het = []
-#     df = access_het_dist(data)
-#     steps = df['step'].max()
-#
-#     for replica in df['replica'].unique():
-#         for step in range(steps):
-#             # Select rows based on the 'step' value and up to the first 50 rows for the current replica
-#             replica_net = df[(df['replica'] == replica) & (df['step'] == step)].head(nodes)
-#             # Generate a sequence for the 'node' column within each replica slice
-#             replica_net['node'] = range(replica_net.shape[0])
-#             all_het.append(replica_net)
-#     # Concatenate all processed slices into a single DataFrame and reset the index
-#     het_df = pd.concat(all_het).reset_index(drop=True)
-#     return het_df
-#
-# def calculate_node_centrality(data, centrality: str):
-#     """
-#     Calculate the specified centrality for each network in each replica and organize the results into a DataFrame.
-#
-#     Parameters:
-#     - data (list): A nested list where data[1] contains replicas, and each replica contains networks.
-#     - centrality (str): The type of centrality to calculate. Can be 'bet' for betweenness or 'degree' for degree centrality.
-#
-#     Returns:
-#     - pd.DataFrame: DataFrame with columns ['node', 'central', 'step', 'replica'] containing the centrality values.
-#     """
-#     centrality_funcs = {
-#         'bet': nx.betweenness_centrality,
-#         'degree': lambda net: dict(nx.degree(net))
-#     }
-#
-#     nets = access_networks(data)
-#     central_list = []
-#
-#     for replica in range(len(nets)):
-#         for step in range(len(nets[0])):
-#             net = nets[replica][step]
-#             central = centrality_funcs[centrality](net)
-#             central_df = pd.DataFrame.from_dict(central, orient='index', columns=['central'])
-#             central_df['step'] = step
-#             central_df['replica'] = replica
-#             central_df = central_df.reset_index().rename(columns={'index': 'node'})
-#             central_list.append(central_df)
-#
-#     return pd.concat(central_list)
-#
+    :param centrality_df: DataFrame containing 'frag_type', 'replica', 'step', 'node_number', 'degree', 'betweenness'
+    :param data: Dictionary mapping frag_type → FragmentationResult
+    :param frag_types: List of fragmentation types to process
+    :return: Merged DataFrame with centrality and heterozygosity for each node.
+    """
+    all_data = []
+
+    # Iterate over each fragmentation type
+    for frag_type in frag_types:
+        # Get the heterozygosity data from FragmentationResult
+        frag_res = data[frag_type]
+        het_df = frag_res.het_dist
+
+        # Merge the centrality and heterozygosity data on ['replica', 'step', 'node_number']
+        merged_df = pd.merge(
+            centrality_df[centrality_df['frag_type'] == frag_type],
+            het_df[['replica', 'step', 'node_number', 'het']],
+            on=['replica', 'step', 'node_number'],
+            how='left'  # 'left' join keeps all centrality data and adds 'het' where possible
+        )
+
+        # Add the fragmentation type to the merged data
+        merged_df['frag_type'] = frag_type
+        all_data.append(merged_df)
+
+    # Concatenate all fragmentation types into a single DataFrame
+    final_df = pd.concat(all_data, ignore_index=True)
+
+    return final_df
+
 #
 # def make_het_central(data, centrality: str,):
 #     """
@@ -272,3 +244,8 @@ print(centrality_df)
 
 
 
+###scripts
+# fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt', 'wrst']
+# data = load_data(fragmentation_types)
+#
+# centrality_df = compute_centralities_types(data, fragmentation_types)
