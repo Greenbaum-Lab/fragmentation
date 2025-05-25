@@ -1,3 +1,9 @@
+from typing import Dict
+
+import pandas as pd
+
+from funcs import FragmentationResult, assign_node_numbers
+
 
 def merge_centrality_het(
         centrality_df: pd.DataFrame,
