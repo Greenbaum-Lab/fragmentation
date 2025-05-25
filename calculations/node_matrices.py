@@ -1,7 +1,8 @@
-from typing import List, Dict
+from typing import List, Dict, Literal
 
 import networkx as nx
 import pandas as pd
+from scipy.stats import pearsonr
 
 from funcs import FragmentationResult
 
@@ -71,3 +72,45 @@ def compute_centrality_types(
     cols = ['frag_type', 'replica', 'step', 'node_number', 'degree', 'betweenness']
     combined_df.to_csv(f'./csv_new/centrality.csv', index=False)
     return combined_df[cols]
+
+
+
+def compute_het_central_correlation(
+    df: pd.DataFrame,
+    centrality: Literal['degree', 'betweenness'],
+) -> pd.DataFrame:
+    """
+    Compute Pearson correlation (r) and p-value between centrality and heterozygosity
+    for each (fragmentation_type, replica, step) group.
+
+    :param df: DataFrame containing columns:
+               ['frag_type', 'replica', 'step', centrality_col, heterozygosity_col]
+    :param centrality_col: Name of centrality measure column ('degree' or 'betweenness')
+    :param heterozygosity_col: Name of heterozygosity column (default 'het')
+    :return: DataFrame with columns:
+             ['frag_type', 'replica', 'step', 'r', 'p']
+    """
+    results = []
+
+    # Ensure frag_type maintains its order
+    frag_type_order = df['frag_type'].unique()
+    df['frag_type'] = pd.Categorical(df['frag_type'], categories=frag_type_order, ordered=True)
+
+    grouped = df.groupby(['frag_type', 'replica', 'step'])
+
+    for (frag_type, replica, step), group in grouped:
+        group = group[group[centrality] != 0]  # Exclude rows where centrality is 0
+        if group[centrality].nunique() < 2:
+            continue
+        r, p = pearsonr(group[centrality], group['het'])
+        results.append({
+            'frag_type': frag_type,
+            'replica': replica,
+            'step': step,
+            'r': r,
+            'p': p
+        })
+
+    corr_df = pd.DataFrame(results)
+    corr_df.to_csv(f'./csv_new/het_bet_correlation.csv', index=False)
+    return pd.DataFrame(results)

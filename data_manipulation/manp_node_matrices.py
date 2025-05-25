@@ -42,3 +42,30 @@ def merge_centrality_het(
     final_df.to_csv(f'./csv_new/centrality_het.csv', index=False)
 
     return final_df
+
+
+
+def filter_correlations(
+    corr_df: pd.DataFrame,
+    min_replicates: int
+) -> pd.DataFrame:
+    """
+    Filter correlation DataFrame to include only significant results (p < threshold)
+    and groups with more than min_replicates.
+
+    :param corr_df: DataFrame with correlation results, including p-values.
+    :param min_replicates: Minimum number of replicates required per (frag_type, step).
+    :return: Filtered DataFrame.
+    """
+    df_filtered = corr_df[(corr_df['p'] < 0.05) & (corr_df['p'] > 0)]
+    # Identify valid (frag_type, step) groups with enough replicates
+    valid_groups = (
+        df_filtered
+        .groupby(['frag_type', 'step'])['replica']
+        .nunique()
+        .reset_index()
+        .query(f"replica >= {min_replicates}")
+        [['frag_type', 'step']]
+    )
+
+    return df_filtered.merge(valid_groups, on=['frag_type', 'step'], how='inner')
