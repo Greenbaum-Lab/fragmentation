@@ -38,7 +38,7 @@ def plot_genetics(
     plt.tick_params(axis='both', labelsize=25)
     plt.legend(title='Type')
     plt.tight_layout()
-    plt.savefig(f'./figs/genetics_{measure}.svg', format="svg")
+    # plt.savefig(f'./figs/genetics_{measure}.svg', format="svg")
     plt.show()
 
 
