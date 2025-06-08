@@ -1,97 +1,4 @@
-############
-# filter giant component smaller than 4 in stack plot
-from random import random
 
-import networkx as nx
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-from itertools import combinations
-
-from scipy.stats import pearsonr
-
-from funcs import load_data, normalize_steps, calculate_statistics, compute_modularity, calculate_centrality, \
-    measure_giant_component, access_networks, access_fst_matrices
-from mantel import test
-import random
-import concurrent.futures
-
-############################################## plots centrality vs heterozygosity
-# def plot_het_central(data: dict, measure: str):
-#     fragmentation_types = list(data.keys())
-#     plt.figure()
-#     color_palette = plt.get_cmap('tab10')
-#
-#     for i, frag_type in enumerate(fragmentation_types):
-#         het = data[frag_type][3]
-#         central = calculate_centrality(data[frag_type][1], measure=measure)
-#         merged = pd.merge(het, central, how='outer')
-#         merged = merged[merged[measure] != 0]
-#
-#         # merged['modularity'] = np.log10(merged['modularity'])
-#         # merged['avg'] = np.log10(merged['avg'])
-#         if measure == 'component':
-#             sns.regplot(x='component', y='avg', data=merged, fit_reg=True, order=2,
-#                         truncate=True,
-#                         scatter_kws={'rasterized': True, 's': 50, 'alpha': 0.01, 'color': color_palette(i)},
-#                         line_kws={'lw': 2, 'label': frag_type})
-#
-#             # add a diagonal line
-#             plt.plot([0.05, 1], [0.05, 1], linestyle='--', color='black',linewidth=1)
-#             plt.xlabel('Fraction of nodes in the largest component', fontsize=16)
-#
-#         if measure == 'modularity':
-#             sns.regplot(x='modularity', y='avg', data=merged, fit_reg=True, order=2,
-#                         truncate=True,
-#                         scatter_kws={'rasterized': True, 's': 50, 'alpha': 0.01, 'color': color_palette(i)},
-#                         line_kws={'lw': 2, 'label': frag_type})
-#
-#             plt.gca().invert_xaxis()
-#             # plt.ylim(-0.05, 1.05)
-#             plt.xlabel('Modularity', fontsize=16)
-#
-#     plt.ylabel('Heterozygosity', fontsize=16)
-#     plt.tick_params(axis='both', labelsize=16)
-#
-#     plt.legend()
-#
-#     plt.savefig(f'./figs/het_{measure}.svg', format="svg", dpi=300)
-#     plt.show()
-
-
-def plot_het_component(data: dict):
-    """
-    Plot the regression of heterozygosity with the size of the giant component for each fragmentation type.
-
-    Args:
-        data (dict): Dictionary containing the data for each fragmentation type.
-    """
-    fragmentation_types = list(data.keys())
-    plt.figure(figsize=(10,6))
-    color_palette = plt.get_cmap('tab10')
-
-    for i, frag_type in enumerate(fragmentation_types):
-        het = data[frag_type][3]
-        giant_component = calculate_centrality(data[frag_type][1], measure='component')
-        merged = pd.merge(het, giant_component, how='outer')
-        merged = merged[merged['component'] != 0]
-
-        # Create bins for 'component' size
-        bins = pd.cut(merged['component'], bins=20)
-        binned_data = merged.groupby(bins).agg(avg=('avg', 'mean'),
-                                               std=('avg', 'std')).reset_index()
-        # Plot the binned data
-        plt.scatter(binned_data['component'].apply(lambda x: x.mid), binned_data['avg'], label=frag_type,
-                    color=color_palette(i))
-        plt.errorbar(binned_data['component'].apply(lambda x: x.mid), binned_data['avg'], yerr=binned_data['std'], fmt='o',
-                 label=frag_type, color=color_palette(i))
-
-    plt.xlabel('Fraction of nodes in the largest component', fontsize=22)
-    plt.ylabel('Heterozygosity', fontsize=22)
-    plt.tick_params(axis='both', labelsize=20)
-    plt.savefig(f'./figs/paper figs/het_component.svg', format="svg")
-    plt.show()
 
 ################################
 ################################ stack plot
@@ -348,18 +255,6 @@ def plot_network_stacked_area_all(data: dict):
 
 
 
-
-###########################################@@#####################
-###############################  analysis  #######################
-
-fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt', 'wrst']
-# fragmentation_types = ['rand', 'div']
-# data = load_data(fragmentation_types)
-
-########################plot centrality vs heterozygosity
-# plot_het_central(data, measure='component')
-# plot_het_component(data)
-
 ##############################plot stacks
 
 # fragmentation_types = ['rand', 'cor', 'intr', 'dist', 'reg', 'div', 'opt', 'wrst']
@@ -373,12 +268,43 @@ fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt', 'wrst
 
 
 
-##############################plot centrality vs fragmnetation
-# plot_centrality(data,centrality='connectivity')
 
-# stats= calculate_statistics(x)
-# print(stats)
-# plot_correlation_with_ci(stats, fragmentation_types)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ##fst-distance relationship
@@ -612,10 +538,10 @@ def calculate_mantel_all(data, perms, dist_type='euclidean'):
 
 
 ### calculate mantel for all for euclidean
-fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt', 'wrst']
-data = load_data(fragmentation_types)
-perms = 999
-cor_data = calculate_mantel_all(data, perms, dist_type='path')
+# fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt', 'wrst']
+# data = load_data(fragmentation_types)
+# perms = 999
+# cor_data = calculate_mantel_all(data, perms, dist_type='path')
 
 def plot_cor_fst(df):
     """

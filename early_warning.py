@@ -1,3 +1,4 @@
+import os
 import pickle
 import networkx as nx
 import numpy as np
@@ -346,13 +347,13 @@ def plot_het_indicator(cor: pd.DataFrame,
 
     ax1.set_xlabel('% fragmentation', fontsize=36)
     ax1.set_ylabel('Heterozygosity', color=color_het, fontsize=36)
-    ax2.set_ylabel("returnrate", color=color_ind, fontsize=36)
+    ax2.set_ylabel("Kurtosis", color=color_ind, fontsize=36)
 
     ax1.tick_params(axis='y', labelsize=32, labelcolor=color_het)
     ax2.tick_params(axis='y', labelsize=32, labelcolor=color_ind)
     ax1.tick_params(axis='x', labelsize=32)
 
-    # plt.savefig(f'./figs/het_{indicator}_metapop.svg', format='svg')
+    plt.savefig(f'./figs/het_{indicator}_signelpop.svg', format='svg')
     plt.show()
 
 
@@ -365,10 +366,11 @@ def plot_het_indicator(cor: pd.DataFrame,
 
 # plot het+indicators of single population data-change y label
 # set random seed for reproducibility
+
 random.seed(1)
 cor = pd.read_csv('cor_d0.6_r1000_het.csv')
 indicators = pd.read_csv('indicators_singlepop_25.csv')
-plot_het_indicator(cor, indicators, indicator='returnrate', n_samples=10)
+plot_het_indicator(cor, indicators, indicator='kurt', n_samples=10)
 
 
 #### get the heterozygosity data for the corresponding largest component into csv
