@@ -130,35 +130,6 @@ def get_random_walk_matrix(net, num_workers=None):
     return distance_matrix
 
 
-def find_connected_components(net):
-    """
-    Find all connected components in the network, filtering out small components.
-
-    :param net: NetworkX graph.
-    :return: List of components with more than 3 nodes.
-    """
-    return [list(comp) for comp in nx.connected_components(net) if len(comp) > 3]
-
-
-
-
-
-data = load_data(['rand'])
-net= data['rand'].networks[0][210]
-
-# Compute various distance matrices
-shortest_path_matrix = get_shortest_path_matrix(net)
-print("Shortest Path Matrix:")
-print(shortest_path_matrix)
-
-euclidean_matrix = get_euclidean_matrix(net)
-print("Euclidean Distance Matrix:")
-print(euclidean_matrix)
-
-random_walk_matrix = get_random_walk_matrix(net, num_workers=4)
-print("Random Walk Distance Matrix:")
-print(random_walk_matrix)
-
 
 
 

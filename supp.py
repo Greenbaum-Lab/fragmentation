@@ -13,7 +13,7 @@ from scipy.stats import pearsonr
 from scipy.stats import norm
 
 from funcs import calculate_statistics, load_data, calculate_centrality, normalize_steps
-from network_analysis import measure_giant_component
+from mantel_test import measure_giant_component
 from nodes_matrices import calculate_node_centrality
 
 

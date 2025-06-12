@@ -1,11 +1,20 @@
 from mantel import test
-from distance_matrices import get_euclidean_matrix, get_shortest_path_matrix, get_random_walk_matrix, \
-    find_connected_components
+from distance_matrices import get_euclidean_matrix, get_shortest_path_matrix, get_random_walk_matrix
 import numpy as np
 import networkx as nx
 from typing import Optional
 import concurrent.futures
 import pandas as pd
+
+def find_connected_components(net):
+    """
+    Find all connected components in the network, filtering out small components.
+
+    :param net: NetworkX graph.
+    :return: List of components with more than 3 nodes.
+    """
+    return [list(comp) for comp in nx.connected_components(net) if len(comp) > 3]
+
 
 
 

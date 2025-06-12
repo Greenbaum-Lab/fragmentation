@@ -3,7 +3,6 @@ from typing import Dict, List, Tuple, Literal
 import numpy as np
 import pandas as pd
 
-from calculations.general import variance_per_replica_step
 from funcs import FragmentationResult, assign_node_numbers, percent_step
 
 
