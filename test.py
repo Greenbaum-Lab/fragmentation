@@ -39,3 +39,49 @@ def process_frag_types(
 
     # Concatenate all types into one DataFrame
     return pd.concat(all_types, ignore_index=True)
+
+
+
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+from typing import Dict
+
+from data_manipulation.manp_genetics import process_frag_types, compute_histogram
+from funcs import FragmentationResult, percent_step
+import numpy as np
+
+
+
+
+def plot_genetics(
+    data: Dict[str, FragmentationResult],
+    measure: str
+):
+    """
+    Plot mean ± SD of the specified measure across all fragmentation types.
+
+    :param data: Mapping from frag_type to FragmentationResult.
+    :param measure: 'het' or 'fst'.
+    """
+    # Process all frag types to get a unified DataFrame
+    df = process_frag_types(data, measure)
+
+    # Plot using seaborn's built-in estimator for mean ± SD
+    plt.figure(figsize=(10, 6))
+    sns.lineplot(
+        data=df,
+        x='step_pct',
+        y='avg',
+        hue='frag_type',
+        estimator='mean',
+        errorbar='sd'
+    )
+    plt.xlabel('% fragmentation', fontsize=30)
+    plt.ylabel(measure.capitalize(), fontsize=30)
+    plt.tick_params(axis='both', labelsize=25)
+    plt.legend(title='Type')
+    plt.tight_layout()
+    # plt.savefig(f'./figs/genetics_{measure}.svg', format="svg")
+    plt.show()
+
