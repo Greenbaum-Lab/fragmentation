@@ -1,5 +1,20 @@
+# -----------------------------------------------------------------------------
+# This script provides utility functions for analyzing the distributions of
+# genetic diversity measures such as heterozygosity (het) and fixation index (fst)
+# across different levels of network fragmentation.
+#
+# Main functionalities:
+# - filter_intervals: Extracts node-level genetic measure data at fixed
+#   fragmentation percentage intervals from a FragmentationResult object.
+# - compute_histogram: Prepares histogram data for a given genetic measure at
+#   each fragmentation interval.
+# -----------------------------------------------------------------------------
 
-####### distributions of heterozygosity and fst for single fragmentation type #######
+
+import pandas as pd
+import numpy as np
+from typing import Literal, Tuple, List, Optional, TYPE_CHECKING
+
 
 def filter_intervals(
     frag_res: FragmentationResult,
@@ -64,4 +79,53 @@ def compute_histogram(
         bin_edges = edges
 
     return steps, bin_edges, hist_counts
+
+
+def plot_distribution(
+    df: pd.DataFrame,
+    measure: str,
+    frag_type: str,
+) -> None:
+    """
+    Plot a ridgeline histogram of heterozygosity for one fragmentation type.
+
+    :param df: DataFrame with columns ['step_pct', 'het'].
+    :param frag_type: Identifier for the fragmentation type.
+    """
+    # 1. Compute histogram layers (reversed so lowest step at top)
+    steps, bin_edges, hist_counts = compute_histogram(df, measure=measure)
+    # 2. Colors reversed for top-down
+    n = len(steps)
+    if measure == 'het':
+        cmap = plt.get_cmap('YlGnBu')(np.linspace(0, 1, n))
+    else:
+        cmap = plt.get_cmap('YlOrRd')(np.linspace(0, 1, n))
+    # 3. Plot bars with offsets
+    fig, ax = plt.subplots(figsize=(4, 2 + 0.5 * n))
+    bin_width = bin_edges[1] - bin_edges[0]
+    for i, (step, counts) in enumerate(zip(steps, hist_counts)):
+        base = i * 6
+        ax.bar(
+            bin_edges[:-1],
+            counts,
+            width=bin_width,
+            bottom=base,
+            color=cmap[i],
+            edgecolor='black',
+            alpha=0.6,
+            align='edge'
+        )
+        ax.hlines(base, bin_edges[0], bin_edges[-1], color='black', linewidth=0.5)
+
+    ax.set_yticks([])
+    ax.set_xlabel('Heterozygosity', fontsize=14)
+    ax.set_xlim(bin_edges[0], bin_edges[-1])
+    ax.set_ylim(0, 6 * n + max(cnt.max() for cnt in hist_counts))
+    ax.tick_params(axis='both', labelsize=12)
+    for spine in ['top', 'right', 'left']:
+        ax.spines[spine].set_visible(False)
+
+    plt.title(f"{frag_type}")
+    plt.show()
+
 
