@@ -8,7 +8,7 @@ from funcs import FragmentationResult, assign_node_numbers, percent_step
 
 
 ####### main plotting of heterozygosity and fst across fragmentation types #######
-def process_frag_types(
+def process_het_fst(
     data: Dict[str, FragmentationResult],
     measure: str
 ) -> pd.DataFrame:
