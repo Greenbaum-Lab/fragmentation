@@ -1,4 +1,10 @@
-import numpy as np
+"""
+This module provides functionality for processing and visualizing genetic data
+across different fragmentation types. It includes functions to normalize and
+combine replicate-level mean data and plot mean ± SD of heterozygosity ('het')
+or fixation index ('fst') across fragmentation types.
+"""
+
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -7,11 +13,7 @@ from typing import Dict
 from funcs import FragmentationResult, percent_step
 
 
-####### main plotting of heterozygosity and fst across fragmentation types #######
-def mean_het_fst(
-    data: Dict[str, FragmentationResult],
-    measure: str
-) -> pd.DataFrame:
+def mean_het_fst(data: Dict[str, FragmentationResult], measure: str) -> pd.DataFrame:
     """
     Combine and normalize replicate-level mean data for all fragmentation types.
 
@@ -19,14 +21,15 @@ def mean_het_fst(
     :param measure: 'het' or 'fst'.
     :return: DataFrame with columns ['step_pct', 'avg', 'replica', 'frag_type'].
     """
+    if measure not in {'het', 'fst'}:
+        raise ValueError(f"Invalid measure {measure!r}. Expected 'het' or 'fst'.")
+
     all_types = []
     for frag_type, frag_res in data.items():
         if measure == 'het':
             df = frag_res.het_mean.copy()
-        elif measure == 'fst':
+        else:  # measure == 'fst'
             df = frag_res.fst_mean.copy()
-        else:
-            raise ValueError(f"Unknown measure {measure!r}, expected 'het' or 'fst'.")
 
         df = percent_step(df, step_col='step', pct_col='step_pct')
         df['frag_type'] = frag_type
@@ -35,17 +38,17 @@ def mean_het_fst(
     return pd.concat(all_types, ignore_index=True)
 
 
-def plot_genetics(
-    data: Dict[str, FragmentationResult],
-    measure: str
-):
+def plot_genetics(data: Dict[str, FragmentationResult], measure: str) -> None:
     """
     Plot mean ± SD of the specified measure across all fragmentation types.
 
     :param data: Mapping from frag_type to FragmentationResult.
     :param measure: 'het' or 'fst'.
     """
-    # Process all frag types to get a unified DataFrame
+    if measure not in {'het', 'fst'}:
+        raise ValueError(f"Invalid measure {measure!r}. Expected 'het' or 'fst'.")
+
+    # Process all fragmentation types to get a unified DataFrame
     df = mean_het_fst(data, measure)
 
     plt.figure(figsize=(10, 6))
@@ -60,8 +63,6 @@ def plot_genetics(
     plt.xlabel('% fragmentation', fontsize=30)
     plt.ylabel(measure.capitalize(), fontsize=30)
     plt.tick_params(axis='both', labelsize=25)
-    plt.legend(title='Type')
+    plt.legend(title='Type', fontsize=15)
     plt.tight_layout()
-    # plt.savefig(f'./figs/genetics_{measure}.svg', format="svg")
     plt.show()
-
