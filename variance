@@ -1,28 +1,19 @@
 """
 variance.py
 
-This script provides functionality to compute the variance of heterozygosity for different fragmentation types
-from simulation results. It processes a dictionary of results and returns a concatenated DataFrame containing
-the variance per replica and step for each specified fragmentation type.
+Script to compute and plot the variance of heterozygosity for different fragmentation types
+from simulation results. Functions robustly process a dictionary of results and return a
+concatenated DataFrame with variance per replica and step for each specified fragmentation type.
 
-Functions:
-    process_variance(data, fragmentation_types): 
-        Prepares concatenated per-replica variance data for given fragmentation types.
-
-Dependencies:
-    - pandas as pd
-    - The following must be defined/imported elsewhere:
-        - Dict, List (from typing)
-        - FragmentationResult
-        - variance_per_replica_step (function)
 """
 
 from typing import Dict, List
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-from funcs import FragmentationResult
+import os
 
+from funcs import FragmentationResult, percent_step
 
 def variance_per_replica_step(
     data: Dict[str, FragmentationResult],
