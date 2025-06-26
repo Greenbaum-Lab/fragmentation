@@ -1,10 +1,12 @@
+"""
+Analysis utilities for evaluating the relationship between network fragmentation,
+giant component size, and heterozygosity metrics across different fragmentation types.
+Includes tools for merging, binning, and plotting these statistics.
+"""
 
-from typing import Dict, List
+from typing import Dict, List, Optional
 import pandas as pd
-from funcs import FragmentationResult, giant_component_over_steps,load_data
-
-
-
+from funcs import FragmentationResult, giant_component_over_steps
 
 
 def het_component(
@@ -61,11 +63,6 @@ def bin_het_component(
         .agg(mean_het='mean', sd_het='std')
 
       from typing import Dict, List
-
-from matplotlib import pyplot as plt
-
-from data_manipulation.manp_net import het_component, bin_het_component
-from funcs import FragmentationResult
 
 
 def plot_het_component(
