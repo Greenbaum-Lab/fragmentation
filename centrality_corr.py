@@ -1,13 +1,19 @@
 
+"""
+centrality_corr.py
 
+This module provides functions for analyzing the correlation between network centrality measures 
+and heterozygosity in network fragmentation analyses. Functions include merging centrality and 
+heterozygosity data, computing correlations, filtering significant results, and plotting correlations.
+
+"""
 from typing import Dict
-
 import pandas as pd
-
 from funcs import FragmentationResult, assign_node_numbers
 from matplotlib import pyplot as plt
-
 from funcs import percent_step
+from typing import Dict, Literal
+from scipy.stats import pearsonr
 
 def compute_het_central_correlation(
     df: pd.DataFrame,
