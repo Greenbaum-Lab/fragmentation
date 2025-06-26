@@ -1,3 +1,12 @@
+"""
+centrality.py
+
+This module provides functions to compute node centralities (degree and betweenness)
+for networks and collections of networks, especially in the context of network fragmentation
+analyses. It uses NetworkX for graph processing and pandas for data handling. The main
+functions allow centrality calculations for a single network, across replicates (e.g., 
+simulation steps), and across multiple fragmentation types.
+"""
 
 from typing import List, Dict, Literal
 
