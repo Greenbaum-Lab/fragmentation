@@ -2,18 +2,17 @@
 # This script provides utility functions for analyzing the distributions of
 # genetic diversity measures such as heterozygosity (het) and fixation index (fst)
 # across different levels of network fragmentation.
-#
-# Main functionalities:
-# - filter_intervals: Extracts node-level genetic measure data at fixed
-#   fragmentation percentage intervals from a FragmentationResult object.
-# - compute_histogram: Prepares histogram data for a given genetic measure at
-#   each fragmentation interval.
+
 # -----------------------------------------------------------------------------
 
 
 import pandas as pd
 import numpy as np
 from typing import Literal, Tuple, List, Optional, TYPE_CHECKING
+
+from matplotlib import pyplot as plt
+
+from funcs import FragmentationResult, percent_step
 
 
 def filter_intervals(

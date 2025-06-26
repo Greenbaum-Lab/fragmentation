@@ -14,7 +14,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from typing import Dict
-from .utils import assign_node_numbers, percent_step
+from funcs import assign_node_numbers, percent_step
 
 def select_random_nodes(
     df: pd.DataFrame,

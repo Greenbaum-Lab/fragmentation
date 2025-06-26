@@ -8,14 +8,16 @@ from pop_ind import select_random_nodes, extract_nodes, plot_het_nodes
 def plot_genetic_data():
     """
     Plot genetic data for different fragmentation types.
+    choose fragmentation types and measure (het or fst)
     """
-    fragmentation_types = ['rand']
+    fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt', 'wrst']
     data = load_data(fragmentation_types)
     plot_genetics(data, measure='het')
 
 def plot_distributions():
     """
     Plot distributions for a single fragmentation type.
+    choose fragmentation types and measure (het or fst)
     """
     fragmentation_types = ['rand']
     data = load_data(fragmentation_types)
@@ -25,6 +27,7 @@ def plot_distributions():
 def plot_individual_nodes():
     """
     Plot individual nodes for a single fragmentation type.
+    choose fragmentation type
     """
     fragmentation_types = ['rand']
     data = load_data(fragmentation_types)
@@ -34,6 +37,7 @@ def plot_individual_nodes():
     plot_het_nodes(df_selected, n_nodes=10)
 
 def main():
+    os.chdir("C://Users//lab2//Documents//GitHub//fragmentation")
     print(f"Current working directory: {os.getcwd()}")
     plot_genetic_data()
     plot_distributions()
