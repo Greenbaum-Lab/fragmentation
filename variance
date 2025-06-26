@@ -1,5 +1,24 @@
+"""
+variance.py
 
-####### variance of heterozygosity for single fragmentation type #######
+This script provides functionality to compute the variance of heterozygosity for different fragmentation types
+from simulation results. It processes a dictionary of results and returns a concatenated DataFrame containing
+the variance per replica and step for each specified fragmentation type.
+
+Functions:
+    process_variance(data, fragmentation_types): 
+        Prepares concatenated per-replica variance data for given fragmentation types.
+
+Dependencies:
+    - pandas as pd
+    - The following must be defined/imported elsewhere:
+        - Dict, List (from typing)
+        - FragmentationResult
+        - variance_per_replica_step (function)
+"""
+
+from typing import Dict, List
+import pandas as pd
 
 def process_variance(
     data: Dict[str, FragmentationResult],
@@ -18,3 +37,26 @@ def process_variance(
         var_df['frag_type'] = frag_type
         dfs.append(var_df)
     return pd.concat(dfs, ignore_index=True)
+
+def plot_variance(df: pd.DataFrame) -> None:
+    """
+    Plot variance.
+
+    :param df: DataFrame with columns ['fragmentation_type', 'replica', 'step', 'variance'].
+    """
+    plt.figure(figsize=(10, 6))
+    # Normalize step to percentage
+    df = percent_step(df, step_col='step', pct_col='step_pct')
+    sns.lineplot(
+        data=df,
+        x='step_pct',
+        y='variance',
+        hue='frag_type',
+        estimator='mean',
+        errorbar='sd'
+    )
+    plt.xlabel('% fragmentation', fontsize=25)
+    plt.ylabel('Variance', fontsize=25)
+    plt.tick_params(axis='both', labelsize=20)
+    plt.savefig('./figs/variance.svg', format='svg', dpi=300)
+    plt.show()
