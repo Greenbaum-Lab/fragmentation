@@ -1,0 +1,20 @@
+
+####### variance of heterozygosity for single fragmentation type #######
+
+def process_variance(
+    data: Dict[str, FragmentationResult],
+    fragmentation_types: List[str]
+) -> pd.DataFrame:
+    """
+    Prepare concatenated per-replica variance data.
+
+    :param data: Dict of frag_type → FragmentationResult.
+    :param fragmentation_types: List of frag_types to process.
+    :return: DataFrame with columns ['fragmentation_type', 'replica', 'step', 'variance'].
+    """
+    dfs = []
+    for frag_type in fragmentation_types:
+        var_df = variance_per_replica_step(data, frag_type)
+        var_df['frag_type'] = frag_type
+        dfs.append(var_df)
+    return pd.concat(dfs, ignore_index=True)
