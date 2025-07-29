@@ -5,15 +5,14 @@ import numpy as np
 import pandas as pd
 import networkx as nx
 from multiprocessing import Pool
-from matplotlib import pyplot as plt
 
-from Transformation import transform_matrix
+from Transformation import transform_matrix, conservative_from_normal
+
 from processes import (
     remove_edge_random, remove_edge_correlated, remove_edge_distance,
     remove_edge_intrusive, remove_edge_divisive, remove_edge_regressive,
     remove_edge_optimal, remove_edge_optimal_no_update, remove_edge_worst
 )
-# from Transformation import transform_matrix
 
 
 
@@ -292,35 +291,18 @@ def make_replicates_new(nets: list, frag_type: str, ignore: bool) -> tuple:
 
     return nets_number, all_nets, het_dens, het_stat, fst_dens, fst_stat, genetics_coal, genetics_fst
 
-def make_networks(n_nets: int, n_nodes: int, net_type) -> list:
+
+def symm_to_assym_net(net: nx.Graph) -> np.array:
     """
-    create a list of networks
-    :param n_nets: number of networks
-    :param n_nodes: number of nodes
-    :param connectivity: degree of connectivity
-    :param net_type: type of network: ER, RGG, or SF
-    :return: list of networks
+    Convert a networkx graph to a numpy array, apply a conservative transformation, and return the new network.
     """
-    nets = []
-    for net in range(n_nets):
-
-        if net_type == 'ER':
-            net = nx.erdos_renyi_graph(n=n_nodes, p=0.2)
-            nets.append(net)
-        if net_type == 'RGG':
-            net = nx.random_geometric_graph(n=n_nodes, radius=0.3)
-            nets.append(net)
-        if net_type == 'AB':
-            net = nx.barabasi_albert_graph(n=n_nodes, m=5)
-            nets.append(net)
-        if net_type == 'SW':
-            net = nx.watts_strogatz_graph(n=n_nodes,k=9, p=0.1)
-            nets.append(net)
-
-    return nets
+    matrix = nx.attr_matrix(net)[0]
+    assymetric_matrix = conservative_from_normal(matrix,mu=1, sigma=0.4, lower=0.2, upper=4)
+    new_net = nx.from_numpy_array(assymetric_matrix)
+    return new_net
 
 
-def make_rgg(n_nets: int, n_nodes: int, target_edges: int) -> list:
+def make_rgg(n_nets: int, n_nodes: int, target_edges: int,assymetric:bool) -> list:
     """
     Create a list of networks with a target number of edges.
     :param n_nets: number of networks
@@ -336,7 +318,11 @@ def make_rgg(n_nets: int, n_nodes: int, target_edges: int) -> list:
             print(net.number_of_edges())
 
             if net.number_of_edges() == target_edges:
-                nets.append(net)
+                if assymetric:
+                    net_assym = symm_to_assym_net(net)
+                    nets.append(net_assym)
+                else:
+                    nets.append(net)
                 break
     return nets
 
