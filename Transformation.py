@@ -3,13 +3,13 @@ import ctypes
 import numpy as np
 import math
 from collections import deque
+import scipy.linalg as la
 
-import scipy as sp
-
-# lib = ctypes.cdll.LoadLibrary('./libmigration.so')
-#
-# lib.coefficient_matrix_from_migration.restype = ctypes.POINTER(ctypes.c_double)
-# lib.coefficient_matrix_from_migration.argtypes = [ctypes.POINTER(ctypes.c_double), ctypes.c_int]
+lib = ctypes.cdll.LoadLibrary('./libmigration.so')
+lib.coefficient_matrix_from_migration.restype = ctypes.POINTER(ctypes.c_double)
+lib.coefficient_matrix_from_migration.argtypes = [ctypes.POINTER(ctypes.c_double), ctypes.c_int]
+lib.coalescence_from_migration.restype = ctypes.POINTER(ctypes.c_double)
+lib.coalescence_from_migration.argtypes = [ctypes.POINTER(ctypes.c_double), ctypes.c_int]
 
 def coefficient_matrix_from_migration_wrapper(migration_matrix):
     n = migration_matrix.shape[0]
@@ -20,13 +20,6 @@ def coefficient_matrix_from_migration_wrapper(migration_matrix):
 
     return result
 
-# lib.coalescence_from_migration.restype = ctypes.POINTER(ctypes.c_double)
-# lib.coalescence_from_migration.argtypes = [ctypes.POINTER(ctypes.c_double), ctypes.c_int]
-
-
-
-
-# This is a file for other users to copy to their projects.
 
 class Coalescence:
     def __init__(self, matrix: np.ndarray) -> None:
@@ -64,22 +57,6 @@ class Migration:
         self.matrix = matrix
         self.shape = matrix.shape[0]
 
-    def produce_coalescence_old(self) -> np.ndarray:
-        """
-        produces and returns the corresponding coalescence matrix
-        :return: The corresponding coalescence matrix
-        """
-        A = self.produce_coefficient_matrix()
-        b = self.produce_solution_vector()
-        x = np.linalg.solve(A, b)
-        T_mat = np.zeros((self.shape, self.shape))
-        cur_ind = 0
-        for i in range(self.shape):
-            for j in range(i, self.shape):
-                T_mat[i, j] = x[cur_ind]
-                T_mat[j, i] = x[cur_ind]
-                cur_ind += 1
-        return T_mat
 
     def produce_coalescence(self) -> np.ndarray:
         n = self.matrix.shape[0]
@@ -111,6 +88,7 @@ class Migration:
                 return -1 * self.matrix[i, p]
         return 0
 
+
     def calculate_last_coefficients(self, j, cur_pop, other_pop) -> float:
         """
         calculates the coefficients for the last (n choose 2) rows in the coefficient matrx
@@ -136,36 +114,6 @@ class Migration:
                         return -1 * self.matrix[not_t, p]
         return 0
 
-    def produce_coefficient_matrix(self) -> np.ndarray:
-        """
-        produce and return the coefficient matrix used to calculate the T matrix(coalescence).
-        :return: Coefficient matrix corresponding to object's migration matrix
-        """
-        n = self.shape
-        n_last_equations = comb(n, 2)
-        n_first_equations = n
-        mat_size = n_first_equations + n_last_equations
-        coefficient_mat = np.zeros((mat_size, mat_size))
-        for i in range(n_first_equations):
-            same_population = int(np.sum([n - k for k in range(i)]))
-            lower_bound = same_population + 1
-            upper_bound = np.sum([n - k for k in range(i + 1)]) - 1
-            smaller_ind_lst = [p for p in range(i)]
-            counter = [1]
-            for j in range(mat_size):
-                coefficient_mat[i, j] = self.calculate_first_coefficients(j, i, same_population, lower_bound,
-                                                                          upper_bound, smaller_ind_lst, counter)
-        cur_population = 1
-        other_population = 0
-        for i in range(n_last_equations):
-            if other_population == cur_population:
-                other_population = 0
-                cur_population += 1
-            for j in range(mat_size):
-                coefficient_mat[n + i, j] = self.calculate_last_coefficients(j, cur_population, other_population)
-            other_population += 1
-
-        return coefficient_mat
 
     def produce_solution_vector(self):
         """
@@ -217,6 +165,7 @@ def find_coalescence(m: np.ndarray) -> np.ndarray:
         return np.array([[1]])
     M = Migration(m)
     return M.produce_coalescence()
+
 
 def find_components(matrix: np.ndarray) -> dict:
     """
@@ -348,27 +297,6 @@ def transform_matrix(m: np.ndarray) -> tuple:
         T = Coalescence(t_matrix)
         f_matrices.append(T.produce_fst())
     return reassemble_matrix(t_matrices, components, "coalescence"), reassemble_matrix(f_matrices, components, "fst")
-def transform_matrix(m: np.ndarray) -> tuple:
-    """
-       Receives a migration matrix (a squared, positive matrix with zeroes on the diagonal) with any number
-       of connected components, and returns its corresponding Coalescent times (T) matrix according to
-       Wilkinson-Herbot's equations, and it's corresponding Fst matrix(F) according to Slatkin equations.
-       :param m: Migration matrix- squared, positive, with zeroes on the diagonal.
-       :return:  A tuple (T,F). Corresponding T matrix according to Wilkinson-Herbot's equations,
-       Corresponding F matrix according to Slatkin equations.
-       If there is no solution, an error will occur.
-       """
-    split = split_migration(m)
-    sub_matrices, components = split[0], split[1]
-    t_matrices = []
-    f_matrices = []
-    for matrix in sub_matrices:
-        t_matrix = find_coalescence(matrix)
-        t_matrices.append(t_matrix)
-        T = Coalescence(t_matrix)
-        f_matrices.append(T.produce_fst())
-    return reassemble_matrix(t_matrices, components, "coalescence"), reassemble_matrix(f_matrices, components, "fst")
-
 
 
 def check_conservative(m: np.ndarray):
@@ -379,57 +307,57 @@ def check_conservative(m: np.ndarray):
     """
     for i in range(m.shape[0]):
         if np.sum(m[i, :]).round(2) != np.sum(m[:, i]).round(2):
+            print("Found non-conservative migration matrix.")
             return False
+    print("Migration matrix is conservative.")
     return True
 
-def conservative_migration_from_binary_matrix(binary_m: np.ndarray, bounds: tuple = (0, 2), lls=False) -> np.ndarray:
-    """
-    Given a binary matrix, generate a conservative migration matrix with the same structure,
-    but with values in bounds. This function uses a linear least squares / numeric solution approach to generate
-    the conservative matrix.
-    :param binary_m: binary migration matrix.
-    :param bounds: bounds for each variable in the migration matrix
-    :param lls: whether to use linear least squares to generate the conservative matrix. if False,
-                scipy.optimize.minimize is used.
-    :return: conservative migration matrix with the same structure as m, but with values in bounds.
-             Same structure means the returned matrix would have values > 0 where m has values > 0 (1), and 0
-             where m has 0. Conservative means that for each i = 1, ..., n, the sum of the ith row of
-             the returned matrix is equal to the sum of the ith column of the returned matrix.
-    :error: if the matrix is not binary, ValueError is raised.
-    """
-    # if m is not binary, raise an error
-    if not np.array_equal(binary_m, binary_m.astype(bool)):
-        raise ValueError("Matrix is not binary.")
-    # get the indices of the non-zero elements of m
-    non_zero_indices = np.argwhere(binary_m)
-    num_unknowns = non_zero_indices.shape[0]
-    result_matrix = np.zeros(binary_m.shape)
-    solution = None
-    # build the matrix A and the vector b
-    A = np.zeros((binary_m.shape[0], num_unknowns))
-    b = np.zeros(binary_m.shape[0])
-    for i in range(binary_m.shape[0]):
-        for j in range(non_zero_indices.shape[0]):
-            if non_zero_indices[j, 0] == i:
-                A[i, j] = 1
-            elif non_zero_indices[j, 1] == i:
-                A[i, j] = -1
-    if lls:
-        ls_sol = sp.optimize.lsq_linear(A, b, bounds=bounds)
-        solution = ls_sol.x
 
-    else:
-        def obj_func(x):
-            return np.linalg.norm(np.dot(A, x) - b)
+def conservative_from_normal(binary_m,      # 0/1 mask of allowed directed edges
+                             mu=1.0, sigma=0.3,
+                             lower=0.2, upper=4,
+                             seed=None):
+    """
+    1. Draw each allowed edge weight ~ N(mu, sigma^2), truncated to (lower, upper).
+    2. Orthogonally project onto the conservative sub-space (row sum = col sum).
+    3. If any entry leaves (lower, upper) by more than 1e-12, clip & re-project once.
 
-        while True:
-            x0 = np.random.uniform(bounds[0], bounds[1], num_unknowns)
-            minimize_sol = sp.optimize.minimize(obj_func, x0=x0, bounds=[bounds] * num_unknowns)
-            solution = minimize_sol.x
-            result_matrix[non_zero_indices[:, 0], non_zero_indices[:, 1]] = solution
-            if not np.any(solution <= 0) and check_conservative(result_matrix):
-                break
-    # put the values of x in result_matrix according to the non_zero_indices
-    result_matrix[non_zero_indices[:, 0], non_zero_indices[:, 1]] = solution
-    return result_matrix
+    Returns
+    -------
+    M : (n,n) ndarray  -- conservative migration matrix.
+    """
+    rng = np.random.default_rng(seed)
+
+    # ---------- step 1 : raw draw -----------------------------------
+    nz   = np.argwhere(binary_m == 1)          # list of directed edges
+    n, _ = binary_m.shape
+    E    = len(nz)
+
+    x = rng.normal(mu, sigma, size=E)
+    # truncate to (lower, upper)
+    x = np.clip(x, lower+1e-12, upper-1e-12)
+
+    # ---------- build balance matrix  A  ----------------------------
+    A = np.zeros((n, E))
+    for j, (r, c) in enumerate(nz):
+        A[r, j] =  1         # outflow
+        A[c, j] = -1         # inflow
+
+    # pre-compute projector  P = I – Aᵀ (AAᵀ)⁻¹ A
+    # (AAᵀ) is n×n and of rank n-1 when graph is strongly connected
+    ATA_inv = la.pinv(A @ A.T, rtol=1e-10)
+    P = np.eye(E) - A.T @ ATA_inv @ A
+
+    # ---------- step 2 : first projection ---------------------------
+    m = P @ x
+
+    # ---------- step 3 : clip & one Dykstra correction --------------
+    m = np.clip(m, lower, upper)
+    # Project again to restore perfect balance (cheap; AAᵀ has same inverse)
+    m = P @ m
+
+    # ---------- pack back into square matrix ------------------------
+    M = np.zeros_like(binary_m, dtype=float)
+    M[nz[:, 0], nz[:, 1]] = m
+    return M
 
