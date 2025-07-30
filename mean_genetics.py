@@ -58,7 +58,7 @@ def plot_genetics(data: Dict[str, FragmentationResult], measure: str) -> None:
         y='avg',
         hue='frag_type',
         estimator='mean',
-        errorbar='sd'
+        ci='sd'
     )
     plt.xlabel('% fragmentation', fontsize=30)
     plt.ylabel(measure.capitalize(), fontsize=30)
