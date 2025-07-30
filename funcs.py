@@ -27,10 +27,7 @@ class FragmentationResult:
     fst_matrices: List[np.ndarray]
 
 
-def load_data(fragmentation_types: List[str],
-              base_path: str = "./pickles/",
-              extension: str = "pickle"
-             ) -> Dict[str, FragmentationResult]:
+def load_data(fragmentation_types: List[str]) -> Dict[str, FragmentationResult]:
     """
     Load fragmentation results for specified types, wrapping each in a dataclass.
 
@@ -41,7 +38,7 @@ def load_data(fragmentation_types: List[str],
     """
     results: Dict[str, FragmentationResult] = {}
     for ft in fragmentation_types:
-        file_path = os.path.join(base_path, f"{ft}.{extension}")
+        file_path =  f"RGG, {ft}_asymmetric.pickle"
         with open(file_path, "rb") as f:
             raw = pickle.load(f)
         results[ft] = FragmentationResult(
