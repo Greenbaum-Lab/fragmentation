@@ -58,7 +58,8 @@ def remove_edge_random(net: nx.Graph) -> list:
 
 import random
 import networkx as nx
-from typing import List
+from typing import List, Set
+
 
 def remove_edge_random(net: nx.DiGraph) -> List[nx.DiGraph]:
     """
@@ -133,20 +134,22 @@ def remove_edge_intrusive(net: nx.Graph) -> list:
     return migration_list
 
 
-def get_connected_nodes(net: nx.Graph) -> set:
+def get_connected_nodes(net: nx.Graph) -> Set:
     """
-    Get all the nodes in a network that are connected (exclude isolated nodes).
-    used in  correlated fragmentation
-
-    :param net: networkx graph object
-    :return: set of connected nodes
+    Return every node that belongs to a size > 1 component.
+    Works for:
+      • nx.Graph / nx.MultiGraph  → uses nx.connected_components
+      • nx.DiGraph / nx.MultiDiGraph → uses nx.weakly_connected_components
+        (i.e. connectivity is evaluated while ignoring edge direction).
     """
-    connected_nodes = set()
-    components = nx.connected_components(net)
+    if net.is_directed():
+        components = nx.weakly_connected_components(net)
+    else:
+        components = nx.connected_components(net)
 
-    for component in components:
-        if len(component) > 1:  # Exclude isolated nodes
-            connected_nodes.update(component)
+    connected_nodes = {node
+                       for comp in components if len(comp) > 1
+                       for node in comp}
 
     return connected_nodes
 
