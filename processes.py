@@ -6,6 +6,17 @@ from collections import OrderedDict
 import networkx as nx
 import random
 from math import sqrt
+def _remove_edge_pair(G: nx.Graph, u, v):
+    """
+    Remove the directed pair u→v and v→u *if* they exist.
+    Works for Graph and DiGraph, raises no error if one
+    direction is already absent.
+    """
+    if G.has_edge(u, v):
+        G.remove_edge(u, v)
+    if G.has_edge(v, u):
+        G.remove_edge(v, u)
+
 
 def remove_edge_random(net: nx.Graph) -> list:
     """
@@ -24,9 +35,12 @@ def remove_edge_random(net: nx.Graph) -> list:
     migration_list = [migration.copy()]
     # Keep track of the number of edges
     edge_count = migration.number_of_edges()
-
+    pos = nx.get_node_attributes(migration, 'pos')
     # Continue removing edges until only two remain
     while edge_count:
+        # nx.draw_networkx(net, pos)
+        # plt.show()
+
         # Get the list of current edges in the graph
         edges = list(migration.edges())
         # Select a random edge to remove
@@ -39,6 +53,43 @@ def remove_edge_random(net: nx.Graph) -> list:
         edge_count -= 1
 
     return migration_list
+
+
+
+import random
+import networkx as nx
+from typing import List
+
+def remove_edge_random(net: nx.DiGraph) -> List[nx.DiGraph]:
+    """
+    Iteratively removes a *pair* of opposite directed edges (u→v and v→u)
+    chosen at random until the graph has no edges left.
+
+    Parameters
+    ----------
+    net : nx.DiGraph
+        The starting migration network.  Node and graph attributes are
+        preserved in every snapshot.
+
+    Returns
+    -------
+    List[nx.DiGraph]
+        Snapshots of the network after each edge-pair removal, starting
+        with the original graph and ending with isolated nodes.
+    """
+    migration = net.copy()
+    all_migration = [migration.copy()]
+
+    while migration.number_of_edges():
+        # sample one existing *directed* edge
+        u, v = random.choice(list(migration.edges()))
+        # remove that direction
+        migration.remove_edge(u, v)
+        migration.remove_edge(v, u)
+
+        all_migration.append(migration.copy())
+
+    return all_migration
 
 
 def remove_edge_intrusive(net: nx.Graph) -> list:
@@ -74,6 +125,7 @@ def remove_edge_intrusive(net: nx.Graph) -> list:
         while edges and edge_count:
             edge = random.choice(edges)
             migration.remove_edge(*edge)
+            _remove_edge_pair(migration, edge[0], edge[1])
             edges.remove(edge)
             migration_list.append(migration.copy())
             edge_count -= 1
@@ -158,7 +210,8 @@ def remove_edge_correlated(net: nx.Graph) -> list:
             edge = random.choice(edges)
 
         # remove the chosen edge from the network
-        migration.remove_edge(*edge)
+        # migration.remove_edge(*edge)
+        _remove_edge_pair(migration, edge[0], edge[1])
 
         # choose the nodes to remove edges from
         # if node doesn't exist in new network choose a random node
@@ -199,7 +252,9 @@ def remove_edge_distance(net: nx.Graph) -> list:
     edges = sorted(edges, key=distances.get, reverse=True)
     while edges:
         # Remove the longest edge from network (first item)
-        migration.remove_edge(*edges[0])
+        # migration.remove_edge(*edges[0])
+        _remove_edge_pair(migration, edges[0][0], edges[0][1])
+
         # Remove the longest edge from the edges list
         edges.pop(0)
         migration_list.append(migration.copy())
@@ -240,7 +295,9 @@ def remove_edge_regressive(net: nx.Graph) -> list:
             edges = list(migration.edges(node))
             if edges:
                 sorted_edges = sort_edges(edges, nodes_order)
-                migration.remove_edge(*sorted_edges[0])
+                # migration.remove_edge(*sorted_edges[0])
+                _remove_edge_pair(migration, sorted_edges[0][0], sorted_edges[0][1])
+
                 migration_list.append(migration.copy())
                 break
         else:
@@ -327,7 +384,9 @@ def remove_edge_divisive(net: nx.Graph) -> list:
         edges_to_remove = sorted(intersections, key=intersections.get)
 
         for edge in edges_to_remove:
-            migration.remove_edge(*edge)
+            # migration.remove_edge(*edge)
+            _remove_edge_pair(migration, edge[0], edge[1])
+
             migration_list.append(migration.copy())
 
     return migration_list
@@ -352,43 +411,13 @@ def remove_edge_optimal(net: nx.Graph) -> list:
         edge_to_remove = min(centrality, key=centrality.get)
 
         # Remove the selected edge
-        migration.remove_edge(*edge_to_remove)
-
+        # migration.remove_edge(*edge_to_remove)
+        _remove_edge_pair(edge_to_remove[0], edge_to_remove[1])
         # Add the resulting graph to the list
         migration_list.append(migration.copy())
     return migration_list
 
 
-def remove_edge_optimal_no_update(net: nx.Graph) -> list:
-    """
-    Remove edges from the network to maximize connectivity between nodes.
-    unlike optimal, this process calculates the edges importance at the begining once, without updating.
-    Track all intermediate states of the network in a list until the stopping condition is met.
-
-    :param net: initial networkx object
-    :return: list of networkx objects showing the network's evolution
-    """
-    migration = net.copy()
-    migration_list = [migration.copy()]  # start with the original network
-
-    # Compute edge betweenness centrality to determine the importance of edges
-    centrality = nx.edge_betweenness_centrality(migration)
-    edges = sorted(centrality, key=centrality.get)
-
-    while nx.number_of_edges(migration) > 2:
-        # Find the edge with the lowest centrality (minimal impact on connectivity)
-        edge_to_remove = edges[0]
-
-        # Remove the selected edge
-        migration.remove_edge(*edge_to_remove)
-
-        # Add the resulting graph to the list
-        migration_list.append(migration.copy())
-
-        # Remove the edge with the highest betweenness from the edges list
-        edges.pop(0)
-
-    return migration_list
 
 
 def remove_edge_worst(net: nx.Graph) -> list:
@@ -410,7 +439,9 @@ def remove_edge_worst(net: nx.Graph) -> list:
         edge_to_remove = max(centrality, key=centrality.get)
 
         # Remove the selected edge
-        migration.remove_edge(*edge_to_remove)
+        # migration.remove_edge(*edge_to_remove)
+        _remove_edge_pair(edge_to_remove[0], edge_to_remove[1])
+
         # Add the resulting graph to the list
         migration_list.append(migration.copy())
     return migration_list
