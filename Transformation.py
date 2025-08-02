@@ -1,5 +1,4 @@
 import ctypes
-
 import numpy as np
 import math
 from collections import deque
@@ -306,7 +305,7 @@ def check_conservative(m: np.ndarray):
     :return: True if m is conservative, False otherwise.
     """
     for i in range(m.shape[0]):
-        if np.sum(m[i, :]).round(2) != np.sum(m[:, i]).round(2):
+        if np.sum(m[i, :]).round(8) != np.sum(m[:, i]).round(8):
             print("Found non-conservative migration matrix.")
             return False
     print("Migration matrix is conservative.")
@@ -360,4 +359,3 @@ def conservative_from_normal(binary_m,      # 0/1 mask of allowed directed edges
     M = np.zeros_like(binary_m, dtype=float)
     M[nz[:, 0], nz[:, 1]] = m
     return M
-
