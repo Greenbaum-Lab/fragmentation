@@ -34,31 +34,31 @@ with open(f'{net}, intr_asymmetric_TEST.pickle', 'wb') as file:
     pickle.dump(intr, file)
 del intr
 
-reg = make_replicates_new(nets=nets, frag_key='reg')
+reg = run_replicates(nets=nets, frag_key='reg')
 print("4")
 with open(f'{net}, reg_asymmetric_TEST.pickle', 'wb') as file:
     pickle.dump(reg, file)
 del reg
 
-div = make_replicates_new(nets=nets, frag_key='div')
+div = run_replicates(nets=nets, frag_key='div')
 print("5")
 with open(f'{net}, div_asymmetric_TEST.pickle', 'wb') as file:
     pickle.dump(div, file)
 del div
 #
-dist = make_replicates_new(nets=nets, frag_key='dist')
+dist = run_replicates(nets=nets, frag_key='dist')
 print("6")
 with open(f'{net}, dist_asymmetric_TEST.pickle', 'wb') as file:
     pickle.dump(dist, file)
 del dist
 #
-opt = make_replicates_new(nets=nets, frag_key='opt')
+opt = run_replicates(nets=nets, frag_key='opt')
 print("7")
 with open(f'{net}, opt_asymmetric_TEST.pickle', 'wb') as file:
     pickle.dump(opt, file)
 del opt
 #
-wrst = make_replicates_new(nets=nets, frag_key='wrst')
+wrst = run_replicates(nets=nets, frag_key='wrst')
 print("8")
 with open(f'{net}, wrst_asymmetric_TEST.pickle', 'wb') as file:
     pickle.dump(wrst, file)
