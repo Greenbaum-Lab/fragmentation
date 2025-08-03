@@ -68,7 +68,7 @@ def plot_variance(df: pd.DataFrame) -> None:
         y='variance',
         hue='frag_type',
         estimator='mean',
-        errorbar='sd'
+        ci='sd'
     )
     plt.xlabel('% fragmentation', fontsize=25)
     plt.ylabel('Variance', fontsize=25)
