@@ -6,7 +6,11 @@ Includes tools for merging, binning, and plotting these statistics.
 
 from typing import Dict, List, Optional
 import pandas as pd
+from matplotlib import pyplot as plt
+from scipy.stats import stats
+
 from funcs import FragmentationResult, giant_component_over_steps
+from typing import Dict, List
 
 
 def het_component(
@@ -60,9 +64,11 @@ def bin_het_component(
     stats = (
         df
         .groupby(binned)['avg']
-        .agg(mean_het='mean', sd_het='std')
+        .agg(mean_het='mean', sd_het='std').reset_index()
+    )
+    stats['component_mid'] = stats['component'].apply(lambda interval: interval.mid)
+    return stats[['component_mid','mean_het','sd_het']]
 
-      from typing import Dict, List
 
 
 def plot_het_component(
@@ -105,7 +111,4 @@ def plot_het_component(
     plt.tight_layout()
     plt.savefig(output, format='svg')
     plt.show()
-        .reset_index()
-    )
-    stats['component_mid'] = stats['component'].apply(lambda interval: interval.mid)
-    return stats[['component_mid','mean_het','sd_het']]
+
