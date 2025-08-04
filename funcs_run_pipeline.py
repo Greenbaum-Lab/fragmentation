@@ -1,21 +1,6 @@
-# pipeline.py
-"""
-Fragmentation orchestration utilities.
-
-Heavy lifting happens in two places:
-• `processes.*`  – removes one edge per step (pure Python + NetworkX)
-• `stats_utils.calculate_genetics` – costly NumPy / algebra per step
-
-Both are embarrassingly parallel across **replicates**.  We therefore
-fan out each replicate to a separate worker process.
-
-Author: <your-name>
-"""
-
 from __future__ import annotations
 
 import logging
-import os
 from multiprocessing import Pool, cpu_count
 from statistics import mean
 from typing import Callable, List, Tuple
@@ -51,7 +36,6 @@ from networks_generator import project_to_conservative  # keeps in-place contrac
 
 LOG = logging.getLogger(__name__)
 if not LOG.handlers:
-    # simple console handler if user did not configure logging
     h = logging.StreamHandler()
     h.setFormatter(logging.Formatter("%(levelname)s | %(message)s"))
     LOG.addHandler(h)
@@ -90,8 +74,6 @@ def run_single_fragmentation(
 ]:
     """
     Apply one fragmentation scenario to *net* and compute genetic stats.
-
-    The output tuple order matches the legacy code exactly.
     """
     frag_fn = _FRAG_MAP[frag_key]
 
