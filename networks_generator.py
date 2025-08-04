@@ -178,15 +178,16 @@ def make_spatial_sw_nets(
 # 5.  Projection to conservative migration (re-balancing)
 # --------------------------------------------------------------------- #
 
+
 def project_to_conservative(
     net: nx.Graph,
-    lower: float | None = None,
-    upper: float | None = None,
+    lower: float = 0.1,
+    upper: float = 4,
     rtol: float = 1e-10,
 ) -> nx.Graph:
     """
     Adjust edge weights *in-place* so every weakly-connected component
-    satisfies the conservative condition (row-sum = col-sum).
+    satisfies the conservative condition (row-sum == col-sum).
 
     Parameters
     ----------
@@ -195,14 +196,9 @@ def project_to_conservative(
     lower, upper
         Optional clipping bounds for edge weights *after* balancing.
     rtol
-        Relative tolerance fed to the Moore–Penrose pseudo-inverse.
-
-    Notes
-    -----
-    • The algorithm is identical to Wilkinson-Herbots balancing in your
-      original code; only readability and typing changed.
+        Relative tolerance passed to the Moore–Penrose pseudo-inverse.
     """
-    # choose component iterator depending on graph type
+    # pick connected-component iterator depending on graph type
     comps: Iterable[set[int]] = (
         nx.weakly_connected_components(net) if net.is_directed()
         else nx.connected_components(net)
@@ -215,7 +211,7 @@ def project_to_conservative(
         nodes = list(comp)
         M = nx.to_numpy_array(net, nodelist=nodes, weight="weight", nonedge=0.0)
 
-        nz_idx = np.argwhere(M != 0)               # each row → edge index
+        nz_idx = np.argwhere(M != 0)          # each row → edge index
         if nz_idx.size == 0:
             continue
 
@@ -227,19 +223,22 @@ def project_to_conservative(
             A[i, k] = 1.0
             A[j, k] = -1.0
 
+        # ――― Quick-patch: compute pseudo-inverse *once* ――― #
+        pinv = np.linalg.pinv(A @ A.T, rcond=rtol)
+
+        # first balancing pass
         imbalance = A @ w
         if not np.allclose(imbalance, 0, atol=1e-12):
-            pinv = np.linalg.pinv(A @ A.T, rcond=rtol)
-            w -= A.T @ pinv @ imbalance             # balance!
+            w -= A.T @ pinv @ imbalance
 
-        # clip if requested, then re-balance once more (rarely needed)
+        # optional clipping, then second (rare) balancing pass
         if lower is not None or upper is not None:
             w = np.clip(w, lower, upper)
             imbalance = A @ w
             if not np.allclose(imbalance, 0, atol=1e-12):
                 w -= A.T @ pinv @ imbalance
 
-        # write weights back into the original graph
+        # write weights back to graph
         for val, (i, j) in zip(w, nz_idx):
             u, v = nodes[i], nodes[j]
             net[u][v]["weight"] = float(val)
