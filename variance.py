@@ -61,10 +61,10 @@ def plot_variance(df: pd.DataFrame) -> None:
     """
     plt.figure(figsize=(10, 6))
     # Normalize step to percentage
-    df = percent_step(df, step_col='step', pct_col='step_pct')
+    # df = percent_step(df, step_col='step', pct_col='step_pct')
     sns.lineplot(
         data=df,
-        x='step_pct',
+        x='step',
         y='variance',
         hue='frag_type',
         estimator='mean',

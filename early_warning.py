@@ -75,7 +75,7 @@ def export_het_csv(data, frag: str):
     data = assign_node_numbers(data)
     surviving_nodes = get_max_het_nodes(data, num_nodes=10)
     final_df = extract_steps_for_nodes(data, surviving_nodes)
-    final_df.to_csv(f'{frag}_het.csv')
+    final_df.to_csv(f'ews_het_sig05.csv')
     print('File saved successfully')
     return final_df
 
@@ -99,6 +99,31 @@ def get_largest_component(nets):
     return pd.DataFrame(components)
 
 
+def get_largest_component(nets):
+    """
+    get the largest component of each network in each replica and step.
+    for early warning analysis.
+    :param nets: list of lists of networks in the format of nets[replica][step]
+    :return: a dataframe with the largest component of each network, the replica and the step
+    """
+
+    components = []
+    for replica in range(len(nets)):
+        for step in range(len(nets[0])):
+            net = nets[replica][step]
+            # Handle both directed and undirected networks
+            if nx.is_directed(net):
+                # For directed networks, use weakly connected components
+                largest_component = max(nx.weakly_connected_components(net), key=len)
+            else:
+                # For undirected networks, use regular connected components
+                largest_component = max(nx.connected_components(net), key=len)
+
+            for node in largest_component:
+                components.append({'replica': replica, 'step': step, 'node_number': node})
+
+    return pd.DataFrame(components)
+
 
 def calculate_indicators(data):
     """
@@ -110,7 +135,6 @@ def calculate_indicators(data):
     grouped = data.groupby(['replica', 'step'])['het']
     indicators = grouped.agg(['std', 'skew']).reset_index()
     indicators['kurt'] = grouped.apply(pd.Series.kurtosis).values
-    indicators.to_csv(f'indicators.csv', index=False)
 
     return indicators
 
@@ -162,7 +186,7 @@ def plot_het_indicator(cor: pd.DataFrame,
     # ---------------------------
     # Set up the figure with two y-axes
     # ---------------------------
-    plt.style.use('seaborn-v0_8-whitegrid')
+    plt.style.use('seaborn-whitegrid')
     fig, ax1 = plt.subplots(figsize=(12, 8))
     ax2 = ax1.twinx()
     color_het = 'darkorange'
@@ -213,5 +237,5 @@ def plot_het_indicator(cor: pd.DataFrame,
     ax2.tick_params(axis='y', labelsize=32, labelcolor=color_ind)
     ax1.tick_params(axis='x', labelsize=32)
 
-    plt.savefig(f'./figs/het_{indicator}_signelpop.svg', format='svg')
+    plt.savefig(f'../figs/het_{indicator}_singlepop.svg', format='svg')
     plt.show()

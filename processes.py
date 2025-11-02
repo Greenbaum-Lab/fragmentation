@@ -45,7 +45,9 @@ def _connected_edges(net: nx.Graph, nodes: Set[int]) -> List[Tuple[int, int]]:
     """Edges touching at least one node in *nodes*."""
     return [(u, v) for u, v in net.edges() if u in nodes or v in nodes]
 
-
+def _unique_pairs(net: nx.Graph):
+    """Return each edge only once, regardless of graph direction."""
+    return (net.to_undirected() if net.is_directed() else net).edges()
 # ---- geometry helper for divisive removal ------------------------------------
 
 def _segments_intersect(p: Tuple[float, float], q: Tuple[float, float], r: Tuple[float, float], s: Tuple[float, float]) -> bool:
@@ -149,11 +151,10 @@ def remove_edge_distance(G: nx.Graph) -> List[nx.Graph]:
         (x1, y1), (x2, y2) = pos[edge[0]], pos[edge[1]]
         return sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
 
-    for u, v in sorted(net.edges(), key=length, reverse=True):
+    for u, v in sorted(_unique_pairs(net), key=length, reverse=True):
         _remove_edge_pair(net, u, v)
-        yield_net = net.copy()
         # building list incrementally avoids extra pass over edges
-        net_list.append(yield_net)
+        net_list.append(net.copy())
 
     return net_list
 
@@ -198,15 +199,15 @@ def remove_edge_divisive(G: nx.Graph, *, seed: int | None = None) -> List[nx.Gra
 
     while net.number_of_edges():
         p1, p2 = _border_divider(rnd)
-        affected = [
-            e for e in net.edges()
+        affected = {
+            tuple(sorted(e))              # deduplicate
+            for e in _unique_pairs(net)
             if _segments_intersect(p1, p2, pos[e[0]], pos[e[1]])
-        ]
+        }
         if not affected:
-            continue  # try a new divider
-        # Sort by actual intersection x‑coordinate (west → east)
-        affected.sort(key=lambda e: _intersection_x(p1, p2, pos[e[0]], pos[e[1]]))
-        for u, v in affected:
+            continue
+        for u, v in sorted(affected,
+                           key=lambda e: _intersection_x(p1, p2, pos[e[0]], pos[e[1]])):
             _remove_edge_pair(net, u, v)
             net_list.append(net.copy())
     return net_list
