@@ -42,7 +42,7 @@ def filter_intervals(
     )
 
     # Filter to only those snapped intervals
-    allowed_intervals = set(range(0, 100, interval_pct))
+    allowed_intervals = set(range(0, 101, interval_pct))
     df_filtered = df[df['step_pct'].isin(allowed_intervals)].copy()
 
     return df_filtered[['step_pct', 'replica', measure]]
@@ -81,8 +81,7 @@ def plot_distribution(
     df: pd.DataFrame,
     measure: str,
     frag_type: str,
-    bins: int = 40,
-    save: Optional[bool] = True
+    bins: int = 40
 ) -> None:
     """
     Plot a ridgeline histogram of genetic diversity for one fragmentation type.
@@ -135,6 +134,4 @@ def plot_distribution(
 
     plt.title(f"{frag_type.capitalize()} Fragmentation", fontsize=16)
     plt.tight_layout()
-    if save:
-        plt.savefig(f"{frag_type}_{measure}_distribution.svg")
     plt.show()

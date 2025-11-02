@@ -1,200 +1,324 @@
-# import pickle
+# """
+# Generate 10 replicas of the RANDOM fragmentation process and track how
+# project_to_conservative (PC) adjusts every migration entry.
+#
+# Output file
+# -----------
+# rand_matrix_pre_post_REP10_TEST.pickle  containing a tuple:
+#     • all_pre   – list[rep] of list[step] of np.ndarray (M_pre)
+#     • all_post  – list[rep] of list[step] of np.ndarray (M_post)
+#     • df_pairs  – pandas DataFrame with columns
+#           replicate, step, source, target,
+#           w_before, w_after, delta_pc
+# """
+#
+# import sys, pickle, random, pathlib
+# from copy import deepcopy
+#
+# import numpy  as np
+# import pandas as pd
+# import networkx as nx
+#
+# # ───────────── project modules ──────────────────────────────────────────
+#
+#
+# from networks_generator import make_rgg, project_to_conservative
+# from processes          import _remove_edge_pair        # bidirectional deletion
+#
+# # ───────────── helper ───────────────────────────────────────────────────
+# def to_matrix(g: nx.DiGraph) -> np.ndarray:
+#     """Return full n×n numpy migration matrix (nodes sorted by index)."""
+#     return nx.to_numpy_array(g, dtype=float, weight="weight",
+#                              nodelist=sorted(g.nodes()))
+#
+# # ───────────── parameters ───────────────────────────────────────────────
+# n_replicates   = 10
+# n_nodes        = 50
+# target_edges   = 250
+# base_seed      = 42      # will offset by +rep to keep replicates independent
+#
+# # ───────────── main loop ────────────────────────────────────────────────
+# all_pre, all_post, df_chunks = [], [], []
+#
+# for rep in range(n_replicates):
+#     # separate NumPy and Python RNGs for reproducibility
+#     rng_np = np.random.default_rng(base_seed + rep)
+#     rng_py = random.Random(base_seed + rep)
+#
+#     # 1. initial asymmetric network (already directed)
+#     G = make_rgg(1, n_nodes, target_edges,
+#                  asymmetric=True, rng=rng_np)[0]
+#     project_to_conservative(G)
+#
+#     net = deepcopy(G)
+#     mats_pre, mats_post = [], []
+#     step = 0
+#
+#     while net.number_of_edges():
+#         # ---- edge removal -------------------------------------------------
+#         u, v = rng_py.choice(list(net.edges()))
+#         _remove_edge_pair(net, u, v)
+#
+#         M_pre  = to_matrix(net)          # after removal
+#         mats_pre.append(M_pre.copy())
+#
+#         # ---- balance ------------------------------------------------------
+#         project_to_conservative(net)
+#         M_post = to_matrix(net)          # after PC
+#         mats_post.append(M_post.copy())
+#
+#         # ---- flatten to tidy DataFrame chunk ------------------------------
+#         n = M_pre.shape[0]
+#         src, tgt = np.meshgrid(range(n), range(n), indexing="ij")
+#         df_chunks.append(pd.DataFrame({
+#             "replicate": rep,
+#             "step":      step,
+#             "source":    src.ravel(),
+#             "target":    tgt.ravel(),
+#             "w_before":  M_pre.ravel(),
+#             "w_after":   M_post.ravel(),
+#         }))
+#         step += 1
+#
+#     all_pre.append(mats_pre)
+#     all_post.append(mats_post)
+#
+# # full tidy table with PC deltas
+# df_pairs = pd.concat(df_chunks, ignore_index=True)
+# df_pairs["delta_pc"] = df_pairs["w_after"] - df_pairs["w_before"]
+#
+# # ───────────── save everything ──────────────────────────────────────────
+# out_file = "rand_matrix_pre_post_REP10_TEST.pickle"
+# with open(out_file, "wb") as f:
+#     pickle.dump((all_pre, all_post, df_pairs), f)
+#
+# print(f"✔  Generated {n_replicates} replicas "
+#       f"({df_pairs['replicate'].nunique()} unique) and saved to '{out_file}'.")
+#
+#
+#
+#
+#
+#
+#
+# # -------------------------------------------------------------
+# # 0.  Load data
+# # -------------------------------------------------------------
+# import pickle, numpy as np, pandas as pd
 # import matplotlib.pyplot as plt
-# from typing import List, Dict
-# import logging
-# import gc
 #
-# from funcs import FragmentationResult, percent_step
-# from mean_genetics import mean_het_fst
+# PKL = "rand_matrix_pre_post_REP10_TEST.pickle"   # output from previous script
 #
-# logging.basicConfig(level=logging.INFO)
-# logger = logging.getLogger(__name__)
+# with open(PKL, "rb") as f:
+#     all_pre, all_post, df_pairs = pickle.load(f)
 #
+# n_reps   = len(all_pre)
+# n_nodes  = all_pre[0][0].shape[0]
+# rng_ctrl = np.random.default_rng(999)
 #
-# def load_single_file(sigma_value: str, frag_types: List[str]) -> Dict[str, FragmentationResult]:
-#     """Load a single sigma file for specified fragmentation types"""
-#     results = {}
-#     for ft in frag_types:
-#         file_path = f"RGG, {ft}_asymm_sig{sigma_value}.pickle"
-#         with open(file_path, "rb") as f:
-#             raw = pickle.load(f)
-#         results[ft] = FragmentationResult(
-#             n_steps=raw[0],
-#             networks=raw[1],
-#             het_dist=raw[2],
-#             het_mean=raw[3],
-#             fst_dist=raw[4],
-#             fst_mean=raw[5],
-#             coalescence_list=raw[6],
-#             fst_matrices=raw[7],
-#         )
-#     logger.info(f"Loaded data for sigma {sigma_value}")
-#     return results
+# # -------------------------------------------------------------
+# # 1.  Build RANDOM-reassignment deltas for every (rep, step)
+# # -------------------------------------------------------------
+# rand_records = []
 #
+# for rep, mats_pre in enumerate(all_pre):
+#     for step, M_pre in enumerate(mats_pre):
+#         rand_w  = np.abs(rng_ctrl.normal(1.0, 0.3, size=M_pre.shape))
+#         M_rand  = np.where(M_pre > 0, rand_w, 0.0)
 #
-# def plot_combined_genetics():
-#     """Plot het and fst for multiple sigma values in a 4×2 grid"""
-#     fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt', 'wrst']
-#     sigma_values = ["00", "01", "03", "05"]
-#     measures = ['het', 'fst']
+#         mask = M_pre > 0                          # edges still alive
+#         mean_abs = np.abs(M_rand - M_pre)[mask].mean()
+#         rand_records.append({"replicate": rep,
+#                              "step":      step,
+#                              "mean_abs_rand": mean_abs})
 #
-#     fig, axes = plt.subplots(4, 2, figsize=(12, 18))
+# df_rand_mean = pd.DataFrame(rand_records)
 #
-#     plt.subplots_adjust(
-#         hspace=0.4,  # Vertical space between subplots
-#         wspace=0.3  # Horizontal space between subplots
-#     )
+# # -------------------------------------------------------------
+# # 2.  Mean |Δ| from project_to_conservative (already in df_pairs)
+# # -------------------------------------------------------------
+# df_pairs["abs_delta_pc"] = df_pairs["delta_pc"].abs()
 #
-#     for i, sigma in enumerate(sigma_values):
-#         # Load single file
-#         data = load_single_file(sigma, fragmentation_types)
+# df_pc_mean = (df_pairs
+#               .groupby(["replicate", "step"])
+#               ["abs_delta_pc"]
+#               .mean()
+#               .reset_index()
+#               .rename(columns={"abs_delta_pc": "mean_abs_pc"}))
 #
-#         for j, measure in enumerate(measures):
-#             # Set current subplot
-#             plt.sca(axes[i, j])
+# # merge PC & random means
+# df_means = (df_pc_mean
+#             .merge(df_rand_mean, on=["replicate", "step"]))
 #
-#             # Process data for plotting
-#             df = mean_het_fst(data, measure)
+# # -------------------------------------------------------------
+# # 3.  Grand mean ± SD across replicas  (per step)
+# # -------------------------------------------------------------
+# agg = (df_means
+#        .groupby("step")
+#        .agg(mean_pc   = ("mean_abs_pc",   "mean"),
+#             sd_pc     = ("mean_abs_pc",   "std"),
+#             mean_rand = ("mean_abs_rand", "mean"),
+#             sd_rand   = ("mean_abs_rand", "std"))
+#        .reset_index())
 #
-#             # Plot on the current subplot
-#             plot_genetics_on_axis(df, measure, f"σ = 0.{sigma}")
+# # -------------------------------------------------------------
+# # 4-A.  Plot: mean ± SD  (PC vs. random)
+# # -------------------------------------------------------------
+# plt.figure(figsize=(8,4))
 #
-#         # Clear memory after plotting both measures
-#         del data
-#         gc.collect()
+# # project_to_conservative
+# plt.plot(agg["step"], agg["mean_pc"], label="Corrected")
+# plt.fill_between(agg["step"],
+#                  agg["mean_pc"]-agg["sd_pc"],
+#                  agg["mean_pc"]+agg["sd_pc"],
+#                  alpha=.25)
 #
-#     # Adjust layout and save
-#     plt.tight_layout()
-#     plt.savefig('figs/combined_genetics_by_sigma.svg', dpi=300)
-#     # plt.show()
+# # random reassignment
+# plt.plot(agg["step"], agg["mean_rand"], label="Random")
+# plt.fill_between(agg["step"],
+#                  agg["mean_rand"]-agg["sd_rand"],
+#                  agg["mean_rand"]+agg["sd_rand"],
+#                  alpha=.25)
 #
+# plt.xlabel("Fragmentation step")
+# plt.ylabel("Mean |Δ| per edge")
+# plt.title("Mean magnitude of edge-weight change for 10 replicas")
+# plt.legend()
+# plt.tight_layout()
+# plt.show()
 #
-# def plot_genetics_on_axis(df, measure, title):
-#     """Plot genetics data on the current axis"""
-#     import seaborn as sns
+# # -------------------------------------------------------------
+# # 4-B.  Histograms: pooled ∣Δ∣ distributions
+# # -------------------------------------------------------------
+# # pool across all replicas + steps
+# abs_rand_all = pd.concat([
+#     pd.Series(np.abs(
+#         np.where(M_pre > 0, np.abs(rng_ctrl.normal(1, 0.3, size=M_pre.shape)), 0.0) - M_pre
+#     ).ravel())
+#     for mats_pre in all_pre
+#     for M_pre in mats_pre
+# ], ignore_index=True)
 #
-#     sns.lineplot(
-#         data=df,
-#         x='step_pct',
-#         y='avg',
-#         hue='frag_type',
-#         estimator='mean',
-#         errorbar="sd",
-#         legend=False
-#     )
-#     plt.xlabel('% fragmentation', fontsize=18)
-#     if measure == 'het':
-#         plt.ylabel('Heterozygosity', fontsize=18)
-#     else:  # measure == 'fst'
-#         plt.ylabel('F$_{ST}$', fontsize=18)
-#         plt.ylim(-0.05, 1.05)
-#     plt.title(title, fontsize=20)
-#     plt.tick_params(axis='both', labelsize=15)
+# abs_pc_all   = df_pairs["abs_delta_pc"].loc[lambda x: x > 0]
+# abs_rand_all = abs_rand_all.loc[lambda x: x > 0]   # from previous pooling
+# import seaborn as sns
 #
-#     plt.savefig('SUP_genetics_sigma.svg', dpi=300)
+# plt.figure(figsize=(6,4))
+# sns.kdeplot(abs_pc_all, fill=True, alpha=0.5, label="Corrected", bw_adjust=1.2)
+# sns.kdeplot(abs_rand_all, fill=True, alpha=0.5, label="Random", bw_adjust=1.2)
+# plt.ylim(0, 10)
+# plt.xlabel("|Δ|")
+# plt.ylabel("Density")
+# plt.title("Edge-weight change distributions for 10 replicas")
+# plt.legend()
+# plt.tight_layout()
+# plt.show()
 #
-#
-# # plt.show()
-#
-# if __name__ == "__main__":
-#     plot_combined_genetics()
+# #print the range and mean of the distributions
+# print(f"Corrected: range = [{abs_pc_all.min():.3f}, {abs_pc_all.max():.3f}], mean = {abs_pc_all.mean():.3f}")
+# print(f"Random:    range = [{abs_rand_all.min():.3f}, {abs_rand_all.max():.3f}], mean = {abs_rand_all.mean():.3f}")
 
 
-import pickle
-import matplotlib.pyplot as plt
-import pandas as pd
+
+
+
+
+# -------------------------------------------------------------------
+# 0.  Parameters and imports
+# -------------------------------------------------------------------
 import numpy as np
-import os
-from typing import Dict, List
+import networkx as nx
+import matplotlib.pyplot as plt
 
-from funcs import FragmentationResult
-from centrality_corr import compute_het_central_correlation, filter_correlations, merge_centrality_het
-from centrality import compute_centrality_types
+from networks_generator import make_rgg
+from Transformation      import conservative_from_normal
 
+n_reps        = 20          # <-- change for more / fewer robustness runs
+n_nodes       = 50
+target_edges  = 250
+mu, sigma     = 1.0, 0.3
+lower, upper  = 0.1, 4.0
 
-def load_sigma_data(sigma_value: str, frag_types: List[str]) -> Dict[str, FragmentationResult]:
-    """Load data for a specific sigma value and fragmentation types"""
-    results = {}
-    for ft in frag_types:
-        file_path = f"../RGG, {ft}_asymm_sig{sigma_value}.pickle"
-        with open(file_path, "rb") as f:
-            raw = pickle.load(f)
-        results[ft] = FragmentationResult(
-            n_steps=raw[0],
-            networks=raw[1],
-            het_dist=raw[2],
-            het_mean=raw[3],
-            fst_dist=raw[4],
-            fst_mean=raw[5],
-            coalescence_list=raw[6],
-            fst_matrices=raw[7],
-        )
-    print(f"Loaded data for sigma {sigma_value}")
-    return results
+# -------------------------------------------------------------------
+# 1.  Collect diagnostics across replicas
+# -------------------------------------------------------------------
+pool_imb_before, pool_imb_after, pool_abs_delta = [], [], []
+max_imb_before = []
+pool_w_cons = []        # balanced (non-zero) migration weights
 
+for rep in range(n_reps):
+    seed       = 1000 + rep
+    rng        = np.random.default_rng(seed)
 
-def run_correlation_pipeline(data, frag_types, centrality_type, sigma_value, ax):
-    """Run the centrality correlation pipeline for specific data and plot on given axis"""
-    # Compute centrality
-    centrality_df = compute_centrality_types(data, frag_types, centrality_types=[centrality_type])
+    # ---- binary support --------------------------------------------------
+    G = make_rgg(1, n_nodes, target_edges, asymmetric=False, rng=rng)[0]
+    support = nx.to_numpy_array(G, dtype=int)
 
-    # Merge centrality with heterozygosity data
-    merged_df = merge_centrality_het(centrality_df, data, frag_types)
+    # ---- raw random draw (exactly the routine's first step) --------------
+    x_raw = np.clip(rng.normal(mu, sigma, size=support.sum()), lower, upper)
+    M_raw = np.zeros_like(support, dtype=float)
+    idx   = np.argwhere(support)
+    M_raw[idx[:,0], idx[:,1]] = x_raw
 
-    # Compute correlation
-    corr_df = compute_het_central_correlation(df=merged_df, centrality=centrality_type)
+    # ---- balanced matrix -------------------------------------------------
+    M_cons = conservative_from_normal(support, mu, sigma, lower, upper, seed=seed)
+    pool_w_cons.extend(M_cons[support.astype(bool)].ravel())
 
-    # Filter correlations
-    filtered_corr_df = filter_correlations(corr_df, min_replicates=5)
+    # ---- store diagnostics ----------------------------------------------
+    pool_imb_before.extend(np.abs(M_raw.sum(1) - M_raw.sum(0)))
+    pool_imb_after .extend(np.abs(M_cons.sum(1) - M_cons.sum(0)))
 
-    # Plot on the given axis
-    plt.sca(ax)
-    # Modify plot_correlation to work with an axis rather than creating a new figure
-    import seaborn as sns
-    sns.lineplot(
-        data=filtered_corr_df,
-        x='step_pct',
-        y='correlation',
-        hue='frag_type',
-        errorbar=('ci', 95),
-        ax=ax
-    )
-    ax.set_xlabel('% fragmentation')
-    ax.set_ylabel(f'Correlation ({centrality_type})')
-    ax.set_title(f'σ = 0.{sigma_value}')
+    delta = M_cons - M_raw
+    pool_abs_delta.extend(np.abs(delta[support.astype(bool)]))
 
-    return filtered_corr_df
+    max_imb_before.append(max(pool_imb_before[-n_nodes:]))  # last replica slice
+
+# -------------------------------------------------------------------
+# 2.  Plots
+# -------------------------------------------------------------------
+fig, ax = plt.subplots(1, 3, figsize=(15,4))
 
 
-def main():
-    fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt', 'wrst']
-    sigma_values = ["00", "01", "03", "05"]
-    centrality_types = ['degree', 'betweenness']
+# (A) imbalance distribution
+# ---------------------------------------------------------------
+#  A.  imbalance density  (zeros removed, log-x)
+# ---------------------------------------------------------------
+thr = 1e-12                            # treat tiny numbers as zero
+imb_before_nz = np.array(pool_imb_before)[np.array(pool_imb_before) > thr]
 
-    # Create a 4×2 figure
-    fig, axes = plt.subplots(4, 2, figsize=(16, 20))
+# log-spaced bins from min to max
+lo, hi = imb_before_nz.min(), imb_before_nz.max()
+bins = np.logspace(np.log10(lo), np.log10(hi), num=40)
 
-    for i, sigma in enumerate(sigma_values):
-        # Load data for this sigma value
-        print(f"Processing sigma {sigma}...")
-        data = load_sigma_data(sigma, fragmentation_types)
-
-        for j, centrality_type in enumerate(centrality_types):
-            print(f"  Processing {centrality_type} centrality...")
-            # Run correlation pipeline and plot on the appropriate subplot
-            corr_df = run_correlation_pipeline(data, fragmentation_types, centrality_type, sigma, axes[i, j])
-
-            # Save the correlation data
-            output_file = f'het_{centrality_type}_correlation_sig{sigma}.csv'
-            corr_df.to_csv(output_file, index=False)
-            print(f"  Saved {output_file}")
-
-    # Adjust layout and save the figure
-    plt.tight_layout()
-    plt.savefig('centrality_correlations_combined.svg', dpi=300)
-    plt.savefig('centrality_correlations_combined.png', dpi=300)
-    plt.show()
+ax[0].hist(imb_before_nz, bins=bins, alpha=.8)
+# ax[0].set_xscale("log")
+ax[0].set_xlabel("|row_sum – col_sum|")
+ax[0].set_ylabel("Count of populations")
+ax[0].set_title("Population-level imbalance BEFORE balancing")
 
 
-if __name__ == "__main__":
-    main()
+# (B) per-edge correction magnitude
+ax[1].hist(pool_abs_delta, bins=60, density=True, alpha=.75, color="tab:purple")
+ax[1].set_xlabel("|Δ| per edge")
+ax[1].set_ylabel("Density")
+ax[1].set_title("Magnitude of corrections")
+
+# (C) replicate-wise max imbalance (before vs after)
+ax[2].bar(range(n_reps), max_imb_before, alpha=.7, label="before")
+ax[2].bar(range(n_reps), [0]*n_reps,   alpha=.7, label="after")
+ax[2].set_xlabel("replicate")
+ax[2].set_ylabel("max |imbalance|")
+ax[2].set_title("Worst imbalance per replicate")
+ax[2].legend()
+plt.tight_layout()
+plt.show()
+
+#plot the distribution of values after balancing for all edges and replicates
+w_cons_nz = [w for w in pool_w_cons if w > 1e-12]   # drop exact zeros
+plt.figure(figsize=(6,4))
+plt.hist(w_cons_nz, bins=60, density=True, alpha=.75, color="tab:green")
+plt.xlabel("Balanced migration weight")
+plt.ylabel("Density")
+plt.title("Distribution of non-zero weights after balancing")
+plt.tight_layout()
+plt.show()

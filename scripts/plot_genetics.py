@@ -16,17 +16,17 @@ def plot_genetic_data():
     """
     fragmentation_types = ['rand', 'cor', 'intr', 'reg', 'dist', 'div', 'opt', 'wrst']
     data = load_data(fragmentation_types)
-    plot_genetics(data, measure= 'het',save=True)
+    plot_genetics(data, measure= 'fst')
 
 def plot_distributions():
     """
     Plot distributions for a single fragmentation type.
     choose fragmentation types and measure (het or fst)
     """
-    fragmentation_types = ['reg']
+    fragmentation_types = ['rand']
     data = load_data(fragmentation_types)
-    df = filter_intervals(data['reg'], measure='het', interval_pct=25)
-    plot_distribution(df, measure='het', frag_type='reg',save=True)
+    df = filter_intervals(data['rand'], measure='het', interval_pct=25)
+    plot_distribution(df, measure='het', frag_type='rand')
 
 def plot_individual_nodes():
     """
@@ -42,8 +42,8 @@ def plot_individual_nodes():
 
 def main():
     plot_genetic_data()
-    # plot_distributions()
-    # plot_individual_nodes()
+    plot_distributions()
+    plot_individual_nodes()
 
 if __name__ == "__main__":
     main()
