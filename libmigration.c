@@ -1,156 +1,181 @@
+// libmigration.c – extended for asymmetric yet conservative migration matrices
+// Compatible with Wilkinson‑Herbots (1998) structured‑coalescent equations.
+// The solver now works with any migration matrix M that satisfies
+//              Σ_j M_ij  =  Σ_i M_ij   for every deme i.
+// ---------------------------------------------------------------------------
+// Build:
+//     gcc -O3 -fPIC -shared libmigration.c -lgsl -lgslcblas -o libmigration.so
+// Optional debug:
+//     gcc -O3 -fPIC -shared -DDEBUG_CONS libmigration.c -lgsl -lgslcblas -o libmigration.so
+// ---------------------------------------------------------------------------
+
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #include <gsl/gsl_linalg.h>
-#include <gsl/gsl_permutation.h>
 #include <gsl/gsl_vector.h>
+#include <gsl/gsl_permutation.h>
 
-int sum_of_n_k(int n, int p) {
-    int sum = 0;
-    for (int k = 0; k < p; k++) {
-        sum += (n - k);
-    }
-    return sum;
+/*-----------------------------------------------------------------------------*/
+#define CONS_TOL 1e-6      /* maximum allowed |row‑sum − col‑sum| */
+/*-----------------------------------------------------------------------------*/
+/*  Helper: map unordered pair (i,j) with 0≤i≤j<n  to compact index 0..n(n+1)/2‑1 */
+static inline int idx_T(int n, int i, int j)
+{
+    if (i > j) { int tmp = i; i = j; j = tmp; }
+    return i * n - (i * (i - 1)) / 2 + (j - i);
 }
 
-int min(int a, int b) {
-    return a < b ? a : b;
-}
-
-int max(int a, int b) {
-    return a > b ? a : b;
-}
-
-double calculate_first_coefficients(double* matrix, int n, int j, int i, int same_pop, int lower_bound, int upper_bound, int* counter) {
-    if (j == same_pop) {
-        double sum = 0;
-        for (int k = 0; k < n; k++) {
-            sum += matrix[i * n + k];
+/*-----------------------------------------------------------------------------*/
+/*  Check conservativeness: row sums equal column sums to within tol            */
+/*-----------------------------------------------------------------------------*/
+static int is_conservative(const double *M, int n, double tol)
+{
+    double maxdiff = 0.0;
+    for (int i = 0; i < n; ++i) {
+        double row = 0.0, col = 0.0;
+        for (int j = 0; j < n; ++j) {
+            row += M[i * n + j];
+            col += M[j * n + i];
         }
-        return 1 + sum;
-    }
-    if (lower_bound <= j && j <= upper_bound) {
-        (*counter)++;
-        return -1 * matrix[i * n + (i + *counter - 1)];
-    }
-    for (int p = 0; p < i; p++) {
-        if (j == (i - p) + sum_of_n_k(n, p)) {
-            return -1 * matrix[i * n + p];
+        double diff = fabs(row - col);
+        if (diff > maxdiff) maxdiff = diff;
+        if (diff > tol) {
+#ifdef DEBUG_CONS
+            printf("max diff %.3e exceeds tol %.3e\n", diff, tol);
+#endif
+            return 0;   /* not conservative */
         }
     }
-    return 0;
+#ifdef DEBUG_CONS
+    printf("max diff %.3e (tol %.3e)\n", maxdiff, tol);
+#endif
+    return 1;           /* conservative */
 }
 
-double calculate_last_coefficients(double* matrix, int n, int j, int cur_pop, int other_pop) {
-    int p, t_index, t, not_t, min_t_p, max_t_p, sum;
-    int t_values[2] = {other_pop, cur_pop};
-    if (j == sum_of_n_k(n, other_pop) + (cur_pop - other_pop)) {
-        double sum_cur_pop = 0, sum_other_pop = 0;
-        for (int k = 0; k < n; k++) {
-            sum_cur_pop += matrix[cur_pop * n + k];
-            sum_other_pop += matrix[other_pop * n + k];
+/*=============================================================================*/
+/*  Build coefficient matrix A (dim×dim) for WH Eq. 9 and RHS vector b         */
+/*=============================================================================*/
+static double *build_coefficient_matrix(const double *M, int n)
+{
+    const int dim = n + n * (n - 1) / 2;               /* unknowns = equations */
+    double *A = calloc((size_t)dim * dim, sizeof(double));
+    if (!A) return NULL;
+
+    /* ---------------- 1.  Diagonal equations  ---------------------------- */
+    for (int i = 0; i < n; ++i) {
+        double Mi = 0.0;                                 /* Σ_k M_ik */
+        for (int k = 0; k < n; ++k) Mi += M[i * n + k];
+
+        A[i * dim + idx_T(n, i, i)] = 1.0 + Mi;          /* (1+Mi)·T_ii */
+
+        for (int k = 0; k < n; ++k) {
+            if (k == i) continue;
+            int col = idx_T(n, i < k ? i : k, i < k ? k : i);
+            A[i * dim + col] = -M[i * n + k];            /* -M_ik·T_ik */
         }
-        return sum_cur_pop + sum_other_pop;
     }
-    for (p = 0; p < n; p++) {
-        for (t_index = 0; t_index < 2; t_index++) {
-            t = t_values[t_index];
-            if (t == other_pop) {
-                not_t = cur_pop;
-            } else {
-                not_t = other_pop;
+
+    /* ---------------- 2.  Off‑diagonal equations  ------------------------ */
+    int eq = n;  /* current row in A */
+    for (int i = 0; i < n; ++i) {
+        for (int j = i + 1; j < n; ++j, ++eq) {
+            double Mi = 0.0, Mj = 0.0;
+            for (int k = 0; k < n; ++k) {
+                Mi += M[i * n + k];
+                Mj += M[j * n + k];
             }
-            if (p != not_t) {
-                min_t_p = min(t, p);
-                max_t_p = max(t, p);
-                if (j == sum_of_n_k(n, min_t_p) + max_t_p - min_t_p) {
-                    return -1 * matrix[not_t * n + p];
-                }
+            A[eq * dim + idx_T(n, i, j)] = Mi + Mj;      /* (Mi+Mj)·T_ij */
+
+            /* - M_ik · T_kj */
+            for (int k = 0; k < n; ++k) {
+                if (k == i) continue;
+                int col = idx_T(n, (k < j ? k : j), (k < j ? j : k));
+                A[eq * dim + col] -= M[i * n + k];
+            }
+            /* - M_jk · T_ik */
+            for (int k = 0; k < n; ++k) {
+                if (k == j) continue;
+                int col = idx_T(n, (k < i ? k : i), (k < i ? i : k));
+                A[eq * dim + col] -= M[j * n + k];
             }
         }
     }
-    return 0;
+    return A;
 }
 
-
-double* coefficient_matrix_from_migration(double* migration_matrix, int n) {
-    int n_last_equations = (n * (n - 1)) / 2;
-    int n_first_equations = n;
-    int mat_size = n_first_equations + n_last_equations;
-
-    double* coefficient_mat = (double*) malloc(mat_size * mat_size * sizeof(double));
-
-    int* counter = (int*) malloc(sizeof(int));
-    for (int i = 0; i < n_first_equations; i++) {
-        *counter = 1;
-        int same_population = sum_of_n_k(n, i);
-        int lower_bound = same_population + 1;
-        int upper_bound = sum_of_n_k(n, i + 1) - 1;
-        for (int j = 0; j < mat_size; j++) {
-            coefficient_mat[i * mat_size + j] = calculate_first_coefficients(migration_matrix, n, j, i, same_population, lower_bound, upper_bound, counter);
-        }
-    }
-
-    free(counter);
-
-    int cur_population = 1;
-    int other_population = 0;
-    for (int i = n_first_equations; i < mat_size; i++) {
-        if (other_population == cur_population) {
-            other_population = 0;
-            cur_population += 1;
-        }
-        for (int j = 0; j < mat_size; j++) {
-            coefficient_mat[i * mat_size + j] = calculate_last_coefficients(migration_matrix, n, j, cur_population, other_population);
-        }
-        other_population += 1;
-    }
-
-    return coefficient_mat;
-}
-
-double* produce_solution_vector(int n) {
-    int n_first = n;
-    int n_last = (n * (n - 1)) / 2;
-    double* b = (double*) malloc((n_first + n_last) * sizeof(double));
-    for (int i = 0; i < n_first; i++) {
-        b[i] = 1;
-    }
-    for (int i = n_first; i < n_first + n_last; i++) {
-        b[i] = 2;
-    }
+static double *build_rhs(int dim)
+{
+    double *b = malloc(dim * sizeof(double));
+    if (!b) return NULL;
+    for (int i = 0; i < dim; ++i) b[i] = 2.0;            /* WH Eq. 9 RHS = 1 */
     return b;
 }
 
-double* coalescence_from_migration(double* migration_matrix, int n) {
-    double* A = coefficient_matrix_from_migration(migration_matrix, n);
-    double* b = produce_solution_vector(n);
+/*=============================================================================*/
+/*  Public API – called from Python via ctypes                                   */
+/*=============================================================================*/
 
-    gsl_vector *x = gsl_vector_alloc(n * (n + 1) / 2);
-    gsl_permutation * p = gsl_permutation_alloc(n * (n + 1) / 2);
+double *coefficient_matrix_from_migration(double *M, int n)
+{
+    if (!is_conservative(M, n, CONS_TOL)) {
+        fprintf(stderr, "Error: migration matrix is not conservative.\n");
+        return NULL;
+    }
+    return build_coefficient_matrix(M, n);
+}
 
-    gsl_matrix_view m = gsl_matrix_view_array(A, n * (n + 1) / 2, n * (n + 1) / 2);
-    gsl_vector_view bv = gsl_vector_view_array(b, n * (n + 1) / 2);
+/*  Solve A·x = b and return full symmetric T‑matrix (n×n)                      */
+double *coalescence_from_migration(double *M, int n)
+{
+    if (!is_conservative(M, n, CONS_TOL)) {
+        fprintf(stderr, "Error: migration matrix is not conservative.\n");
+        return NULL;
+    }
 
-    int s;
+    const int dim = n + n * (n - 1) / 2;
+    double *A = build_coefficient_matrix(M, n);
+    double *b = build_rhs(dim);
+    if (!A || !b) {
+        fprintf(stderr, "Memory allocation failure.\n");
+        return NULL;
+    }
 
-    gsl_linalg_LU_decomp(&m.matrix, p, &s);
-    gsl_linalg_LU_solve(&m.matrix, p, &bv.vector, x);
+    gsl_matrix_view  Am = gsl_matrix_view_array(A, dim, dim);
+    gsl_vector_view  bv = gsl_vector_view_array(b, dim);
+    gsl_vector      *x  = gsl_vector_alloc(dim);
+    gsl_permutation *p  = gsl_permutation_alloc(dim);
+    if (!x || !p) {
+        fprintf(stderr, "GSL allocation failure.\n");
+        return NULL;
+    }
 
-    double* T_mat = (double*) malloc(n * n * sizeof(double));
-    int cur_ind = 0;
-    for (int i = 0; i < n; i++) {
-        for (int j = i; j < n; j++) {
-            T_mat[i * n + j] = gsl_vector_get(x, cur_ind);
-            T_mat[j * n + i] = gsl_vector_get(x, cur_ind);
-            cur_ind++;
+    int signum;
+    if (gsl_linalg_LU_decomp(&Am.matrix, p, &signum)) {
+        fprintf(stderr, "GSL: LU decomposition failed (singular matrix).\n");
+        return NULL;
+    }
+    gsl_linalg_LU_solve(&Am.matrix, p, &bv.vector, x);
+
+    /* --- reconstruct symmetric T matrix --- */
+    double *T = malloc((size_t)n * n * sizeof(double));
+    if (!T) return NULL;
+
+    int cur = 0;
+    for (int i = 0; i < n; ++i) {
+        for (int j = i; j < n; ++j, ++cur) {
+            double val = gsl_vector_get(x, cur);
+            T[i * n + j] = val;
+            T[j * n + i] = val;   /* symmetry */
         }
     }
 
-    gsl_permutation_free(p);
+    /* tidy up */
     gsl_vector_free(x);
+    gsl_permutation_free(p);
     free(A);
     free(b);
 
-    return T_mat;
+    return T;
 }
 

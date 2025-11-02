@@ -7,13 +7,15 @@ and heterozygosity in network fragmentation analyses. Functions include merging 
 heterozygosity data, computing correlations, filtering significant results, and plotting correlations.
 
 """
-from typing import Dict
+from typing import Dict, List
 import pandas as pd
 from funcs import FragmentationResult, assign_node_numbers
 from matplotlib import pyplot as plt
 from funcs import percent_step
 from typing import Dict, Literal
 from scipy.stats import pearsonr
+import seaborn as sns
+
 
 def compute_het_central_correlation(
     df: pd.DataFrame,
@@ -52,7 +54,7 @@ def compute_het_central_correlation(
         })
 
     corr_df = pd.DataFrame(results)
-    corr_df.to_csv(f'./csv_new/het_bet_correlation.csv', index=False)
+    corr_df.to_csv(f'het_{centrality}_correlation_sig03.csv', index=False)
     return pd.DataFrame(results)
 
 
@@ -60,7 +62,7 @@ def compute_het_central_correlation(
 def merge_centrality_het(
         centrality_df: pd.DataFrame,
         data: Dict[str, FragmentationResult],
-        frag_types: list[str]
+        frag_types: List[str]
 ) -> pd.DataFrame:
     """
     Preprocess and merge the centrality data with heterozygosity data for each fragmentation type.
@@ -91,7 +93,7 @@ def merge_centrality_het(
 
     # Concatenate all fragmentation types into a single DataFrame
     final_df = pd.concat(all_data, ignore_index=True)
-    final_df.to_csv(f'./csv_new/centrality_het.csv', index=False)
+    final_df.to_csv(f'centrality_het_sig03.csv', index=False)
 
     return final_df
 
@@ -140,6 +142,7 @@ def plot_correlation(
     """
     # Convert step to percentage using func percent_step
     corr_df = percent_step(corr_df, step_col='step', pct_col='step_pct')
+    import seaborn as sns
 
     plt.figure(figsize=(6, 4))
     sns.lineplot(

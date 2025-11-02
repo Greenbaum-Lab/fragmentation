@@ -18,26 +18,21 @@ from funcs import FragmentationResult
 
 
 def compute_centrality_network(graph: nx.Graph) -> pd.DataFrame:
-    """
-    Compute degree and betweenness centrality for all nodes in a network.
-
-    :param graph: NetworkX graph instance.
-    :return: DataFrame with columns ['node_number', 'degree_centrality', 'betweenness_centrality'].
-    """
-    # degree_centrality = nx.degree_centrality(graph)
-    betweenness_centrality = nx.betweenness_centrality(graph)
-    degree_centrality = dict(nx.degree(graph))
-
-    #         'degree': lambda net: dict(nx.degree(net))
-
-    df = pd.DataFrame({
-        'node_number': list(degree_centrality.keys()),
-        'degree': list(degree_centrality.values()),
-        'betweenness': list(betweenness_centrality.values())
+    if graph.is_directed():
+        degree = dict(nx.degree(graph, weight='weight'))
+        H = graph.copy()
+        for u, v, d in H.edges(data=True):
+            w = float(d.get('weight', 1.0))
+            d['length'] = 1.0 / w
+        betweenness = nx.betweenness_centrality(H, weight='length', normalized=True)
+    else:
+        degree = dict(nx.degree(graph, weight='weight'))
+        betweenness = nx.betweenness_centrality(graph, weight='weight', normalized=True)
+    return pd.DataFrame({
+        'node_number': list(graph.nodes()),
+        'degree': [degree[n] for n in graph.nodes()],
+        'betweenness': [betweenness[n] for n in graph.nodes()],
     })
-
-    return df
-
 
 def compute_centrality_replicates(
     networks: List[List[nx.Graph]]
@@ -62,7 +57,7 @@ def compute_centrality_replicates(
 
 def compute_centrality_types(
     data: Dict[str, FragmentationResult],
-    frag_types: list[str]
+    frag_types: List[str]
 ) -> pd.DataFrame:
     """
     Compute degree and betweenness centralities for all graphs across multiple fragmentation types.
@@ -79,7 +74,8 @@ def compute_centrality_types(
         all_dfs.append(df)
 
     combined_df = pd.concat(all_dfs, ignore_index=True)
+    print(combined_df)
     cols = ['frag_type', 'replica', 'step', 'node_number', 'degree', 'betweenness']
-    combined_df.to_csv(f'./csv_new/centrality.csv', index=False)
+    combined_df.to_csv(f'centrality_sig03.csv', index=False)
     return combined_df[cols]
 

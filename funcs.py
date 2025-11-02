@@ -38,7 +38,7 @@ def load_data(fragmentation_types: List[str]) -> Dict[str, FragmentationResult]:
     """
     results: Dict[str, FragmentationResult] = {}
     for ft in fragmentation_types:
-        file_path =  f"RGG, {ft}_asymmetric.pickle"
+        file_path =  f"../pickles/RGG, {ft}_asymm_sig03.pickle"
         with open(file_path, "rb") as f:
             raw = pickle.load(f)
         results[ft] = FragmentationResult(

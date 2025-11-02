@@ -6,7 +6,7 @@ from typing import Iterable, List, Optional
 import networkx as nx
 import numpy as np
 
-from Transformation import conservative_from_normal
+from Transformation import conservative_from_normal, transform_matrix
 
 
 # --------------------------------------------------------------------- #
@@ -16,7 +16,7 @@ from Transformation import conservative_from_normal
 def symm_to_asymm_net(
     net: nx.Graph,
     mu: float = 1.0,
-    sigma: float = 0.3,
+    sigma: float = 0.1,
     lower: float = 0.1,
     upper: float = 4,
     rng: Optional[np.random.Generator] = None,
@@ -84,7 +84,7 @@ def make_rgg(
     target_edges: int,
     *,
     asymmetric: bool,
-    radius: float = 0.30,
+    radius: float = 0.60,
     rng: Optional[np.random.Generator] = None,
 ) -> List[nx.Graph | nx.DiGraph]:
     """
@@ -110,6 +110,8 @@ def make_rgg(
 
     while len(graphs) < n_graphs:
         g = nx.random_geometric_graph(n_nodes, radius, seed=int(rng.integers(2**32 - 1)))
+        # print(g.number_of_edges())
+
         if g.number_of_edges() == target_edges:
             graphs.append(symm_to_asymm_net(g, rng=rng) if asymmetric else g)
 
