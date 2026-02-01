@@ -4,8 +4,11 @@
 # But not these files...
 !.gitignore
 !*.py
-!.gitkeep
 !/data/
+!/data/**
 !/figs/
+!/figs/**
 !/results/
+!/results/**
 !/notebooks/
+!/notebooks/**
