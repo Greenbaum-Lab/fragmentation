@@ -5,4 +5,7 @@
 !.gitignore
 !*.py
 !.gitkeep
-!*/
+!/data/
+!/figs/
+!/results/
+!/notebooks/
